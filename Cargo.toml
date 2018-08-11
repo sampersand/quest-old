@@ -1,0 +1,14 @@
+[package]
+name = "quest"
+version = "0.1.0"
+authors = ["sam <westerhack@gmail.com>"]
+
+[features]
+default = ["single-threaded"]
+single-threaded = []
+
+[dependencies]
+lazy_static = "1.1.0"
+regex = "1.0"
+log = "0.4.3"
+simple_logger = "0.5"
