@@ -1,7 +1,7 @@
 use env::Environment;
-use obj::{Id, attrs::AttrId, classes};
+use obj::{Id, Result, Exception, attrs::AttrId, classes};
 use std::ops::Deref;
-use super::{QObj, Classes};
+use obj::object::{QObj, Classes};
 use std::fmt::{self, Debug, Display, Formatter};
 
 
@@ -63,15 +63,15 @@ impl QObject {
 		self.attrs.set(id, obj)
 	}
 
-	pub fn call(&self, args: &[&QObject], env: &Environment) -> QObject {
+	pub fn call(&self, args: &[&QObject], env: &Environment) -> Result {
 		self.call_attr("()", args, env)
 	}
 
-	pub fn call_local(&self, args: &[&QObject], env: &Environment) -> QObject {
+	pub fn call_local(&self, args: &[&QObject], env: &Environment) -> Result {
 		self.call_attr("{}", args, env)
 	}
 
-	pub fn call_attr<I: Into<AttrId>>(&self, id: I, args: &[&QObject], env: &Environment) -> QObject {
+	pub fn call_attr<I: Into<AttrId>>(&self, id: I, args: &[&QObject], env: &Environment) -> Result {
 		let id = id.into();
 
 		if let Some(qboundfn) = self.attrs.get(id.clone(), self) {
@@ -82,7 +82,7 @@ impl QObject {
 			}
 		} else {
 			warn!("Missing attribute {} for {:?}", id, self);
-			().into()
+			Ok(().into())
 		}
 	}
 
@@ -132,15 +132,11 @@ macro_rules! define_conversion {
 					}
 				}
 
-				pub fn $as(&self, env: &Environment) -> Option<classes::$obj> {
-					if !self.has_attr($attr) {
-						return None;
-					}
-
-					let obj_arc = self.call_attr($attr, &[], &env).0;
+				pub fn $as(&self, env: &Environment) -> ::std::result::Result<classes::$obj, Exception> {
+					let obj_arc = self.call_attr($attr, &[], &env)?.0;
 					let obj = RefC::try_unwrap(obj_arc).expect(concat!("Unable to get a unique `", stringify!($obj), "` (from calling \"", $attr, "\")"));
 					match obj.into_class() {
-						Classes::$class(class) => Some(class),
+						Classes::$class(class) => Ok(class),
 						invalid_class => panic!(concat!("`", $attr, "` for {:?} should return a ", stringify!($class), ", not `{:?}`"), self, invalid_class)
 					}
 				}

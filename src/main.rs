@@ -8,7 +8,7 @@ fn main(){
 	simple_logger::init().unwrap();
 
 	let result = quest::parse_file("code/test.qs", env).expect("cant read file");
-	println!("Result: {:#?}", result);
+	println!("====[ Result ]===\n{:#?}", result);
 }
 
 

@@ -99,7 +99,7 @@ impl Attributes {
 			return Some(val.clone());
 		}
 
-		let mut lock = self.assigned.lock();
+		let mut lock = self.assigned.write();
 
 		if let Some(val) = lock.get(&id){ 
 			return Some(val.clone());

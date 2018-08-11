@@ -2,6 +2,8 @@ use obj::QObject;
 use obj::classes::{QVar, QNum, utils::IndexPos};
 use env::Environment;
 
+use regex::Regex;
+
 use std::ops::Deref;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -37,7 +39,6 @@ impl From<String> for QObject {
 	}
 }
 
-
 impl From<char> for QObject {
 	#[inline]
 	fn from(inp: char) -> QObject {
@@ -45,6 +46,23 @@ impl From<char> for QObject {
 	}
 }
 
+lazy_static! {
+	pub static ref RE_SINGLE: Regex = regex!(r"\A'((?:\.|[^'])*)'");
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NoMatches;
+
+impl FromStr for QNull {
+	type Err = NoMatches;
+	fn from_str(inp: &str) -> Result<QNull, NoMatches> {
+		if RE_NULL.is_match(inp) {
+			Ok(QNull)
+		} else {
+			Err(NoMatches)
+		}
+	}
+}
 
 
 impl AsRef<str> for QText {
@@ -72,27 +90,28 @@ impl Display for QText {
 	}
 }
 
+
 default_attrs!{ for QText, with variant Text;
 	use QObj;
 
 	fn "@text" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "@bool" (this) {
-		(!this.0.is_empty()).into()
+		Ok((!this.0.is_empty()).into())
 	}
 
 	fn "@var" (this) {
-		QVar::from_nonstatic_str(this.as_ref()).into()
+		Ok(QVar::from_nonstatic_str(this.as_ref()).into())
 	}
 
 	fn "@num" (this) {
 		match QNum::from_str(&this) {
-			Ok(num) => num.into(),
+			Ok(num) => Ok(num.into()),
 			Err(err) => {
 				warn!("Unable to convert {:?} to QNum ({:?}); returning QNull", this, err);
-				().into()
+				Ok(().into())
 			}
 		}
 	}
@@ -106,33 +125,33 @@ default_attrs!{ for QText, with variant Text;
 
 	fn "empty!" (mut this) with _env _var obj{
 		this.0.clear();
-		obj.clone()
+		Ok(obj.clone())
 	}
 
 	fn "empty?" (this) {
-		this.0.is_empty().into()
+		Ok(this.0.is_empty().into())
 	}
 
 	fn "len" (this) {
-		this.0.len().into()
+		Ok(this.0.len().into())
 	}
 
 	fn "has" (this, var) with env {
-		if var.is_num() {
+		Ok(if var.is_num() {
 			IndexPos::from_qobject(this.0.len(), var, env).is_inbounds().into()
-		} else if let Some(text) = var.as_text(env) {
+		} else if let Ok(text) = var.as_text(env) {
 			this.0.contains(&text.as_str()).into()
 		} else {
 			panic!("Only Num or `@text` can be used to index")
-		}
+		})
 	}
 
 	fn "get" (this, pos) with env {
-		match IndexPos::from_qobject(this.0.len(), pos, env) {
+		Ok(match IndexPos::from_qobject(this.0.len(), pos, env) {
 			IndexPos::InBounds(pos) => this.0.chars().nth(pos).unwrap().into(),
 			IndexPos::OutOfBounds(_) | IndexPos::Underflow(_) => ().into(),
 			IndexPos::NotAnInt(pos) => panic!("Can't index with non-integer num `{}`", pos)
-		}
+		})
 	}
 
 	fn "set" (mut this, pos, val) with env args obj {
@@ -162,21 +181,21 @@ default_attrs!{ for QText, with variant Text;
 			}
 		}
 		s.replace_range(pos..pos + val_str.len(), &val_str);
-		obj.clone()
+		Ok(obj.clone())
 	}
 
 	fn "del" (mut this, pos) with env {
-		match IndexPos::from_qobject(this.0.len(), pos, env) {
+		Ok(match IndexPos::from_qobject(this.0.len(), pos, env) {
 			IndexPos::InBounds(pos) => this.0.remove(pos).into(),
 			IndexPos::OutOfBounds(_) | IndexPos::Underflow(_) => ().into(),
 			IndexPos::NotAnInt(pos) => panic!("Can't index with non-integer num `{}`", pos)
-		}
+		})
 	}
 
 	fn "+" (this, rhs) with env {
 		let mut s = this.0.clone();
 		s.push_str(&rhs.as_text(env).expect("`@text` is needed for QList.+").as_str());
-		s.into()
+		Ok(s.into())
 	}
 }
 

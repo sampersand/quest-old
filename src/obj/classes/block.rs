@@ -1,5 +1,6 @@
-use obj::classes::QNull;
+use obj::{QObject, Result, Exception};
 use parse::Tree;
+use env::Environment;
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -28,25 +29,38 @@ impl Display for QBlock {
 	}
 }
 
+fn execute(tree: Option<&Tree>, args: &[&QObject], env: &Environment) -> Result {
+	if let Some(tree) = tree {
+		env.set_arguments(args);
+		match tree.execute(&env) {
+			Ok(val) => Ok(val),
+			Err(Exception::Return(0, Some(val))) => Ok(val),
+			Err(Exception::Return(0, None)) => Ok(().into()),
+			Err(Exception::Return(i, ret_val)) => Err(Exception::Return(i - 1, ret_val)),
+			other => other
+		}
+	} else {
+		Ok(().into()) // aka we have an empty tree
+	}
+}
+
 default_attrs! { for QBlock, with variant Block;
 	use QObj;
 
 	fn "{}" (this) with env args {
-		if let Some(tree) = this.0.as_ref() {
-			env.set_arguments(args);
-			tree.execute(&env)
-		} else {
-			().into()
-		}
+		execute(this.0.as_ref(), args, env)
 	}
 
 	fn "()" (this) with env args {
-		if let Some(tree) = this.0.as_ref() {
-			tree.execute(&env.clone_for_call(args))
-		} else {
-			().into()
-		}
+		let mut envv = env.clone_for_call();
+		envv.bind(env);
+		execute(this.0.as_ref(), args, &envv)
 	}
 }
+
+
+
+
+
 
 

@@ -2,11 +2,11 @@ use env::Environment;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Display, Formatter};
 
-use obj::QObject;
+use obj::{QObject, Result as Result};
 
 
 #[derive(Clone, Copy)]
-pub struct RustFn(pub &'static str, pub fn(&QObject, &[&QObject], &Environment) -> QObject);
+pub struct RustFn(pub &'static str, pub fn(&QObject, &[&QObject], &Environment) -> Result);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct QBoundFn(QObject, &'static RustFn);
@@ -17,7 +17,12 @@ impl QBoundFn {
 		QBoundFn(obj, rustfn)
 	}
 
-	pub fn call(&self, args: &[&QObject], env: &Environment) -> QObject {
+	pub fn call(&self, args: &[&QObject], env: &Environment) -> Result {
+		// todo: work out the difference betwixt these
+		((self.1).1)(&self.0, args, env)
+	}
+
+	pub fn call_local(&self, args: &[&QObject], env: &Environment) -> Result {
 		((self.1).1)(&self.0, args, env)
 	}
 }
@@ -33,6 +38,9 @@ default_attrs! { for QBoundFn, with variant BoundFn;
 	fn "()" (this) with env args {
 		this.call(args, env)
 	}
+	fn "{}" (this) with env args {
+		this.call_local(args, env)
+	}
 }
 
 
@@ -40,7 +48,7 @@ impl RustFn {
 	pub fn into_bound(&'static self, obj: &QObject) -> QBoundFn {
 		QBoundFn(obj.clone(), self)
 	}
-	pub fn call_from_null(&self, args: &[&QObject], env: &Environment) -> QObject {
+	pub fn call_from_null(&self, args: &[&QObject], env: &Environment) -> Result {
 		(self.1)(&().into(), args, env)
 	}
 }

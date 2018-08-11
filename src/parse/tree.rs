@@ -1,5 +1,5 @@
 use env::Environment;
-use obj::QObject;
+use obj::{QObject, Result};
 use parse::TokenMatch;
 use std::fmt::{self, Debug, Display, Formatter};
 
@@ -21,11 +21,11 @@ impl Tree {
 		self.lhs.is_none() && self.rhs.is_none()
 	}
 
-	pub fn execute(&self, env: &Environment) -> QObject {
+	pub fn execute(&self, env: &Environment) -> Result {
 		self.oper.token.create_qobject(self, env)
 	}
 
-	pub fn to_qvar(&self, env: &Environment) -> QObject {
+	pub fn to_qvar(&self, env: &Environment) -> Result {
 		self.oper.token.to_qvar(self, env)
 	}
 }

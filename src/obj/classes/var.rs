@@ -90,7 +90,8 @@ impl Debug for QVar {
 
 
 lazy_static! {
-	pub static ref REGEX: Regex = regex!(r"\A(?:[$@].|[a-zA-Z_]\w*(?:[?!]|\b))");
+	pub static ref REGEX: Regex = regex!(r"\A(?:(?:[$@].|[a-zA-Z_])\w*(?:[?!]|\b)|(?:(?:[$@].)))");
+	// pub static ref REGEX: Regex = regex!(r"\A(?:[$@].|[a-zA-Z_]\w*(?:[?!]|\b))");
 }
 
 impl FromStr for QVar {
@@ -103,10 +104,10 @@ impl FromStr for QVar {
 default_attrs! { for QVar, with variant Var;
 	use QObj;
 	fn "@var" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "@text" (this) {
-		this.0.str_id().expect("all vars should have id strs associated?").to_string().into()
+		Ok(this.0.str_id().expect("all vars should have id strs associated?").to_string().into())
 	}
 }

@@ -11,19 +11,22 @@ pub struct SyncMapReadGuard<'a: 'b, 'b, K: Hash + Eq + 'a, V: 'a, Q: Borrow<K> +
 #[derive(Debug)]
 pub struct SyncMapWriteGuard<'a: 'b, 'b, K: Hash + Eq + 'a, V: 'a, Q: Borrow<K> + 'b>(&'b Q, SpinWriteGuard<'a, HashMap<K, V>>);
 
+#[derive(PartialEq, Eq)]
 pub struct SyncMap<K: Hash + Eq, V>(SpinRwLock<HashMap<K, V>>);
 
 impl<K: Eq + Hash, V> SyncMap<K, V> {
 	pub fn new() -> SyncMap<K, V> {
 		SyncMap::default()
 	}
+}
 
-	pub fn lock<'a>(&'a self) -> impl DerefMut<Target=HashMap<K, V>> + 'a {
-		self.0.write()
-	}
 
-	pub fn read<'a>(&'a self) -> impl Deref<Target=HashMap<K, V>> + 'a {
-		self.0.read()
+impl<K: Hash + Eq, V> Deref for SyncMap<K, V> {
+	type Target = SpinRwLock<HashMap<K, V>>;
+
+	#[inline]
+	fn deref(&self) -> &SpinRwLock<HashMap<K, V>> {
+		&self.0
 	}
 }
 

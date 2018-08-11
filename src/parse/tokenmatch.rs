@@ -3,6 +3,7 @@ use parse::{Tree, Token};
 use env::Environment;
 use obj::QObject;
 use std::cmp::Ordering;
+use std::fmt::{self, Debug, Formatter};
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -15,7 +16,7 @@ pub enum MatchData {
 
 use self::MatchData::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TokenMatch {
 	pub(super) data: MatchData,
 	pub(super) token: &'static Token,
@@ -31,6 +32,25 @@ impl TokenMatch {
 	#[inline]
 	pub fn try_as_str(&self) -> Option<&str> {
 		self.data.try_as_str()
+	}
+}
+
+impl Debug for TokenMatch {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			f.debug_struct("TokenMatch")
+			 .field("data", &self.data)
+			 .field("token", &self.token)
+			 .field("src", &self.src)
+			 .finish()
+		} else {
+			match self.data {
+				MatchData::Text(ref s, _) => f.debug_tuple("TokenMatch").field(&s).finish(),
+				MatchData::Block(ref t, _) => f.debug_tuple("TokenMatch").field(&t).finish(),
+				MatchData::NoToken(_) => f.debug_tuple("TokenMatch").field(&"<No token>").finish(),
+				MatchData::Eof(_) => f.debug_tuple("TokenMatch").field(&"<EOF>").finish(),
+			}
+		}
 	}
 }
 

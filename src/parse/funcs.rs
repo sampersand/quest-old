@@ -1,21 +1,24 @@
 use std::path::Path;
 use std::{io, fs};
 use parse::{Token, TokenMatch, MatchData, Stream, Tree};
-use obj::QObject;
+use obj::{Result, Exception};
 use env::Environment;
 
-pub fn parse_file<P: AsRef<Path>>(file: P, env: &Environment) -> io::Result<QObject> {
+pub fn parse_file<P: AsRef<Path>>(file: P, env: &Environment) -> io::Result<Result> {
 	let file = file.as_ref();
 	Ok(parse(&mut Stream::from_file(&file.to_string_lossy(), &fs::read_to_string(file)?), env))
 }
 
-pub fn parse_str(text: &str, env: &Environment) -> QObject {
+pub fn parse_str(text: &str, env: &Environment) -> Result {
 	parse(&mut Stream::from_str(text), env)
 }
 
-fn parse(stream: &mut Stream, env: &Environment) -> QObject {
+fn parse(stream: &mut Stream, env: &Environment) -> Result {
 	let matches = matches_until(stream, env, |_| false);
-	Tree::try_from_vec(matches).map(|x| x.execute(env)).unwrap_or_else(|| ().into())
+	match Tree::try_from_vec(matches) {
+		Some(tree) => tree.execute(env),
+		None => Err(Exception::Missing("<anything in the block>".into()))
+	}
 }
 
 pub fn matches_until(stream: &mut Stream, env: &Environment, until: fn(&TokenMatch) -> bool) -> Vec<TokenMatch> {

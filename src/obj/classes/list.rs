@@ -1,5 +1,5 @@
 use std::ops::Deref;
-use obj::{Classes, QObject};
+use obj::{Classes, QObject, Exception};
 use std::fmt::{self, Debug, Display, Formatter};
 use obj::classes::{QNum, QNull, utils::IndexPos};
 use env::Environment;
@@ -80,41 +80,50 @@ default_attrs! { for QList, with variant List;
 	}
 
 	fn "@list" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "@bool" (this) with env this {
-		this.0.is_empty().into()
+		Ok(this.0.is_empty().into())
+	}
+
+	fn "empty!" (mut this) with _env _var obj{
+		this.0.clear();
+		Ok(obj.clone())
+	}
+
+	fn "empty?" (this) {
+		Ok(this.0.is_empty().into())
 	}
 
 	fn "len" (this) {
-		QNum::new(this.0.len() as _).into()
+		Ok(QNum::new(this.0.len() as _).into())
 	}
 
 	fn "push" (mut this, pos) {
 		this.0.push(pos.clone());
-		QNull.into()
+		Ok(QNull.into())
 	}
 
 	fn "pop" (mut this, pos) {
-		if let Some(ele) = this.0.pop() {
+		Ok(if let Some(ele) = this.0.pop() {
 			ele
 		} else {
 			info!("Attempted to pop from an empty list ({:?}); returning null", this);
 			().into()
-		}
+		})
 	}
 
 	fn "has" (this, var) {
-		this.0.contains(var).into()
+		Ok(this.0.contains(var).into())
 	}
 
 	fn "get" (this, pos) with env {
-		match IndexPos::from_qobject(this.0.len(), pos, env) {
+		Ok(match IndexPos::from_qobject(this.0.len(), pos, env) {
 			IndexPos::InBounds(pos) => this.0[pos].clone(),
-			IndexPos::OutOfBounds(_) | IndexPos::Underflow(_) => QNull.into(),
+			IndexPos::OutOfBounds(_) | IndexPos::Underflow(_) => ().into(),
 			IndexPos::NotAnInt(pos) => panic!("Can't index with non-integer num `{}`", pos)
-		}
+		})
 	}
 
 	fn "set" (mut this, pos, val) with env {
@@ -133,15 +142,15 @@ default_attrs! { for QList, with variant List;
 			IndexPos::NotAnInt(pos) => panic!("Can't index with non-integer num `{}`", pos)
 		};
 		this.0[pos] = val.clone();
-		val.clone()
+		Ok(val.clone())
 	}
 
 	fn "del" (mut this, pos) with env {
-		match IndexPos::from_qobject(this.0.len(), pos, env) {
+		Ok(match IndexPos::from_qobject(this.0.len(), pos, env) {
 			IndexPos::InBounds(pos) => this.0.remove(pos),
 			IndexPos::OutOfBounds(_) | IndexPos::Underflow(_) => QNull.into(),
 			IndexPos::NotAnInt(pos) => panic!("Can't index with non-integer num `{}`", pos)
-		}
+		})
 	}
 
 	// operators 
@@ -154,7 +163,7 @@ default_attrs! { for QList, with variant List;
 				v.push(ele.clone());
 			}
 		}
-		v.into()
+		Ok(v.into())
 	}
 
 	fn "&" (this, other) with env {
@@ -165,7 +174,7 @@ default_attrs! { for QList, with variant List;
 				v.push(ele.clone());
 			}
 		}
-		v.into()
+		Ok(v.into())
 	}
 	fn "^^" (this, other) with env {
 		let mut v = vec![];
@@ -181,6 +190,6 @@ default_attrs! { for QList, with variant List;
 				v.push(ele.clone());
 			}
 		}
-		v.into()
+		Ok(v.into())
 	}
 }

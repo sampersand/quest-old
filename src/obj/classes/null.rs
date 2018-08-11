@@ -55,6 +55,6 @@ default_attrs! { for QNull, with variant Null;
 	use QObj;
 
 	fn "@bool" (this) {
-		false.into()
+		Ok(false.into())
 	}
 }

@@ -2,7 +2,7 @@ use sync::SpinRwLock;
 use std::hash::{Hash, Hasher};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use obj::{Id, classes, attrs::*, object::Classes};
+use obj::{Id, Exception, classes, attrs::*, object::Classes};
 use env::Environment;
 use std::fmt::{self, Display, Formatter};
 
@@ -75,60 +75,26 @@ impl Display for QObj {
 
 default_attrs! { for QObj;
 	fn "@text" (this) {
-		this.to_string().into()
+		Ok(this.to_string().into())
 	}
 
 	fn "@bool" (this) {
-		true.into()
+		Ok(true.into())
 	}
 
 	fn "clone" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "==" (this, rhs) {
-		(this == rhs.deref()).into()
+		Ok((this == rhs.deref()).into())
 	}
 
 	fn "!=" (this, rhs) {
-		(this != rhs.deref()).into()
+		Ok((this != rhs.deref()).into())
 	}
 
 	fn "." (_this, attr) with env vars obj {
-		obj.get_attr(attr.clone()).unwrap_or_else(|| ().into())
+		obj.get_attr(attr.clone()).ok_or_else(|| Exception::Missing(attr.clone()))
 	}
 }
-
-// __default_attrs! {
-// 	"@text" => |obj, _, _| classes::QText::new(obj).into(),
-// 	"@bool" => |_, _, _| classes::QBool::new(true).into(),
-// 	"clone" => |obj, _, _| QObj::clone(&obj).into(),
-// 	"." => |obj, args, env| obj.get_attr(args[0].as_var(env).expect("var is currently required to index").as_id()).unwrap_or_else(|| ().into()),//QObj::default_attrs()[&Id::from("get_attr")].call(obj, args, env),
-// 	"get_attr" => |obj, args, _| {
-// 		assert_args_len!(args, 1, "get_attr");
-// 		let val = match args[0].class {
-// 			Classes::Var(id) => obj.get_attr(id.as_id()),
-// 			_ => obj.get_attr(args[0].clone())
-// 		};
-// 		match val {
-// 			Some(val) => val,
-// 			None => {
-// 				eprintln!("Attribute `{}` doesn't exist for `{:?}`", args[0], obj);
-// 				classes::QNull.into()
-// 			}
-// 		}
-// 	},
-// 	"set_attr" => |obj, args, _| {
-// 		assert_args_len!(args, 2, "set_attr");
-// 		obj.set_attr(expect_id!(args[0]), args[1].clone()).unwrap_or_else(|| classes::QNull.into())
-// 	},
-// 	"del_attr" => |obj, args, _| {
-// 		assert_args_len!(args, 1, "del_attr");
-// 		obj.del_attr(expect_id!(args[0])).unwrap_or_else(|| classes::QNull.into())
-// 	},
-// 	"attr?" => |obj, args, _| {
-// 		assert_args_len!(args, 1, "del_attr");
-// 		classes::QBool::new(obj.has_attr(expect_id!(args[0]))).into()
-
-// 	}
-// }

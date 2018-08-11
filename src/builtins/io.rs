@@ -8,9 +8,9 @@ builtins!{
 		println!("{}", args.iter().map(|arg| arg.as_text(env).expect("`@text` is required for disp").as_str().to_owned()).collect::<Vec<_>>().join(" "));
 
 		if args.len() == 1 {
-			args[0].clone()
+			Ok(args[0].clone())
 		} else {
-			QList::new(args.iter().map(|x| (*x).clone()).collect()).into()
+			Ok(QList::new(args.iter().map(|x| (*x).clone()).collect()).into())
 		}
 	}
 	fn PROMPT(args, env) {
@@ -26,6 +26,6 @@ builtins!{
 				assert_eq!(input.pop(), Some('\r'));
 			}
 		}
-		input.into()
+		Ok(input.into())
 	}
 }

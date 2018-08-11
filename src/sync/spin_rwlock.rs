@@ -86,7 +86,17 @@ impl<T> SpinRwLock<T> {
 			}
 		}
 	}
+}
 
+impl<T: Eq> Eq for SpinRwLock<T>{}
+impl<T: PartialEq> PartialEq for SpinRwLock<T> {
+	fn eq(&self, other: &SpinRwLock<T>) -> bool {
+		if let (Some(selfguard), Some(otherguard)) = (self.try_read(), other.try_read()) {
+			*selfguard == *otherguard
+		} else {
+			false
+		}
+	}
 }
 
 impl<T: Clone> SpinRwLock<T> {

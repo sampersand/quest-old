@@ -2,7 +2,7 @@ use regex::Regex;
 use parse::{Tree, Source};
 use std::fmt::{self, Display, Formatter};
 use env::Environment;
-use obj::{QObject, classes::{QNull, QList}};
+use obj::{QObject, Result, classes::{QNull, QList}};
 
 
 macro_rules! define_opers {
@@ -34,7 +34,7 @@ macro_rules! define_opers {
 				src: Source
 				}
 				lazy_static!{
-					pub static ref REGEX: Regex = regex!(concat!("\\A", $regex));
+					pub static ref REGEX: Regex = regex!(concat!("\\A(?:", $regex, ")"));
 				}
 
 				impl ::obj::attrs::HasDefaultAttrs for $oper {
@@ -96,32 +96,32 @@ macro_rules! rhs {
 
 macro_rules! binaryoper {
 	($attr:expr) => {
-		pub fn execute(&self, env: &Environment) -> QObject {
-			let lhs = lhs!(self, $attr).execute(env);
-			let rhs = rhs!(self, $attr).execute(env);
+		pub fn execute(&self, env: &Environment) -> Result {
+			let lhs = lhs!(self, $attr).execute(env)?;
+			let rhs = rhs!(self, $attr).execute(env)?;
 			lhs.call_attr($attr, &[&rhs], env)
 		}
 	}
 }
 macro_rules! binaryassign {
 	($attr:expr) => {
-		pub fn execute(&self, env: &Environment) -> QObject {
+		pub fn execute(&self, env: &Environment) -> Result {
 			let lhs = lhs!(self, $attr);
-			let rhs = rhs!(self, $attr).execute(env);
-			env.set(lhs.to_qvar(env), lhs.execute(env).call_attr($attr, &[&rhs], env))
+			let rhs = rhs!(self, $attr).execute(env)?;
+			Ok(env.set(lhs.to_qvar(env)?, lhs.execute(env)?.call_attr($attr, &[&rhs], env)?))
 		}
 	}
 }
 
 macro_rules! assignoper {
 	($attr:expr, $reversed:expr) => {
-		pub fn execute(&self, env: &Environment) -> QObject {
+		pub fn execute(&self, env: &Environment) -> Result {
 			let (lhs, rhs) = match $reversed {
 				false => (lhs!(self, $attr), rhs!(self, $attr)),
 				true  => (rhs!(self, $attr), lhs!(self, $attr))
 			};
 
-			env.set(lhs.to_qvar(env), rhs.execute(env))
+			Ok(env.set(lhs.to_qvar(env)?, rhs.execute(env)?))
 		}
 	}
 }
@@ -134,8 +134,8 @@ define_opers!{
 		Sub(mod sub { struct QSub("-",   "-"); binaryoper!("-"); }),
 		Mul(mod mul { struct QMul("*", r"\*"); binaryoper!("*"); }),
 		Div(mod div { struct QDiv("/",   "/"); binaryoper!("/"); }),
-		Pow(mod pow { struct QPow("^", r"(?:\^|pow\b|\*\*)"); binaryoper!("^"); }),
-		Mod(mod mod_{ struct QMod("%", r"(?:%|mod\b)"); binaryoper!("%"); }),
+		Pow(mod pow { struct QPow("^", r"\^|pow\b|\*\*"); binaryoper!("^"); }),
+		Mod(mod mod_{ struct QMod("%", r"%|mod\b"); binaryoper!("%"); }),
 
 		AddI(mod addi { struct QAddI("+=", r"\+="); binaryassign!("+"); }),
 		SubI(mod subi { struct QSubI("-=",   "-="); binaryassign!("-"); }),
@@ -148,10 +148,10 @@ define_opers!{
 		// token O_NOT(oper unary true QNot, noti::REGEX, Unary);
 		Or(mod or {
 			struct QOr("||", r"\|\||or\b");
-			pub fn execute(&self, env: &Environment) -> QObject {
-				let lhs = self.lhs.as_ref().expect("lhs is needed for `or`").execute(env);
-				if lhs.as_bool(env).expect("`@bool` is needed for lhs of `or`").to_bool() {
-					lhs
+			pub fn execute(&self, env: &Environment) -> Result {
+				let lhs = self.lhs.as_ref().expect("lhs is needed for `or`").execute(env)?;
+				if lhs.as_bool(env)?.to_bool() {
+					Ok(lhs)
 				} else {
 					self.rhs.as_ref().expect("rhs is needed for `or` when lhs is null").execute(env)
 				}
@@ -159,24 +159,24 @@ define_opers!{
 		}),
 		And(mod and {
 			struct QAnd("&&",  r"&&|and\b");
-			pub fn execute(&self, env: &Environment) -> QObject {
-				let lhs = self.lhs.as_ref().expect("lhs is needed for `and`").execute(env);
-				if lhs.as_bool(env).expect("`@bool` is needed for lhs of `and`").to_bool() {
+			pub fn execute(&self, env: &Environment) -> Result {
+				let lhs = self.lhs.as_ref().expect("lhs is needed for `and`").execute(env)?;
+				if lhs.as_bool(env)?.to_bool() {
 					self.rhs.as_ref().expect("rhs is needed for `and` when lhs is null").execute(env)
 				} else {
-					lhs
+					Ok(lhs)
 				}
 			}
 		}),
 		
 		Lt(mod lt { struct QLt( "<",  "<"); binaryoper!("<"); }),
 		Gt(mod gt { struct QGt( ">",  ">"); binaryoper!(">"); }),
-		Le(mod le { struct QLe("<=", "(?:<=|≤)"); binaryoper!("<="); }),
-		Ge(mod ge { struct QGe(">=", "(?:>=|≥)"); binaryoper!(">="); }),
+		Le(mod le { struct QLe("<=", "<=|≤"); binaryoper!("<="); }),
+		Ge(mod ge { struct QGe(">=", ">=|≥"); binaryoper!(">="); }),
 		Cmp(mod cmp { struct QCmp("<=>", "<=>"); binaryoper!("<=>"); }),
 
 		Eq(mod eq { struct QEq("==", "=="); binaryoper!("=="); }),
-		Ne(mod ne { struct QNe("!=", "(?:!=|≠)"); binaryoper!("!="); }),
+		Ne(mod ne { struct QNe("!=", "!=|≠"); binaryoper!("!="); }),
 		
 		Assign(mod assign { struct QAssign("=", "="); assignoper!("=", false); }),
 		AssignL(mod assignl { struct QAssignL("<-", "<-"); assignoper!("=", false); }),
@@ -185,7 +185,7 @@ define_opers!{
 		// token O_NOT(oper unary true QBwNeg, bw_neg::REGEX, Unary);
 		BwOr(mod bw_or { struct QBwOr("|", r"\|"); binaryoper!("|"); }),
 		BwAnd(mod bw_and { struct QBwAnd("&", "&"); binaryoper!("&"); }),
-		BwXor(mod bw_xor { struct QBwXor("^^", r"(?:\^\^|xor\b)"); binaryoper!("^^"); }),
+		BwXor(mod bw_xor { struct QBwXor("^^", r"\^\^|xor\b"); binaryoper!("^^"); }),
 		BwLs(mod bw_ls { struct QBwLs("<<", "<<"); binaryoper!("<<"); }),
 		BwRs(mod bw_rs { struct QBwRs(">>", ">>"); binaryoper!(">>"); }),
 		
@@ -199,11 +199,11 @@ define_opers!{
 
 		Exists(mod exists {
 			struct QQuestion("?", "\\?");
-			pub fn execute(&self, env: &Environment) -> QObject {
+			pub fn execute(&self, env: &Environment) -> Result {
 				match (&self.lhs, &self.rhs) {
-					(Some(ref var), None) | (None, Some(ref var)) => env.has(&var.to_qvar(env)).into(),
+					(Some(ref var), None) | (None, Some(ref var)) => Ok(env.has(&var.to_qvar(env)?).into()),
 					(Some(ref lhs), Some(ref rhs)) if rhs.oper.try_as_str() == Some(":") => 
-						if lhs.execute(env).as_bool(env).expect("`@bool` is needed for `? :` operator").to_bool() {
+						if lhs.execute(env)?.as_bool(env)?.to_bool() {
 							rhs.lhs().expect("LHS is needed in COND ? LHS : RHS ").execute(env)
 						} else {
 							rhs.rhs().expect("RHS is needed in COND ? LHS : RHS ").execute(env)
@@ -215,7 +215,7 @@ define_opers!{
 
 		Comma(mod comma {
 			struct QComma(",", ",");
-			pub fn execute(&self, env: &Environment) -> QObject {
+			pub fn execute(&self, env: &Environment) -> Result {
 				let mut body = Vec::new();
 				let mut lhs = match self.lhs {
 					Some(ref lhs) => lhs,
@@ -223,28 +223,28 @@ define_opers!{
 				};
 
 				if lhs.oper.try_as_str().map(|s| s == ",").unwrap_or(false) {
-					let lhs = lhs.execute(env).as_list(env).expect("`,`.execute didnt return a list").into();
+					let lhs = lhs.execute(env)?.as_list(env)?.into();
 					body = lhs;
 				} else {
-					body.push(lhs.execute(env));
+					body.push(lhs.execute(env)?);
 				}
 				if let Some(ref rhs) = self.rhs {
-					body.push(rhs.execute(env));
+					body.push(rhs.execute(env)?);
 				}
-				QList::from(body).into()
+				Ok(QList::from(body).into())
 			}
 		}),
 
 		LineEnd(mod line_end {
 			struct QLineEnd(";", ";");
-			pub fn execute(&self, env: &Environment) -> QObject {
+			pub fn execute(&self, env: &Environment) -> Result {
 				if let Some(ref lhs) = self.lhs {
-					lhs.execute(env);
+					lhs.execute(env)?;
 				}
 				if let Some(ref rhs) = self.rhs {
 					rhs.execute(env)
 				} else {
-					QNull.into()
+					Ok(QNull.into())
 				}
 			}
 		}),
@@ -252,9 +252,9 @@ define_opers!{
 
 		Accessor(mod accessor {
 			struct QAccessor(".", r"\.");
-			pub fn execute(&self, env: &Environment) -> QObject {
-				let lhs = self.lhs.as_ref().expect("lhs is needed for `.`").execute(env);
-				let rhs = self.rhs.as_ref().expect("rhs is needed for `.`").to_qvar(env);
+			pub fn execute(&self, env: &Environment) -> Result {
+				let lhs = self.lhs.as_ref().expect("lhs is needed for `.`").execute(env)?;
+				let rhs = self.rhs.as_ref().expect("rhs is needed for `.`").to_qvar(env)?;
 				lhs.call_attr(".", &[&rhs], env)
 			}
 		})

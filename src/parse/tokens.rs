@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use parse::{Tree, TokenMatch, funcs, MatchData, Stream};
 use std::hash::{Hash, Hasher};
 use env::Environment;
-use obj::{QObject, classes::{self, QVar, QBlock, QText, QNull, QList}};
+use obj::{QObject, Result, classes::{self, QVar, QBlock, QText, QNull, QList}};
 use regex::Regex;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -34,7 +34,7 @@ pub struct Token {
 	binding: Binding,
 	r_assoc: bool,
 	pub(super) match_fn: fn(&Stream, &Environment) -> Option<MatchData>,
-	qobj: Option<fn(&Tree, &Environment) -> QObject>,
+	qobj: Option<fn(&Tree, &Environment) -> Result>,
 	to_qvar: Option<fn(&Tree, &Environment) -> QObject>,
 }
 
@@ -79,19 +79,21 @@ impl PartialEq for Token {
 }
 
 impl Token {
-	pub fn create_qobject(&self, tree: &Tree, env: &Environment) -> QObject {
+	pub fn create_qobject(&self, tree: &Tree, env: &Environment) -> Result {
 		debug_assert!(self.qobj.is_some(), "Attempted to create a QObject out of a non-qobj token `{:?}`", self);
 		self.qobj.expect("bad qobj token")(tree, env)
 	}
 
-	pub fn to_qvar(&self, tree: &Tree, env: &Environment) -> QObject {
+	pub fn to_qvar(&self, tree: &Tree, env: &Environment) -> Result {
 		if let Some(to_qvar) = self.to_qvar {
-			return to_qvar(tree, env);
+			return Ok(to_qvar(tree, env));
 		}
-		assert!(tree.is_singular(), "Can only get qvar of singular trees for now");
+
+		assert!(tree.is_singular(), "Can only get qvar of singular trees for now (got: {:#?})", tree);
+
 		if tree.oper.token == V_NORM.deref() {
 			let text = tree.oper.try_as_str().expect(concat!("Non-Text match data found for QVar"));
-			QVar::from_str(text).unwrap().into()
+			Ok(QVar::from_str(text).unwrap().into())
 		} else {
 			tree.execute(env)
 		}
@@ -203,7 +205,7 @@ macro_rules! create_token {
 			..Token::default()
 		}
 	};
-	($name:ident text $quote:tt $object:ty) => {
+	($name:ident text $quote:tt $object:ty, $func:tt) => {
 		Token {
 			name: stringify!($name),
 			qobj: Some(|tree, _| {
@@ -211,7 +213,7 @@ macro_rules! create_token {
 				assert_eq!(tree.oper.token, $name.deref());
 				let text = tree.oper.try_as_str().expect(concat!("Non-Text match data found for ", stringify!($object)));
 
-				<$object>::new(text).into()
+				Ok(<$object>::$func(text).into())
 			}),
 			match_fn: |stream, _| get_text($quote, stream).map(|(s, len)| MatchData::Text(s, len)),
 			..Token::default()
@@ -222,7 +224,7 @@ macro_rules! create_token {
 		Token {
 			name: stringify!($name),
 			match_fn: normal_match_fn!($regex),
-			qobj: Some(|tree, _| object_from_tree::<$object, _>(tree)),
+			qobj: Some(|tree, _| Ok(object_from_tree::<$object, _>(tree))),
 			..Token::default()
 		}
 	}};
@@ -295,11 +297,11 @@ tokens! {
 		debug_assert!(tree.rhs().is_none(), "got rhs of paren block");
 		let block = Tree::try_from_vec(tree.oper.data.try_as_block().expect("MatchData isn't a block for paren?").to_vec());
 		if let Some(lhs) = tree.lhs() { // this is a function call, eg `foo(XXX)`
-			let lhs = lhs.execute(env);
+			let lhs = lhs.execute(env)?;
 
 			if let Some(block) = block { // this is a function call with args, eg `foo(1, 2)`
-				let block = block.execute(env);
-				if let Some(list) = block.as_list(env) {
+				let block = block.execute(env)?;
+				if let Some(list) = block.try_cast_list() {
 					let list = list.as_ref();
 					lhs.call(&list.iter().collect::<Vec<_>>(), env)
 				} else {
@@ -320,11 +322,11 @@ tokens! {
 		debug_assert!(tree.rhs().is_none(), "got rhs of paren block");
 		if let Some(lhs) = tree.lhs() {
 			let block = Tree::try_from_vec(tree.oper.data.try_as_block().expect("MatchData isn't a block for paren?").to_vec());
-			let lhs = lhs.execute(env);
+			let lhs = lhs.execute(env)?;
 
 			if let Some(block) = block { // this is a function call with args, eg `foo(1, 2)`
-				let block = block.execute(env);
-				if let Some(list) = block.as_list(env) {
+				let block = block.execute(env)?;
+				if let Some(list) = block.try_cast_list() {
 					let list = list.as_ref();
 					lhs.call_local(&list.iter().collect::<Vec<_>>(), env)
 				} else {
@@ -335,7 +337,7 @@ tokens! {
 			}
 		} else { // this is just a `()` without anything surrounding it, as in `4 * (5 + 3)`
 			if let MatchData::Block(ref block, _) = tree.oper.data {
-				QBlock::new(Tree::try_from_vec(block.to_owned())).into()
+				Ok(QBlock::new(Tree::try_from_vec(block.to_owned())).into())
 			} else {
 				panic!("Empty curly block body encountered") // this is analgous to `x = ()`;
 			}
@@ -358,9 +360,9 @@ tokens! {
 
 	// token V_LITERAL(text "`");
 
-	token S_SINGLE(text '\'' QText);
-	token S_DOUBLE(text '\"' QText);
-	// token S_GRAVE(string '`' QText);
+	token S_SINGLE(text '\'' QText, new);
+	token S_DOUBLE(text '\"' QText, new);
+	token S_GRAVE(text '`' QVar, from_nonstatic_str);
 
 
 	// token O_NEG(oper unary true QNeg, neg::REGEX, UnaryNeg);
@@ -422,7 +424,7 @@ tokens! {
 		qobj: Some(|tree, env| {
 			assert!(tree.is_singular(), concat!("Non-singular tree found for Var: {:?}"), tree);
 			assert_eq!(tree.oper.token, V_NORM.deref(), "non-vnorm passed to vnorm");
-			env.get(&tree.to_qvar(env))
+			env.get(&tree.to_qvar(env)?)
 		}),
 		..Token::default()
 	};

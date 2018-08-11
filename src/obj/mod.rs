@@ -119,6 +119,8 @@ macro_rules! default_attrs {
 
 mod object;
 mod attrs;
+mod exception;
 pub mod classes;
 
 pub use self::object::{Id, IdType, QObject, Classes};
+pub use self::exception::{Exception, Result};

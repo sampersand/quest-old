@@ -1,4 +1,4 @@
-use obj::{Classes, QObject};
+use obj::{Classes, QObject, Exception};
 use obj::classes::QNull;
 use env::Environment;
 
@@ -153,18 +153,18 @@ default_attrs! { for QNum, with variant Num;
 	use QObj;
 
 	fn "@bool" (this) {
-		(this.0 != 0.0).into()
+		Ok((this.0 != 0.0).into())
 	}
 
 	fn "@num" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "@text" (this) {
 		if let Some(int) = this.try_to_int() {
-			int.to_string().into()
+			Ok(int.to_string().into())
 		} else {
-			this.0.to_string().into()
+			Ok(this.0.to_string().into())
 		}
 	}
 
@@ -180,47 +180,47 @@ default_attrs! { for QNum, with variant Num;
 		}
 	}
 
-	fn "round" (this; places = QNull.into()) with env {
+	fn "round" (this; places = ().into()) with env {
 		if !places.is_null() {
 			let places = into_f64(&places, env);
 			if places != 0.0 {
 				unimplemented!("TODO: Round with non-zero amount")
 			}
 		}
-		this.0.round().into()
+		Ok(this.0.round().into())
 	}
 
 	fn "abs" (this) {
-		this.0.abs().into()
+		Ok(this.0.abs().into())
 	}
 
-	fn "+" (this, rhs) with env { (this.0 + into_f64(rhs, env)).into() }
-	fn "-" (this, rhs) with env { (this.0 - into_f64(rhs, env)).into() }
-	fn "*" (this, rhs) with env { (this.0 * into_f64(rhs, env)).into() }
-	fn "/" (this, rhs) with env { (this.0 / into_f64(rhs, env)).into() }
-	fn "^" (this, rhs) with env { (this.0.powf(into_f64(rhs, env))).into() }
-	fn "%" (this, rhs) with env { (this.0 % into_f64(rhs, env)).into() }
+	fn "+" (this, rhs) with env { Ok((this.0 + into_f64(rhs, env)).into()) }
+	fn "-" (this, rhs) with env { Ok((this.0 - into_f64(rhs, env)).into()) }
+	fn "*" (this, rhs) with env { Ok((this.0 * into_f64(rhs, env)).into()) }
+	fn "/" (this, rhs) with env { Ok((this.0 / into_f64(rhs, env)).into()) }
+	fn "^" (this, rhs) with env { Ok((this.0.powf(into_f64(rhs, env))).into()) }
+	fn "%" (this, rhs) with env { Ok((this.0 % into_f64(rhs, env)).into()) }
 
-	fn "<"  (this, rhs) with env { (this.0 <  into_f64(rhs, env)).into() }
-	fn "<=" (this, rhs) with env { (this.0 <= into_f64(rhs, env)).into() }
-	fn ">"  (this, rhs) with env { (this.0 >  into_f64(rhs, env)).into() }
-	fn ">=" (this, rhs) with env { (this.0 >= into_f64(rhs, env)).into() }
-	fn "==" (this, rhs) with env { (this.0 == into_f64(rhs, env)).into() }
-	fn "!=" (this, rhs) with env { (this.0 !=  into_f64(rhs, env)).into() }
+	fn "<"  (this, rhs) with env { Ok((this.0 <  into_f64(rhs, env)).into()) }
+	fn "<=" (this, rhs) with env { Ok((this.0 <= into_f64(rhs, env)).into()) }
+	fn ">"  (this, rhs) with env { Ok((this.0 >  into_f64(rhs, env)).into()) }
+	fn ">=" (this, rhs) with env { Ok((this.0 >= into_f64(rhs, env)).into()) }
+	fn "==" (this, rhs) with env { Ok((this.0 == into_f64(rhs, env)).into()) }
+	fn "!=" (this, rhs) with env { Ok((this.0 !=  into_f64(rhs, env)).into()) }
 	fn "<=>" (this, rhs) with env {
 		let other = into_f64(rhs, env);
 		if this.0 < other {
-			(-1.0).into()
+			Ok((-1.0).into())
 		} else if this.0 == other {
-			0.0.into()
+			Ok(0.0.into())
 		} else {
-			1.0.into()
+			Ok(1.0.into())
 		}
 	}
 
 	fn "~" (this){
 		if let Some(int) = this.try_to_int() {
-			(!int).into()
+			Ok((!int).into())
 		} else {
 			panic!("Can't apply `~` to non-int `{}`", this)
 		}
@@ -228,7 +228,7 @@ default_attrs! { for QNum, with variant Num;
 	fn "|" (this, rhs) with env {
 		let rhs = into_qnum(rhs, env);
 		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			(l | r).into()
+			Ok((l | r).into())
 		} else {
 			panic!("Can't apply `|` to with nonints found: `{}`, `{}`", this, rhs)
 		}
@@ -236,7 +236,7 @@ default_attrs! { for QNum, with variant Num;
 	fn "&" (this, rhs) with env {
 		let rhs = into_qnum(rhs, env);
 		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			(l & r).into()
+			Ok((l & r).into())
 		} else {
 			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
 		}
@@ -244,7 +244,7 @@ default_attrs! { for QNum, with variant Num;
 	fn "^^" (this, rhs) with env {
 		let rhs = into_qnum(rhs, env);
 		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			(l ^ r).into()
+			Ok((l ^ r).into())
 		} else {
 			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
 		}
@@ -252,7 +252,7 @@ default_attrs! { for QNum, with variant Num;
 	fn "<<" (this, rhs) with env {
 		let rhs = into_qnum(rhs, env);
 		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			(l ^ r).into()
+			Ok((l ^ r).into())
 		} else {
 			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
 		}
@@ -260,7 +260,7 @@ default_attrs! { for QNum, with variant Num;
 	fn ">>" (this, rhs) with env {
 		let rhs = into_qnum(rhs, env);
 		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			(l ^ r).into()
+			Ok((l ^ r).into())
 		} else {
 			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
 		}

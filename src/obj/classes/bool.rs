@@ -85,10 +85,10 @@ impl FromStr for QBool {
 default_attrs!{ for QBool, with variant Bool ;
 	use QObj;
 	fn "@num" (this) {
-		QNum::new(this.0 as u8 as _).into()
+		Ok(QNum::new(this.0 as u8 as _).into())
 	}
 
 	fn "@bool" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 }

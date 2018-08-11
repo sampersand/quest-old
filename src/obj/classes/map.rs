@@ -1,41 +1,41 @@
+use std::sync::Arc;
 use obj::QObject;
-use obj::classes::{QNum, QNull};
+use obj::classes::{QNum, QNull, QList};
+use sync::SyncMap;
 
-
-use std::collections::HashMap;
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct QMap(HashMap<QObject, QObject>);
+pub struct QMap(Arc<SyncMap<QObject, QObject>>);
 
 impl QMap {
 	#[inline]
-	pub fn new(h: HashMap<QObject, QObject>) -> QMap {
-		QMap(h)
+	pub fn new<M: Into<Arc<SyncMap<QObject, QObject>>>>(map: M) -> QMap {
+		QMap(map.into())
 	}
 }
 
-impl From<HashMap<QObject, QObject>> for QMap {
+impl From<SyncMap<QObject, QObject>> for QMap {
 	#[inline]
-	fn from(map: HashMap<QObject, QObject>) -> QMap {
+	fn from(map: SyncMap<QObject, QObject>) -> QMap {
 		QMap::new(map)
 	}
 }
 
-impl From<HashMap<QObject, QObject>> for QObject {
+impl From<SyncMap<QObject, QObject>> for QObject {
 	#[inline]
-	fn from(map: HashMap<QObject, QObject>) -> QObject {
+	fn from(map: SyncMap<QObject, QObject>) -> QObject {
 		QMap::from(map).into()
 	}
 }
 
 impl Deref for QMap {
-	type Target = HashMap<QObject, QObject>;
+	type Target = SyncMap<QObject, QObject>;
 
 	#[inline]
-	fn deref(&self) -> &HashMap<QObject, QObject> {
+	fn deref(&self) -> &SyncMap<QObject, QObject> {
 		&self.0
 	}
 }
@@ -43,7 +43,7 @@ impl Deref for QMap {
 impl Display for QMap {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		write!(f, "{{")?;
-		let ref inner = self.0;
+		let ref inner = self.0.try_read().expect("deadlock on map display");
 		if !inner.is_empty() {
 			let mut iter = inner.iter();
 			let first = iter.next().unwrap();
@@ -68,39 +68,54 @@ default_attrs! { for QMap, with variant Map;
 	use QObj;
 
 	fn "@map" (this) {
-		this.clone().into()
+		Ok(this.clone().into())
 	}
 
 	fn "@bool" (this) {
-		this.0.is_empty().into()
+		Ok(this.0.read().is_empty().into())
+	}
+
+	fn "keys" (this) {
+		Ok(QList::new(this.0.read().keys().map(QObject::clone).collect()).into())
 	}
 
 	fn "@list" (_this) with env vars obj {
 		obj.call_attr("keys", &[], env)
 	}
 
+	fn "empty!" (mut this) with _env _var obj{
+		this.0.write().clear();
+		Ok(obj.clone())
+	}
+
+	fn "empty?" (this) {
+		Ok(this.0.read().is_empty().into())
+	}
+
 	fn "len" (this) {
-		this.0.len().into()
+		Ok(this.0.read().len().into())
 	}
 
 	fn "get" (this, key) {
 		if let Some(val) = this.0.get(key) {
-			val.clone()
+			Ok(val.clone())
 		} else {
-			warn!("Missing attribute `{}` for `{}`; returning qnull", key, this);
-			().into()
+			debug!("Missing attribute `{}` for `{}`; returning qnull", key, this);
+			Ok(().into())
 		}
 	}
 
 	fn "set" (mut this, key, val) {
-		this.0.insert(key.clone(), val.clone()).unwrap_or_else(|| QNull.into())
+		Ok(this.0.set(key.clone(), val.clone()).unwrap_or_else(|| QNull.into()))
 	}
 
 	fn "has" (this, key) {
-		this.0.contains_key(key).into()
+		Ok(this.0.has_key(key).into())
 	}
 
 	fn "del" (mut this, key) {
-		this.0.remove(key).unwrap_or_else(|| QNull.into())
+		Ok(this.0.del(key).unwrap_or_else(|| QNull.into()))
 	}
 }
+
+
