@@ -1,43 +1,37 @@
 use parse::{Parsable, Stream};
+use obj::{Id, AnyObject, SharedObject};
 
 use shared::SharedMap;
-use obj::{Id, object::QObject};
-use obj::classes::{QuestClass, DefaultAttrs};
 
 use std::fmt::{self, Display, Formatter};	
 use std::sync::Weak;
 
-pub type QVar = QObject<Id>;
+pub type QVar = SharedObject<Id>;
 
 impl QVar {
 	pub fn from_nonstatic_str(str_id: &str) -> QVar {
-		QVar::new(Id::from_nonstatic_str(str_id))
+		Id::from_nonstatic_str(str_id).into()
 	}
 }
 
 impl From<&'static str> for QVar {
 	#[inline]
 	fn from(inp: &'static str) -> QVar {
-		QVar::new(inp.into())
+		Id::from(inp).into()
 	}
 }
 
-impl Parsable for Id {
-	type Value = Id;
+impl Parsable for QVar {
+	type Value = QVar;
 
-	fn try_parse(stream: &mut Stream) -> Option<Id> {
+	fn try_parse(stream: &mut Stream) -> Option<QVar> {
 		let variable = stream.try_get(regex!(r"\A(\$\W|(\$.|[A-Za-z_])\w+)\b"))?;
-		Some(Id::from_nonstatic_str(variable)) 
+		Some(Id::from_nonstatic_str(variable).into())
 	}
-}
-
-
-impl QuestClass for Id {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
 }
 
 define_attrs! {
-	static ref DEFAULT_ATTRS for Id;
+	static ref DEFAULT_ATTRS for QVar;
 	use QObject<Id>;
 
 	fn "@var" (this) {

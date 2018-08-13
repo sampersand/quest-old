@@ -16,7 +16,7 @@ pub struct WriteGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockWriteGuard<'a, ()
 pub struct Shared<T: ?Sized>(Arc<SharedInner<T>>);
 
 struct SharedInner<T: ?Sized>{
-	lock: RwLock<()>,
+	lock: RwLock<()>, // todo: make this an actual implementation of a RwLock (and not use the inbuilt one)
 	data: UnsafeCell<T>
 }
 

@@ -1,22 +1,19 @@
-use shared::Shared;
 use std::fmt::Debug;
-use std::hash::Hash;
-use env::Environment;
-use std::collections::HashMap;
-use obj::{Id, Result, object::QObject, SharedObject};
+use obj::{Id, AnyObject};
 
-pub type DefaultAttrs<T> = HashMap<Id, fn(&Shared<QObject<T>>, &[&SharedObject], &Environment) -> Result<SharedObject>>;
-
-pub trait QuestClass : Debug + 'static {
-	fn default_attrs() -> &'static DefaultAttrs<Self> where Self: Sized;
+pub trait QuestClass : Debug + Send + Sync + 'static {
+	const GET_DEFAULTS: fn(&AnyObject, &Id) -> Option<AnyObject>;
+	const HAS_DEFAULTS: fn(&AnyObject, &Id) -> bool; // same as `GET_DEFAULT` without actually executing it
 }
 
 mod bool;
 mod text;
 mod var;
 mod exception;
+mod boundfn;
 
 // these classes have special inner values that need to be accessed from `parse`
+pub(crate) mod block;
 pub(crate) mod null;
 pub(crate) mod num;
 pub(crate) mod oper;
@@ -27,4 +24,6 @@ pub use self::null::QNull;
 pub use self::text::QText;
 pub use self::var::QVar;
 pub use self::oper::QOper;
+pub use self::block::QBlock;
+pub use self::boundfn::QBoundFn;
 pub use self::exception::QException;

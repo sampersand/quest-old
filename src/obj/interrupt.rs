@@ -1,4 +1,4 @@
-use obj::{Id, SharedObject};
+use obj::{Id, AnyObject};
 use obj::object::QObject;
 use obj::classes::{QuestClass, QException};
 
@@ -7,7 +7,7 @@ use std::error::Error;
 
 #[derive(Debug)]
 pub enum Interrupt {
-	Return(usize, Option<SharedObject>),
+	Return(usize, Option<AnyObject>),
 	Exception(QException)
 }
 

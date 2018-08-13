@@ -8,7 +8,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 #[derive(Debug)]
 pub enum QObject_ {
 	Old(QObject__),
-	New(::obj::SharedObject)
+	New(::obj::AnyObject)
 }
 
 impl From<QObject__> for QObject_ {
@@ -18,9 +18,9 @@ impl From<QObject__> for QObject_ {
 	}
 }
 
-impl From<::obj::SharedObject> for QObject_ {
+impl From<::obj::AnyObject> for QObject_ {
 	#[inline]
-	fn from(inp: ::obj::SharedObject) -> QObject_ {
+	fn from(inp: ::obj::AnyObject) -> QObject_ {
 		QObject_::New(inp)
 	}
 }

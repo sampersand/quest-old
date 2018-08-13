@@ -264,7 +264,7 @@ fn object_from_tree_new<T: ::obj::classes::QuestClass + FromStr<Err=E>, E: Debug
 	let text = tree.oper.try_as_str().expect("Non-Text match data found");
 
 	match T::from_str(&text) {
-		Ok(obj) => (::shared::Shared::new(::obj::__QObject::new(obj)) as ::obj::SharedObject).into(),
+		Ok(obj) => (::shared::Shared::new(::obj::__QObject::new(obj)) as ::obj::AnyObject).into(),
 		Err(err) => panic!("Bad sigil `{:?}` supplied : {:?}", text, err)
 	}
 }

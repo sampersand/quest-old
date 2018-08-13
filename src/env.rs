@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use obj::{Id, SharedObject};
+use obj::{Id, AnyObject};
 use shared::SharedMap;
 
 #[derive(Clone)]
 pub struct Environment<'a> {
-	locals: SharedMap<Id, SharedObject>,
-	globals: SharedMap<Id, SharedObject>,
-	// specials: &'static HashMap<Id, fn(&Environment) -> SharedObject>,
+	locals: SharedMap<Id, AnyObject>,
+	globals: SharedMap<Id, AnyObject>,
+	// specials: &'static HashMap<Id, fn(&Environment) -> AnyObject>,
 	binding: Option<&'a Environment<'a>>,
 	// tokens: Vec<&'static Token>
 }

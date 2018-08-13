@@ -1,65 +1,52 @@
-use obj::{SharedObject, object::QObject};
-use obj::classes::{QuestClass, DefaultAttrs};
-use std::fmt::{self, Display, Formatter};
+use obj::{AnyObject, SharedObject};
+
+use std::fmt::{self, Debug, Display, Formatter};
 use std::error::Error as ErrorTrait;
+
+pub trait SafeError: ErrorTrait + Send + Sync {}
+impl<T: ErrorTrait + Send + Sync> SafeError for T {}
+
 
 #[derive(Debug)]
 pub enum Exception {
-	Custom(SharedObject),
-	Rust(Box<dyn ErrorTrait>)
+	Custom(AnyObject),
+	Rust(Box<dyn SafeError>)
 }
 
-pub type QException = QObject<Exception>;
+pub type QException = SharedObject<Exception>;
 
 impl Display for Exception {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		match self {
 			Exception::Custom(val) => write!(f, "{:?}", val),
-			Exception::Rust(ref err) => Display::fmt(err, f)
+			Exception::Rust(ref err) => <SafeError as Debug>::fmt(unimplemented!(), f)
+			// Exception::Rust(ref err) => <SafeError as Debug>::fmt(&&err, f)
 		}
 	}
 }
 
-impl Display for QException {
-	#[inline]
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(self.as_ref(), f)
-	}
-}
-
-impl QuestClass for Exception {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
-impl<E: ErrorTrait + 'static> From<E> for QException {
-	#[inline]
-	fn from(inp: E) -> QException {
-		QException::new(Exception::from(inp))
-	}
-}
-
-impl<E: ErrorTrait + 'static> From<E> for Exception {
+impl<E: SafeError + 'static> From<E> for Exception {
 	#[inline]
 	fn from(err: E) -> Exception {
 		Exception::Rust(Box::new(err))
 	}
 }
 
-impl From<SharedObject> for Exception {
+impl From<AnyObject> for Exception {
 	#[inline]
-	fn from(err: SharedObject) -> Exception {
+	fn from(err: AnyObject) -> Exception {
 		Exception::Custom(err)
 	}
 }
 
 define_attrs! {
-	static ref DEFAULT_ATTRS for Exception;
+	static ref DEFAULT_ATTRS for QException;
 	use QObject<Exception>;
 
 	fn "@text" (this) with env {
 		match this.as_ref() {
 			Exception::Custom(ref obj) => Ok(obj.call_attr("@bool", &[], env)?),
-			Exception::Rust(ref err) => Ok(Shared::from(QText::from(err.to_string())) as SharedObject),
+			Exception::Rust(ref err) => Ok(Shared::from(QText::from(err.to_string())) as AnyObject),
 		}
 	}
 }

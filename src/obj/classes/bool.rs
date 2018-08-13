@@ -1,38 +1,24 @@
 use parse::{Parsable, Stream};
-
-use obj::object::QObject;
-use obj::classes::{QuestClass, DefaultAttrs};
+use obj::{AnyObject, SharedObject};
 
 use std::fmt::{self, Display, Formatter};
 
-pub type QBool = QObject<bool>;
+pub type QBool = SharedObject<bool>;
 
-impl Display for QBool {
-	#[inline]
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(self.as_ref(), f)
-	}
-}
+impl Parsable for QBool {
+	type Value = QBool;
 
-impl Parsable for bool {
-	type Value = bool;
-
-	fn try_parse(stream: &mut Stream) -> Option<bool> {
+	fn try_parse(stream: &mut Stream) -> Option<QBool> {
 		match stream.try_get(regex!(r"\A([tT]rue|[fF]alse)\b"))? {
-			"true"  | "True"  => Some(true),
-			"false" | "False" => Some(false),
+			"true"  | "True"  => Some(true.into()),
+			"false" | "False" => Some(false.into()),
 			other => unreachable!("found non-bool regex value `{:?}`", other)
 		}
 	}
 }
 
-
-impl QuestClass for bool {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
 define_attrs! {
-	static ref DEFAULT_ATTRS for bool;
+	static ref DEFAULT_ATTRS for QBool;
 	use QObject<bool>;
 
 	fn "@num" (this) {

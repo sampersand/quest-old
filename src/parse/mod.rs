@@ -1,9 +1,14 @@
 mod stream;
 mod funcs;
 mod impls;
+mod tree;
 
+
+pub use self::tree::Tree;
 pub use self::stream::Stream;
-pub use self::funcs::{parse_file};
+
+pub(crate) use self::funcs::parse_stream;
+pub use self::funcs::{parse_file, parse_str};
 
 
 use obj::classes::QuestClass;

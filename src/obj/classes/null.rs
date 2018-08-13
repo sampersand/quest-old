@@ -1,13 +1,12 @@
 use parse::{Parsable, Stream};
-use std::marker::PhantomData;
-use obj::object::QObject;
-use obj::classes::{QuestClass, DefaultAttrs};
+use obj::{AnyObject, SharedObject};
+
 use std::fmt::{self, Display, Formatter};	
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Null;
 
-pub type QNull = QObject<Null>;
+pub type QNull = SharedObject<Null>;
 
 impl Display for Null {
 	#[inline]
@@ -16,21 +15,16 @@ impl Display for Null {
 	}
 }
 
-impl Parsable for Null {
-	type Value = Null;
+impl Parsable for QNull {
+	type Value = QNull;
 
-	fn try_parse(stream: &mut Stream) -> Option<Null> {
-		stream.try_get("null").and(Some(Null))
+	fn try_parse(stream: &mut Stream) -> Option<QNull> {
+		stream.try_get("null").map(|_| Null.into())
 	}
 }
 
-impl QuestClass for Null {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
-
 define_attrs! {
-	static ref DEFAULT_ATTRS for Null;
+	static ref DEFAULT_ATTRS for QNull;
 	use QObject<Null>;
 
 	fn "@num" () {

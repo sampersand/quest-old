@@ -1,7 +1,6 @@
 use parse::{Parsable, Stream};
+use obj::{AnyObject, SharedObject};
 
-use obj::object::QObject;
-use obj::classes::{QuestClass, DefaultAttrs};
 use std::fmt::{self, Display, Formatter};	
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -21,7 +20,7 @@ pub enum Oper {
 	Not, Neg, Exists, Incr, Decr,
 }
 
-pub type QOper = QObject<Oper>;
+pub type QOper = SharedObject<Oper>;
 
 impl Display for Oper {
 	#[inline]
@@ -51,14 +50,14 @@ impl Oper {
 	}
 }
 
-impl Parsable for Oper {
-	type Value = Oper;
-	fn try_parse(stream: &mut Stream) -> Option<Oper> {
+impl Parsable for QOper {
+	type Value = QOper;
+	fn try_parse(stream: &mut Stream) -> Option<QOper> {
 		macro_rules! parse_oper {
 			($($oper:ident $regex:tt)*) => {
 				$(
 					if stream.try_get(regex!(concat!("\\A(?:", $regex, ")"))).is_some() {
-						return Some(Oper::$oper);
+						return Some(Oper::$oper.into());
 					}
 				)*
 			}
@@ -77,8 +76,8 @@ impl Parsable for Oper {
 			AssignL "<-" AssignR "->" // notice this is before both the `<` and `-` operators
 			Incr r"\+\+" Decr "--" // note before `+` and `-`
 
-			AddI r"\+=" SubI "-=" MulI r"\*=" DivI "/=" PowI r"(\^|pow)="   ModI  "(%|mod)="
-			Add  r"\+"  Sub  "-"  Mul  r"\*"  Div  "/"  Pow  r"(\^|pow\b)"  Mod  r"(%|mod\b)"
+			AddI r"\+=" SubI "-=" MulI r"\*=" DivI "/=" PowI r"(\^|pow|\*\*)="   ModI  "(%|mod)="
+			Add  r"\+"  Sub  "-"  Mul  r"\*"  Div  "/"  Pow  r"(\^|pow\b|\*\*)"  Mod  r"(%|mod\b)"
 
 			Eq r"==\b" Ne "!=" Le "<=" Ge ">=" Lt "<" Ge ">"
 			Assign "=" // notice this is after `==`
@@ -91,13 +90,8 @@ impl Parsable for Oper {
 	}
 }
 
-impl QuestClass for Oper {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
-
 define_attrs! {
-	static ref DEFAULT_ATTRS for Oper;
+	static ref DEFAULT_ATTRS for QOper;
 	use QObject<Oper>;
 
 	fn "@num" () {

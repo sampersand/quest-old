@@ -1,13 +1,11 @@
 use parse::{Parsable, Stream};
-
-use obj::object::QObject;
-use obj::classes::{QuestClass, DefaultAttrs};
+use obj::{AnyObject, SharedObject};
 
 use std::str::FromStr;
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
 
-pub type QNum = QObject<Number>;
+pub type QNum = SharedObject<Number>;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Number(i32, u32);
@@ -15,7 +13,7 @@ pub struct Number(i32, u32);
 
 impl QNum {
 	pub fn from_number<N: Into<Number>>(num: N) -> QNum {
-		QNum::new(num.into())
+		num.into().into()
 	}
 }
 
@@ -68,10 +66,10 @@ impl Display for Number {
 	}
 }
 
-impl Parsable for Number {
-	type Value = Number;
+impl Parsable for QNum {
+	type Value = QNum;
 
-	fn try_parse(stream: &mut Stream) -> Option<Number> {
+	fn try_parse(stream: &mut Stream) -> Option<QNum> {
 		if let Some(data) = stream.try_get(regex!(r"(?i)\A0(x[\da-f]+|o[0-7]+|b[01]+|d\d+)\b")) {
 			assert_eq!(data.chars().next(), Some('0'));
 			match data.chars().nth(1).expect("no regex supplied, but it must have matched") {
@@ -96,30 +94,20 @@ impl Parsable for Number {
 				panic!("TODO: incorperate exponent (ie sci notation)");
 			}
 
-			return Some(Number(above_one, mantissa))
+			return Some(Number(above_one, mantissa).into())
 		}
 
 		None
 	}
 }
 
-impl QuestClass for Number {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
 define_attrs! {
-	static ref DEFAULT_ATTRS for Number;
+	static ref DEFAULT_ATTRS for QNum;
 	use QObject<Number>;
 	fn "@num" (this) {
 		Ok(this.clone())
 	}
 }
-
-
-
-
-
-
 
 
 

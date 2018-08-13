@@ -1,40 +1,27 @@
 use parse::{Parsable, Stream};
+use obj::{AnyObject, SharedObject};
 
-use obj::object::QObject;
-use obj::classes::{QuestClass, DefaultAttrs, QException, num};
 use std::fmt::{self, Display, Formatter};	
 use std::str::FromStr;
 
-pub type QText = QObject<String>;
+pub type QText = SharedObject<String>;
 
+impl Parsable for QText {
+	type Value = QText;
 
-impl AsRef<str> for QText {
-	#[inline]
-	fn as_ref(&self) -> &str {
-		String::as_ref(self.as_ref())
-	}
-}
-
-impl QuestClass for String {
-	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
-}
-
-impl Parsable for String {
-	type Value = String;
-
-	fn try_parse(stream: &mut Stream) -> Option<String> {
+	fn try_parse(stream: &mut Stream) -> Option<QText> {
 		// double quotes
 		if let Some(text) = stream.try_get(regex!(r#"\A("(\\.|[^"])*")"#)) {
 			assert_eq!(text.chars().next(), Some('\"'), "Invalid first char encountered");
 			assert_eq!(text.chars().last(), Some('\"'), "Invalid first char encountered");
-			return Some(text[1..text.len() - 1].to_string());
+			return Some(text[1..text.len() - 1].to_string().into());
 		}
 
 		// single string
 		if let Some(text) = stream.try_get(regex!(r"\A('(\\.|[^'])*')")) {
 			assert_eq!(text.chars().next(), Some('\''), "Invalid first char encountered");
 			assert_eq!(text.chars().last(), Some('\''), "Invalid first char encountered");
-			return Some(text[1..text.len() - 1].to_string());
+			return Some(text[1..text.len() - 1].to_string().into());
 		}
 
 		// grave quote
@@ -46,9 +33,8 @@ impl Parsable for String {
 	}
 }
 
-
 define_attrs! {
-	static ref DEFAULT_ATTRS for String;
+	static ref DEFAULT_ATTRS for QText;
 	use QObject<String>;
 
 	fn "@text" (this) {
