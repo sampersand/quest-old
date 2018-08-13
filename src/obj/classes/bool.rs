@@ -17,15 +17,14 @@ impl Parsable for QBool {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QBool;
+define_attrs! { for QBool;
 	use QObject<bool>;
 
 	fn "@num" (this) {
 		Ok(QNum::from_number(**this as u8))
 	}
 
-	fn "@bool" (this) {
-		Ok(this.clone())
+	fn "@bool" () with _env _args obj {
+		Ok(obj.clone())
 	}
 }

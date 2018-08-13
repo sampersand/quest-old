@@ -40,7 +40,6 @@ impl<C: Send + Sync> From<C> for SharedObject<C> where SharedObject<C>: QuestCla
 }
 
 
-
 impl<C: Send + Sync + Clone> SharedObject<C> {
 	pub fn clone_object(&self) -> Self {
 		QObject::clone(&*self.read()).into()

@@ -39,8 +39,7 @@ impl From<AnyObject> for Exception {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QException;
+define_attrs! { for QException;
 	use QObject<Exception>;
 
 	fn "@text" (this) with env {

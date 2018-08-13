@@ -23,8 +23,7 @@ impl Parsable for QNull {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QNull;
+define_attrs! { for QNull;
 	use QObject<Null>;
 
 	fn "@num" () {

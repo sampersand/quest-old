@@ -90,8 +90,7 @@ impl Parsable for QOper {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QOper;
+define_attrs! { for QOper;
 	use QObject<Oper>;
 
 	fn "@num" () {

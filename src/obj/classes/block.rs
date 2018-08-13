@@ -18,16 +18,17 @@ impl Parsable for QBlock {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QBlock;
+define_attrs! { for QBlock;
 	use QObject<Tree>;
 
-	fn "{}" (this) with env args {
+	fn "{}" (this) with env args obj {
 		unimplemented!("TODO: local call qblock");
+		Ok(obj.clone())
 	}
 
-	fn "()" (this) with env args {
+	fn "()" (this) with env args obj {
 		unimplemented!("TODO: call qblock");
+		Ok(obj.clone())
 	}
 }
 

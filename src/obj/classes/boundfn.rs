@@ -9,16 +9,24 @@ use std::fmt::{self, Debug, Display, Formatter};
 #[derive(Clone, Copy)]
 pub struct BindableFn(pub fn(&AnyObject, &[&AnyObject], &Environment) -> Result<AnyObject>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]//, PartialEq, Eq)]
 pub struct BoundFn(BindableFn, AnyObject);
 
 pub type QBoundFn = SharedObject<BoundFn>;
 
 impl BindableFn {
-	pub fn bind(self, obj: AnyObject) -> QBoundFn {
+	pub fn bind_to(self, obj: AnyObject) -> QBoundFn {
 		QBoundFn::from(BoundFn(self, obj))
 	}
 }
+
+impl Eq for BoundFn {}
+impl PartialEq for BoundFn {
+	fn eq(&self, other: &BoundFn) -> bool {
+		self.0 == other.0 && &self.1 == &other.1
+	}
+}
+
 
 impl Eq for BindableFn {}
 impl PartialEq for BindableFn {
@@ -43,15 +51,16 @@ impl Display for BindableFn {
 }
 
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QBoundFn;
+define_attrs! { for QBoundFn;
 	use QObject<BindableFn>;
 
-	fn "{}" (this) with env args {
+	fn "{}" (this) with env args obj {
 		unimplemented!("TODO: local call qblock");
+		Ok(obj.clone())
 	}
 
-	fn "()" (this) with env args {
+	fn "()" (this) with env args obj {
 		unimplemented!("TODO: call qblock");
+		Ok(obj.clone())
 	}
 }

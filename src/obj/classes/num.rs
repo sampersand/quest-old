@@ -101,11 +101,10 @@ impl Parsable for QNum {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QNum;
+define_attrs! { for QNum;
 	use QObject<Number>;
 	fn "@num" (this) {
-		Ok(this.clone())
+		Ok(QNum::from(this.clone()))
 	}
 }
 

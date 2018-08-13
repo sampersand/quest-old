@@ -33,12 +33,11 @@ impl Parsable for QText {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QText;
+define_attrs! { for QText;
 	use QObject<String>;
 
-	fn "@text" (this) {
-		Ok(this.clone())
+	fn "@text" () with _env _args obj {
+		Ok(obj.clone())
 	}
 
 	fn "@bool" (this) {
@@ -50,7 +49,7 @@ define_attrs! {
 
 	fn "@num" (this) {
 		let mut stream: Stream = Stream::from_str(this.as_ref());
-		Ok(QNum::from(num::Number::try_parse(&mut stream).expect("Invalid number given (todo: make this an exception)")))
+		Ok(QNum::try_parse(&mut stream).expect("Invalid number given (todo: make this an exception)"))
 	}
 
 	fn "@cmd" (this) {

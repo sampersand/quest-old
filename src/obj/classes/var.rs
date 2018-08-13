@@ -30,12 +30,11 @@ impl Parsable for QVar {
 	}
 }
 
-define_attrs! {
-	static ref DEFAULT_ATTRS for QVar;
+define_attrs! { for QVar;
 	use QObject<Id>;
 
 	fn "@var" (this) {
-		Ok(this.clone())
+		Ok(QVar::from(*this))
 	}
 
 	fn "@text" (this) {
