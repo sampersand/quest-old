@@ -1,79 +1,44 @@
-use std::ops::Deref;
-use std::cmp::min;
-use std::fmt::{self, Display, Debug, Formatter};
+use std::str::pattern::Pattern;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stream<'a> {
 	data: &'a str,
-	src: Source
+	file: &'a str,
+	line: usize
 }
 
 impl<'a> Stream<'a> {
-	pub fn from_file(file: &str, data: &'a str) -> Stream<'a> {
-		Stream::from_source(file.to_string(), data)
-	}
 	pub fn from_str(data: &'a str) -> Stream<'a> {
-		Stream::from_source(format!("<data from '{}'>", &data[0..min(data.len(), 10)]), data)
-	}
-	pub fn from_source(source: String, data: &'a str) -> Stream<'a> {
-		Stream { data, src: Source { source, line: 0, col: 0 }}
-	}
-}
-
-impl<'a> Stream<'a> {
-	pub(super)fn get_src(&self) -> Source {
-		self.src.clone()
-	}
-
-	pub(super) fn offset_by(&mut self, amnt: usize) {
-		// todo: fix this
-		if self.data[..amnt].contains('\n') {
-			self.src.line += self.data[0..amnt].lines().count();
-			self.src.col = self.data[0..amnt].lines().last().unwrap().len();
-		} else {
-			self.src.col += amnt;
+		Stream {
+			data,
+			file: "<evald string>",
+			line: 0
 		}
+	}
 
-		self.data = &self.data[amnt..];
+	pub fn from_file(file: &'a str, data: &'a str) -> Stream<'a> {
+		Stream { file, data, line: 0 }
+	}
+
+	pub fn as_str(&self) -> &'a str {
+		self.data
+	}
+
+	pub fn try_get<P: Pattern<'a>>(&mut self, pat: P) -> Option<&'a str> {
+		let (pos, val) = self.data.match_indices(pat).next()?;
+		if pos == 0 {
+			self.data = &self.data[val.len()..];
+			self.line += val.matches('\n').count();
+			Some(val)
+		} else {
+			None
+		}
 	}
 }
 
-impl<'a> Deref for Stream<'a> {
-	type Target = str;
-	fn deref(&self) -> &str {
-		&self.data
-	}
-}
-
-impl<'a> Debug for Stream<'a> {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "Stream({}, '{}')", self.src, self.data)
-	}
-}
-
-
-impl<'a> Display for Stream<'a> {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(&self.data, f)
-	}
-}
-
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Source {
-	source: String,
-	line: usize,
-	col: usize
-}
-
-impl Display for Source {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "{}:{}", self.source, self.line)
-	}
-}
-
-impl Debug for Source {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "Source({:?}, {}, {})", self.source, self.line, self.col)
+impl<'a> From<&'a str> for Stream<'a> {
+	#[inline]
+	fn from(s: &'a str) -> Stream<'a> {
+		Stream::from_str(s)
 	}
 }

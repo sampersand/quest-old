@@ -1,6 +1,6 @@
 macro_rules! builtins {
 	($(fn $name:ident($args:ident, $env:ident) $body:block)*) => {
-		use obj::classes::boundfn::RustFn;
+		use obj_::classes_::boundfn::RustFn;
 		$(
 			pub const $name: RustFn = RustFn(concat!("<builtin ", stringify!($name), ">"), |_, $args, $env| $body);
 		)*
@@ -10,15 +10,15 @@ macro_rules! builtins {
 mod flow;
 mod io;
 
-use obj::{Id, QObject};
+use obj_::{Id, QObject__};
 use std::collections::HashMap;
 
 
 macro_rules! define_builtins {
 	($($name:expr => $path:path),*) => {
 		lazy_static! {
-			static ref DEFAULT_BUILTINS: HashMap<Id, QObject> = {
-				let mut h: HashMap<Id, QObject> = HashMap::new();
+			static ref DEFAULT_BUILTINS: HashMap<Id, QObject__> = {
+				let mut h: HashMap<Id, QObject__> = HashMap::new();
 				$(
 					h.insert($name.into(), $path.into_bound(&().into()).into());
 				)*
@@ -38,6 +38,6 @@ define_builtins! {
 }
 
 
-pub fn default_builtins() -> &'static HashMap<Id, QObject> {
+pub fn default_builtins() -> &'static HashMap<Id, QObject__> {
 	&DEFAULT_BUILTINS
 }

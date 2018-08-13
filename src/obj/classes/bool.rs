@@ -1,94 +1,45 @@
-use obj::{QObject, classes::QNum};
-use env::Environment;
-use std::ops::{Deref, DerefMut};
-use regex::Regex;
-use std::str::FromStr;
+use parse::{Parsable, Stream};
+
+use obj::object::QObject;
+use obj::classes::{QuestClass, DefaultAttrs};
+
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct QBool(bool);
-
-impl QBool {
-	pub fn new(inp: bool) -> QBool {
-		QBool(inp)
-	}
-
-	pub fn to_bool(&self) -> bool {
-		self.0
-	}
-}
+pub type QBool = QObject<bool>;
 
 impl Display for QBool {
 	#[inline]
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(&self.0, f)
+		Display::fmt(self.as_ref(), f)
 	}
 }
 
-impl From<bool> for QObject {
-	#[inline]
-	fn from(b: bool) -> QObject {
-		QBool::from(b).into()
-	}
-}
+impl Parsable for bool {
+	type Value = bool;
 
-impl From<bool> for QBool {
-	#[inline]
-	fn from(b: bool) -> QBool {
-		QBool(b)
-	}
-}
-
-impl From<QBool> for bool {
-	#[inline]
-	fn from(qb: QBool) -> bool {
-		qb.0
-	}
-}
-
-impl Deref for QBool {
-	type Target = bool;
-	#[inline]
-	fn deref(&self) -> &bool {
-		&self.0
-	}
-}
-
-impl AsRef<bool> for QBool {
-	#[inline]
-	fn as_ref(&self) -> &bool {
-		&self.0
-	}
-}
-
-lazy_static! {
-	pub static ref RE_TRUE: Regex = regex!(r"\A(?:true|TRUE)\b");
-	pub static ref RE_FALSE: Regex = regex!(r"\A(?:false|FALSE)\b");
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NoMatches;
-
-impl FromStr for QBool {
-	type Err = NoMatches;
-	fn from_str(inp: &str) -> Result<QBool, NoMatches> {
-		if RE_TRUE.is_match(inp) {
-			Ok(true.into())
-		} else if RE_FALSE.is_match(inp) {
-			Ok(false.into())
-		} else {
-			Err(NoMatches)
+	fn try_parse(stream: &mut Stream) -> Option<bool> {
+		match stream.try_get(regex!(r"\A([tT]rue|[fF]alse)\b"))? {
+			"true"  | "True"  => Some(true),
+			"false" | "False" => Some(false),
+			other => unreachable!("found non-bool regex value `{:?}`", other)
 		}
 	}
 }
 
-default_attrs!{ for QBool, with variant Bool ;
-	use QObj;
+
+impl QuestClass for bool {
+	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
+}
+
+define_attrs! {
+	static ref DEFAULT_ATTRS for bool;
+	use QObject<bool>;
+
 	fn "@num" (this) {
-		Ok(QNum::new(this.0 as u8 as _).into())
+		Ok(QNum::from_number(**this as u8))
 	}
 
 	fn "@bool" (this) {
-		Ok(this.clone().into())
+		Ok(this.clone())
 	}
 }

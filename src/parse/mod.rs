@@ -1,15 +1,15 @@
-mod funcs;
-mod tokenmatch;
-mod tree;
 mod stream;
-pub mod tokens;
+mod funcs;
+mod impls;
+
+pub use self::stream::Stream;
+pub use self::funcs::{parse_file};
 
 
-use self::tokenmatch::MatchData;
-use self::stream::Stream;
-pub use self::tokenmatch::TokenMatch;
-pub use self::stream::Source;
-pub use self::tokens::Token;
+use obj::classes::QuestClass;
 
-pub use self::tree::Tree;
-pub use self::funcs::{parse_str, parse_file};
+pub trait Parsable : Sized {
+	type Value: QuestClass;
+	fn try_parse(stream: &mut Stream) -> Option<Self::Value>;
+}
+

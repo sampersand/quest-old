@@ -1,5 +1,12 @@
 macro_rules! regex {
-	($regex:expr) => (Regex::new($regex).expect(concat!("Invalid internal regex `", $regex, "` encountered")));
+	($regex:expr) => {{
+		use regex::Regex;
+		use std::ops::Deref;
+		lazy_static!{
+			static ref REGEX: Regex = Regex::new($regex).expect(concat!("Invalid internal regex `", $regex, "` encountered"));
+		}
+		REGEX.deref()
+	}}
 }
 
 macro_rules! assert_ge {
@@ -28,7 +35,7 @@ macro_rules! expect_qobj {
 ($obj:expr, $var:ident) => {{
 		use std::ops::Deref;
 		match $obj.class().deref() {
-			::obj::Classes::$var(val) => val,
+			::obj_::Classes::$var(val) => val,
 			other => panic!(concat!("Unexpected variant `{:?}` found; ", stringify!($var), " expected"), other)
 		}
 	}}

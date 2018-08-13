@@ -1,271 +1,133 @@
-use obj::{Classes, QObject, Exception};
-use obj::classes::QNull;
-use env::Environment;
+use parse::{Parsable, Stream};
 
-use regex::Regex;
-use std::{num, str::FromStr};
-use std::hash::{Hash, Hasher};
-use std::fmt::{self, Display, Formatter};
+use obj::object::QObject;
+use obj::classes::{QuestClass, DefaultAttrs};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct QNum(f64);
+use std::str::FromStr;
+use std::error::Error;
+use std::fmt::{self, Debug, Display, Formatter};
+
+pub type QNum = QObject<Number>;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Number(i32, u32);
 
 
 impl QNum {
-	#[inline]
-	pub fn new(val: f64) -> QNum {
-		QNum(val)
-	}
-
-	pub fn to_f64(&self) -> f64 {
-		self.0
-	}
-
-	pub fn try_to_usize(&self) -> Option<usize> {
-		self.try_to_int().map(|x| x as usize)
-	}
-
-	pub fn try_to_i32(&self) -> Option<i32> {
-		self.try_to_int().map(|x| x as i32)
-	}
-
-	pub fn try_to_int(&self) -> Option<i64> {
-		if self.0.floor() == self.0 {
-			Some(self.0 as i64)
-		} else {
-			None
-		}
+	pub fn from_number<N: Into<Number>>(num: N) -> QNum {
+		QNum::new(num.into())
 	}
 }
 
-impl AsRef<f64> for QNum {
-	fn as_ref(&self) -> &f64 {
-		&self.0
-	}
-}
-
-impl Display for QNum {
-	#[inline]
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(&self.0, f)
-	}
-}
-
-macro_rules! impl_from_builtin {
-	($($ty:ident)*) => {
+macro_rules! num_convert {
+	($($normal:ty)*; $($float:ty)*) => {
 		$(
-			impl From<$ty> for QNum {
+			impl From<$normal> for Number {
 				#[inline]
-				fn from(num: $ty) -> QNum {
-					QNum(num as _)
+				fn from(num: $normal) -> Number {
+					Number(num as i32, 0)
 				}
 			}
 
-			impl From<$ty> for QObject {
+			impl From<Number> for $normal {
 				#[inline]
-				fn from(num: $ty) -> QObject {
-					QNum::from(num).into()
+				fn from(num: Number) -> $normal {
+					assert_eq!(num.1, 0, "Can't convert non-integer number {:?} into an integer", num);
+					num.0 as $normal
 				}
 			}
-
-			impl From<QNum> for $ty {
+		)*
+		$(
+			impl From<$float> for Number {
 				#[inline]
-				fn from(inp: QNum) -> $ty {
-					inp.0 as $ty
+				fn from(num: $float) -> Number {
+					unimplemented!("TODO: From floating point numbers")
+				}
+			}
+			impl From<Number> for $float {
+				#[inline]
+				fn from(num: Number) -> $float {
+					unimplemented!("TODO: Into floating point numbers");
 				}
 			}
 		)*
 	}
 }
-impl_from_builtin!(i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 usize isize);
 
-impl Eq for QNum {} // lol bad...
+num_convert!(i8 i16 i32 i64 isize u8 u16 u32 u64 usize ; f32 f64);
 
-impl Hash for QNum {
-	fn hash<H: Hasher>(&self, hasher: &mut H) {
-		self.0.to_bits().hash(hasher)
+impl Debug for Number {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "Number({})", self)
 	}
 }
 
-#[derive(Debug)]
-pub enum ParseError {
-	Float(num::ParseFloatError),
-	Int(num::ParseIntError),
-	NoMatches(String)
-}
-
-impl From<num::ParseFloatError> for ParseError {
-	fn from(err: num::ParseFloatError) -> ParseError {
-		ParseError::Float(err)
+impl Display for Number {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{}.{}", self.0, self.1)
 	}
 }
 
-impl From<num::ParseIntError> for ParseError {
-	fn from(err: num::ParseIntError) -> ParseError {
-		ParseError::Int(err)
-	}
-}
+impl Parsable for Number {
+	type Value = Number;
 
-lazy_static! {
-	pub static ref RE_DECI: Regex = regex!(r"\A(?:0[dD](\d+))\b");
-	pub static ref RE_HEX: Regex = regex!(r"\A(?:0[xX]([\da-f]+))\b");
-	pub static ref RE_BINARY: Regex = regex!(r"\A(?:0[bB]([01]+))\b");
-	pub static ref RE_OCTAL: Regex = regex!(r"\A(?:0[oO]([0-7]+))\b");
-	pub static ref RE_FLOAT: Regex = regex!(r"\A([-+]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b");
-}
-
-impl FromStr for QNum {
-	type Err = ParseError;
-	fn from_str(inp: &str) -> Result<QNum, ParseError> {
-		macro_rules! match_radix {
-			($regex:ident, $radix:expr) => {
-				if let Some(caps) = $regex.captures(inp) {
-					debug_assert_eq!(caps.get(1).unwrap().start(), 2);
-					return Ok(QNum::new(u64::from_str_radix(&caps[1], $radix)? as f64))
-				}
+	fn try_parse(stream: &mut Stream) -> Option<Number> {
+		if let Some(data) = stream.try_get(regex!(r"(?i)\A0(x[\da-f]+|o[0-7]+|b[01]+|d\d+)\b")) {
+			assert_eq!(data.chars().next(), Some('0'));
+			match data.chars().nth(1).expect("no regex supplied, but it must have matched") {
+				'x' | 'X' => unimplemented!(),
+				'o' | 'O' => unimplemented!(),
+				'b' | 'B' => unimplemented!(),
+				'd' | 'D' => unimplemented!(),
+				other => unreachable!("found invalid radix that was matched: `{}`", other)
 			}
 		}
 
-		match_radix!(RE_DECI, 10);
-		match_radix!(RE_HEX, 16);
-		match_radix!(RE_BINARY, 2);
-		match_radix!(RE_OCTAL, 8);
+		if let Some(data) = stream.try_get(regex!(r"\A[-+]?\d+(\.\d+)?([eE][-+]?\d+)?\b")) {
+			let mut base_exp = data.splitn(2, 'e');
+			let base = base_exp.next().expect("there should always be a first match");
+			let exp: i32 = base_exp.next().map(|exp| exp.parse().expect("invalid exp got past the regex?")).unwrap_or(0);
+			let mut deci = base.splitn(2, '.');
 
-		if let Some(caps) = RE_FLOAT.captures(inp) {
-			debug_assert_eq!(caps.get(0).unwrap().start(), 0);
-			Ok(QNum::new(f64::from_str(&caps[0])?))
-		} else {
-			Err(ParseError::NoMatches(inp.to_string()))
+			let above_one: i32 = deci.next().expect("there should always be a first match").parse().expect("invalid base got past the regex?");
+			let mantissa: u32 = deci.next().map(|m| m.parse().expect("invalid mantissa got past regex?")).unwrap_or(0);
+
+			if exp != 0 {
+				panic!("TODO: incorperate exponent (ie sci notation)");
+			}
+
+			return Some(Number(above_one, mantissa))
 		}
+
+		None
 	}
 }
 
-
-fn into_qnum(pos: &QObject, env: &Environment) -> QNum {
-	pos.as_num(env).expect("`@num` is required to interact with `QNum`")
+impl QuestClass for Number {
+	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
 }
 
-fn into_f64(pos: &QObject, env: &Environment) -> f64 {
-	into_qnum(pos, env).to_f64()
-}
-
-default_attrs! { for QNum, with variant Num;
-	use QObj;
-
-	fn "@bool" (this) {
-		Ok((this.0 != 0.0).into())
-	}
-
+define_attrs! {
+	static ref DEFAULT_ATTRS for Number;
+	use QObject<Number>;
 	fn "@num" (this) {
-		Ok(this.clone().into())
-	}
-
-	fn "@text" (this) {
-		if let Some(int) = this.try_to_int() {
-			Ok(int.to_string().into())
-		} else {
-			Ok(this.0.to_string().into())
-		}
-	}
-
-	fn "()" (_this, rhs) with env _vars obj {
-		obj.call_attr("*", &[rhs], env)
-	}
-
-	fn "." (_this, rhs) with env vars obj {
-		if rhs.is_num() {
-			unimplemented!("TODO: `.` for QNum")
-		} else {
-			call_super!(QObj(".") for obj, vars, env)
-		}
-	}
-
-	fn "round" (this; places = ().into()) with env {
-		if !places.is_null() {
-			let places = into_f64(&places, env);
-			if places != 0.0 {
-				unimplemented!("TODO: Round with non-zero amount")
-			}
-		}
-		Ok(this.0.round().into())
-	}
-
-	fn "abs" (this) {
-		Ok(this.0.abs().into())
-	}
-
-	fn "+" (this, rhs) with env { Ok((this.0 + into_f64(rhs, env)).into()) }
-	fn "-" (this, rhs) with env { Ok((this.0 - into_f64(rhs, env)).into()) }
-	fn "*" (this, rhs) with env { Ok((this.0 * into_f64(rhs, env)).into()) }
-	fn "/" (this, rhs) with env { Ok((this.0 / into_f64(rhs, env)).into()) }
-	fn "^" (this, rhs) with env { Ok((this.0.powf(into_f64(rhs, env))).into()) }
-	fn "%" (this, rhs) with env { Ok((this.0 % into_f64(rhs, env)).into()) }
-
-	fn "<"  (this, rhs) with env { Ok((this.0 <  into_f64(rhs, env)).into()) }
-	fn "<=" (this, rhs) with env { Ok((this.0 <= into_f64(rhs, env)).into()) }
-	fn ">"  (this, rhs) with env { Ok((this.0 >  into_f64(rhs, env)).into()) }
-	fn ">=" (this, rhs) with env { Ok((this.0 >= into_f64(rhs, env)).into()) }
-	fn "==" (this, rhs) with env { Ok((this.0 == into_f64(rhs, env)).into()) }
-	fn "!=" (this, rhs) with env { Ok((this.0 !=  into_f64(rhs, env)).into()) }
-	fn "<=>" (this, rhs) with env {
-		let other = into_f64(rhs, env);
-		if this.0 < other {
-			Ok((-1.0).into())
-		} else if this.0 == other {
-			Ok(0.0.into())
-		} else {
-			Ok(1.0.into())
-		}
-	}
-
-	fn "~" (this){
-		if let Some(int) = this.try_to_int() {
-			Ok((!int).into())
-		} else {
-			panic!("Can't apply `~` to non-int `{}`", this)
-		}
-	}
-	fn "|" (this, rhs) with env {
-		let rhs = into_qnum(rhs, env);
-		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			Ok((l | r).into())
-		} else {
-			panic!("Can't apply `|` to with nonints found: `{}`, `{}`", this, rhs)
-		}
-	}
-	fn "&" (this, rhs) with env {
-		let rhs = into_qnum(rhs, env);
-		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			Ok((l & r).into())
-		} else {
-			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
-		}
-	}
-	fn "^^" (this, rhs) with env {
-		let rhs = into_qnum(rhs, env);
-		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			Ok((l ^ r).into())
-		} else {
-			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
-		}
-	}
-	fn "<<" (this, rhs) with env {
-		let rhs = into_qnum(rhs, env);
-		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			Ok((l ^ r).into())
-		} else {
-			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
-		}
-	}
-	fn ">>" (this, rhs) with env {
-		let rhs = into_qnum(rhs, env);
-		if let (Some(l), Some(r)) = (this.try_to_int(), rhs.try_to_int()) {
-			Ok((l ^ r).into())
-		} else {
-			panic!("Can't apply `&` to with nonints found: `{}`, `{}`", this, rhs)
-		}
+		Ok(this.clone())
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

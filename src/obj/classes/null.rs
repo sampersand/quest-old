@@ -1,60 +1,39 @@
-use std::str::FromStr;
-use regex::Regex;
+use parse::{Parsable, Stream};
+use std::marker::PhantomData;
+use obj::object::QObject;
+use obj::classes::{QuestClass, DefaultAttrs};
+use std::fmt::{self, Display, Formatter};	
 
-use obj::QObject;
-use std::fmt::{self, Display, Formatter};
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct Null;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct QNull;
+pub type QNull = QObject<Null>;
 
-impl From<()> for QNull {
-	fn from(_: ()) -> QNull {
-		QNull
-	}
-}
-
-impl From<()> for QObject {
+impl Display for Null {
 	#[inline]
-	fn from(_: ()) -> QObject {
-		QNull.into()
-	}
-}
-
-impl QNull {
-	pub fn new() -> QNull {
-		QNull
-	}
-}
-
-lazy_static! {
-	pub static ref RE_NULL: Regex = regex!(r"\A(null|nil|none|NULL|NIL|NONE)\b");
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NoMatches;
-
-impl FromStr for QNull {
-	type Err = NoMatches;
-	fn from_str(inp: &str) -> Result<QNull, NoMatches> {
-		if RE_NULL.is_match(inp) {
-			Ok(QNull)
-		} else {
-			Err(NoMatches)
-		}
-	}
-}
-
-impl Display for QNull {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		write!(f, "null")
 	}
 }
 
+impl Parsable for Null {
+	type Value = Null;
 
-default_attrs! { for QNull, with variant Null;
-	use QObj;
+	fn try_parse(stream: &mut Stream) -> Option<Null> {
+		stream.try_get("null").and(Some(Null))
+	}
+}
 
-	fn "@bool" (this) {
-		Ok(false.into())
+impl QuestClass for Null {
+	fn default_attrs() -> &'static DefaultAttrs<Self> { &DEFAULT_ATTRS }
+}
+
+
+define_attrs! {
+	static ref DEFAULT_ATTRS for Null;
+	use QObject<Null>;
+
+	fn "@num" () {
+		Ok(QBool::from(false))
 	}
 }

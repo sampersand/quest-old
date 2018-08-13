@@ -1,45 +1,41 @@
-use std::path::Path;
-use std::{io, fs};
-use parse::{Token, TokenMatch, MatchData, Stream, Tree};
-use obj::{Result, Exception};
+use parse::{Stream, Parsable, impls};
+
+use obj::{self, SharedObject, QObject};
+use std::{fs, io};
 use env::Environment;
 
-pub fn parse_file<P: AsRef<Path>>(file: P, env: &Environment) -> io::Result<Result> {
-	let file = file.as_ref();
-	Ok(parse(&mut Stream::from_file(&file.to_string_lossy(), &fs::read_to_string(file)?), env))
+pub fn parse_file(file: &str, env: &Environment) -> io::Result<Vec<SharedObject>> {
+	let data = fs::read_to_string(file)?;
+	let mut stream = Stream::from_file(file, &data);
+	Ok(parse_stream(&mut Stream::from_file(file, &data)))
 }
 
-pub fn parse_str(text: &str, env: &Environment) -> Result {
-	parse(&mut Stream::from_str(text), env)
-}
+fn parse_stream(stream: &mut Stream) -> Vec<SharedObject> {
+	use obj::Id;
+	use obj::classes::{oper::Oper, num::Number, null::Null};
+	use self::impls::*;
 
-fn parse(stream: &mut Stream, env: &Environment) -> Result {
-	let matches = matches_until(stream, env, |_| false);
-	match Tree::try_from_vec(matches) {
-		Some(tree) => tree.execute(env),
-		None => Err(Exception::Missing("<anything in the block>".into()))
-	}
-}
+	let mut objects = Vec::new();
 
-pub fn matches_until(stream: &mut Stream, env: &Environment, until: fn(&TokenMatch) -> bool) -> Vec<TokenMatch> {
-	let mut matches = Vec::new();
-	let tokens = env.tokens.read();
-	while !stream.is_empty() {
-		let tokenmatch = tokens.iter()
-			.filter_map(|token| (token.match_fn)(stream, env).map(|data| TokenMatch::new(data, token, stream.get_src())))
-			.rev()
-			.max_by(|x, y| x.data.cmp(&y.data))
-			.unwrap_or_else(|| panic!("No tokens found for {:?}", stream));
-
-		stream.offset_by(tokenmatch.data.len());
-
-		if until(&tokenmatch) || tokenmatch.data.is_eof() {
-			break
-		}
-
-		if !tokenmatch.data.is_notoken() {
-			matches.push(tokenmatch)
+	macro_rules! try_parse {
+		($($ty:ty)*) => {
+			$(
+				if let Some(object) = <$ty>::try_parse(stream) {
+					objects.push(QObject::from(object).make_shared() as _);
+					continue
+				}
+			)*
 		}
 	}
-	matches
+
+	while !stream.as_str().is_empty() {
+
+		if Whitespace::try_parse(stream).is_some() || Comment::try_parse(stream).is_some() {
+			continue
+		}
+
+		try_parse!(Null bool String Number Oper Id);
+		panic!("No objects could match the stream: {}", stream.as_str());
+	}
+	objects
 }

@@ -1,5 +1,5 @@
 #![allow(unused)]
-#![feature(never_type, try_trait)]
+#![feature(unsize, coerce_unsized, pattern, specialization)]
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -11,12 +11,12 @@ extern crate log;
 #[macro_use]
 mod macros;
 
-mod sync;
+
+mod shared;
 mod env;
-mod parse;
 mod obj;
-mod builtins;
+mod parse;
+
 
 pub use self::env::Environment;
-pub use self::parse::{parse_str, parse_file};
-
+pub use self::parse::{parse_file};
