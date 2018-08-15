@@ -1,8 +1,9 @@
 use std::ops::CoerceUnsized;
 use std::marker::Unsize;
 
+use std::any::Any;
 use std::ops::{Deref, DerefMut};
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::cell::UnsafeCell;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, TryLockError};
 use std::thread;
@@ -13,12 +14,22 @@ pub struct ReadGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockReadGuard<'a, ()>)
 #[must_use = "if unused the Shared will immediately unlock"]
 pub struct WriteGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockWriteGuard<'a, ()>);
 
+#[must_use = "memory leak occurs if rawshared isn't used correctly"]
+// used for converting to and from raw
+
+pub trait Foo {}
+impl<T> Foo for T {}
+
+pub type RawShared = *const ();
+
 pub struct Shared<T: ?Sized>(Arc<SharedInner<T>>);
 
+#[derive(Debug)]
 struct SharedInner<T: ?Sized>{
 	lock: RwLock<()>, // todo: make this an actual implementation of a RwLock (and not use the inbuilt one)
 	data: UnsafeCell<T>
 }
+
 
 unsafe impl<T: ?Sized + Send> Send for SharedInner<T> {}
 unsafe impl<T: ?Sized + Send + Sync> Sync for SharedInner<T> {}
@@ -32,7 +43,7 @@ impl<T: ?Sized> Clone for Shared<T> {
 }
 
 impl<T: Sized> Shared<T> {
-	pub fn new(t: T) -> Shared<T> {
+	pub fn new(t: T) -> Self {
 		Shared(Arc::new(
 			SharedInner {
 				lock: RwLock::new(()),
@@ -40,17 +51,17 @@ impl<T: Sized> Shared<T> {
 			}
 		))
 	}
-
-	#[inline]
-	pub fn try_unwrap(self) -> Result<T, Self> {
-		Arc::try_unwrap(self.0).map(|inner| inner.data.into_inner()).map_err(Shared)
-	}
-
 }
-impl<T: Clone> Shared<T> {
-	#[inline]
-	pub fn try_clone_inner(&self) -> Option<Shared<T>> {
-		self.try_read().map(|lock| Shared::new(T::clone(&lock)))
+
+impl<T: 'static + ?Sized> Shared<T> {
+	pub fn into_raw(self) -> RawShared {
+		Arc::<SharedInner<T>>::into_raw(self.0) as RawShared
+	}
+}
+
+impl<T: 'static + Sized> Shared<T> {
+	pub unsafe fn from_raw(raw: RawShared) -> Self {
+		Shared(Arc::from_raw(raw as *const SharedInner<T>))
 	}
 }
 
@@ -157,6 +168,12 @@ impl<'a, T: 'a + ?Sized> DerefMut for WriteGuard<'a, T> {
 		unsafe {
 			self.0.data()
 		}
+	}
+}
+
+impl<T: Display + ?Sized> Display for Shared<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{}", &*self.read())
 	}
 }
 

@@ -1,19 +1,14 @@
-#[macro_use]
-mod macros;
-
-mod id;
 mod object;
-mod interrupt;
-pub mod classes;
+mod id;
 
-
-pub use self::interrupt::{Result, Interrupt};
+use self::object::QObject;
 pub use self::id::Id;
-pub use self::object::QObject;
 
-use shared::{Shared, SafeAny};
-pub type AnyObject = Shared<QObject<dyn SafeAny>>;
+use shared::Shared;
+use std::any::Any;
+
 pub type SharedObject<T> = Shared<QObject<T>>;
+pub type AnyObject = SharedObject<dyn Any + Send + Sync>;
 
 impl From<!> for AnyObject {
 	fn from(_: !) -> AnyObject {
