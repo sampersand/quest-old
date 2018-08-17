@@ -1,24 +1,26 @@
-use env::parse::{Parser, Token};
-use std::path::Path;
-use std::sync::Arc;
+use parse::Parser;
 use std::str::pattern::Pattern;
-use std::fmt::{self, Debug, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stream<'a> {
-	pub(super) parsers: Vec<Parser>,
+	parsers: Vec<Parser>,
 	data: &'a str,
-	file: Option<&'a Path>,
+	file: &'a str,
 	line: usize
 }
 
 impl<'a> Stream<'a> {
-	pub(super) fn new(data: &'a str, file: Option<&'a Path>, parsers: Option<Vec<Parser>>) -> Self {
-		Stream { data, file, parsers: parsers.unwrap_or_else(Parser::default_parsers), line: 0 }
+	pub fn from_str(data: &'a str) -> Stream<'a> {
+		Stream {
+			parsers: unimplemented!(),
+			data,
+			file: "<evald string>",
+			line: 0
+		}
 	}
 
-	pub(super) fn parsers(&self) -> impl Iterator<Item=&Parser> {
-		self.parsers.iter()
+	pub fn from_file(file: &'a str, data: &'a str) -> Stream<'a> {
+		Stream { parsers: unimplemented!(), file, data, line: 0 }
 	}
 
 	pub fn as_str(&self) -> &'a str {
@@ -34,5 +36,12 @@ impl<'a> Stream<'a> {
 		} else {
 			None
 		}
+	}
+}
+
+impl<'a> From<&'a str> for Stream<'a> {
+	#[inline]
+	fn from(s: &'a str) -> Stream<'a> {
+		Stream::from_str(s)
 	}
 }

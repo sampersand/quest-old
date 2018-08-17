@@ -1,5 +1,5 @@
 #![allow(unused)]
-#![feature(unsize, coerce_unsized, pattern, never_type, rc_downcast)]
+#![feature(unsize, coerce_unsized, pattern, never_type, rc_downcast, specialization)]
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -14,7 +14,7 @@ mod macros;
 
 
 mod shared;
-mod env;
+pub mod env;
 mod obj;
 
 pub use self::env::Binding;

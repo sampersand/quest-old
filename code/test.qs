@@ -1,3 +1,4 @@
-foo = "hi i am sam";
+1 + 2
+#foo = "hi i am sam";
 
 #foo = 3;
