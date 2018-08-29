@@ -112,7 +112,7 @@ impl Parsable for Oper {
 				$(
 					if env.stream.try_get(regex!(concat!("\\A(?:", $regex, ")"))).is_some() {
 						let oper = Oper::$oper;
-						return Some(Token::Object(SharedObject::from(oper), oper.precedence()));
+						return Some(Token::Object(SharedObject::from(oper), oper.precedence(), Oper::execute));
 					}
 				)*
 			}

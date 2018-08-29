@@ -6,7 +6,10 @@ use std::hash::{Hash, Hasher};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct MapGuard<'a, K: Eq + Hash + 'a, V: 'a>(&'a V, ReadGuard<'a, HashMap<K, V>>);
+pub struct MapGuard<'a, K: Eq + Hash + 'a, V: 'a> {
+	value: &'a V,
+	guard: ReadGuard<'a, HashMap<K, V>>
+}
 
 pub type SharedMap<K, V> = Shared<HashMap<K, V>>;
 
@@ -25,7 +28,7 @@ impl<K: Eq + Hash, V> SharedMap<K, V> {
 			// we're allowed to extend the lifetime to the lifetime of the guard itself
 			mem::transmute::<&V, &'a V>(guard.get(key.borrow())?)
 		};
-		Some(MapGuard(value, guard))
+		Some(MapGuard { value, guard })
 	}
 
 	pub fn insert(&self, key: K, val: V) -> Option<K> {
@@ -46,13 +49,13 @@ impl<'a, K: Eq + Hash + 'a, V: 'a> Deref for MapGuard<'a, K, V> {
 
 	#[inline]
 	fn deref(&self) -> &V {
-		&self.0
+		&self.value
 	}
 }
 
 impl<'a, K: Eq + Hash + 'a, V: 'a> AsRef<V> for MapGuard<'a, K, V> {
 	#[inline]
 	fn as_ref(&self) -> &V {
-		self.0
+		self.value
 	}
 }

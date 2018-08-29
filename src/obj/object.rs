@@ -1,170 +1,195 @@
-use obj::{Id, AnyObject, SharedObject, classes::{Class, GetDefault, HasDefault}};
+use shared::Shared;
+use obj::{Type, Id, AnyObject, AnyResult, SharedObject, AnyShared, WeakObject, attrs::Attributes};
+use env::Environment;
 
-use std::any::Any;
-use std::ops::{Deref, DerefMut};
-use std::hash::{Hash, Hasher};
 use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
+use std::hash::{Hash, Hasher};
+use std::any::Any;
+use std::cell::UnsafeCell;
+use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::borrow::Borrow;
+use std::marker::Unsize;
+use std::fmt::{self, Debug, Display, Formatter};
+use std::{thread, mem, ptr};
 
-#[derive(Clone, Copy)]
-struct Defaults { 
-	get: GetDefault,
-	has: HasDefault,
-	fmt: fn(&dyn Any, f: &mut Formatter) -> fmt::Result,
+
+struct Ops {
+	debug_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
+	display_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
+	eq: fn(&AnyObject, &AnyObject) -> bool,
+	hash: fn(&AnyObject, Box<&mut dyn Hasher>)
+
 }
 
-pub struct QObject<D: Send + Sync + ?Sized> {
+pub struct Object<T: ?Sized>{
+	obj: WeakObject,
 	id: Id,
-	attrs: HashMap<Id, AnyObject>,
-	defaults: Defaults,
-	data: D
+	pub attrs: Attributes,
+	ops: Ops,
+	pub(super) data: T,
 }
 
-impl<D: Debug + Send + Sync> QObject<D> where SharedObject<D>: Class {
-	fn new(data: D) -> QObject<D> {
-		QObject {
+unsafe impl<T: Sync + ?Sized> Send for Object<T> {}
+unsafe impl<T: Send + Sync + ?Sized> Sync for Object<T> {}
+
+impl<T: CoerceUnsized<U>, U> CoerceUnsized<Object<U>> for Object<T> {}
+
+impl<T: Debug + PartialEq + Hash + 'static> Object<T> where Object<T>: Type {
+	pub fn new(data: T) -> SharedObject<T> {
+		let object = SharedObject::new(Object {
+			obj: unsafe{ mem::uninitialized() },
 			id: Id::next(),
-			attrs: HashMap::default(),
-			defaults: Defaults {
-				get: SharedObject::<D>::GET_DEFAULTS,
-				has: SharedObject::<D>::HAS_DEFAULTS,
-				fmt: |x, f| if f.alternate() {
-					write!(f, "{:#?}", x.downcast_ref::<D>().expect("invalid argument passed to formatter"))
-				} else {
-					write!(f, "{:?}", x.downcast_ref::<D>().expect("invalid argument passed to formatter"))
-				}
+			attrs: Attributes {
+				obj: unsafe{ mem::uninitialized() },
+				map: Default::default(),
+				defaults: |this, attr| this.downcast_ref::<T>().unwrap().get_default_attr(attr)
 			},
-			data
+			ops: Ops {
+				debug_fmt: |this, f| this.downcast_ref::<T>().unwrap().debug_fmt(f),
+				display_fmt: |this, f| this.downcast_ref::<T>().unwrap().display_fmt(f),
+				eq: |this, o| this.downcast_ref::<T>().unwrap() == o,
+				hash: |this, mut h| this.downcast_ref::<T>().unwrap().data.hash(&mut *h) 
+			},
+			data: data
+		});
+
+		unsafe {
+			ptr::write(&mut object.data().obj as *mut WeakObject, object.downgrade() as WeakObject);
+			ptr::write(&mut object.data().attrs.obj as *mut WeakObject, object.downgrade() as WeakObject);
+		}
+
+		object
+	}
+}
+
+impl<T: ?Sized> Object<T> {
+	pub fn data(&self) -> &T {
+		&self.data
+	}
+
+	pub fn id(&self) -> &Id {
+		&self.id
+	}
+}
+
+impl<T: 'static> Object<T> {
+	pub fn upgrade(&self) -> SharedObject<T> {
+		let shared = self.obj.upgrade().expect("Arc doesn't exist but its contents do?");
+		assert!(shared.read().data.is::<T>(), "bad obj passed?");
+		unsafe {
+			Shared::from_raw(shared.into_raw().convert::<Object<T>>())
 		}
 	}
 }
 
 impl AnyObject {
-	pub fn downcast<T: Send + Sync>(self) -> ::std::result::Result<SharedObject<T>, AnyObject> where SharedObject<T>: Class {
-		use std::any::Any;
+	pub fn upgrade(&self) -> AnyShared {
+		self.obj.upgrade().expect("Arc doesn't exist but its contents do?")
+	}
 
-		let is_t = {
-			let qobject = self.read();
-			Any::is::<T>(qobject.data() as &Any)
-		};
-		if is_t {
+	pub fn try_upgrade<T: 'static>(&self) -> Option<SharedObject<T>> {
+		if !self.data.is::<T>() {
+			None
+		} else {
+			self.downcast_ref::<T>().map(Object::<T>::upgrade)
+		}
+	}
+
+	pub fn downcast_ref<T: 'static>(&self) -> Option<&Object<T>> {
+		if self.data.is::<T>() {
 			unsafe {
-				Ok(SharedObject::<T>::from_raw(self.into_raw()))
+				Some(&*(self as *const AnyObject as *const Object<T>))
 			}
 		} else {
-			Err(self)
+			None
 		}
 	}
 }
 
+impl<T: ?Sized> SharedObject<T> {
+	pub fn read_call(&self, attr: &'static str, args: &[&AnyShared], env: &mut Environment) -> AnyResult {
+		let func = self.read().attrs.get(attr)?;
+		let r = func.read();
+		r.attrs.call("()", args, env)
+	}
+}
 
-impl<D: Send + Sync + ?Sized> Deref for QObject<D> {
-	type Target = D;
+impl<T> Deref for Object<T> {
+	type Target = T;
 
 	#[inline]
-	fn deref(&self) -> &D {
+	fn deref(&self) -> &T {
 		&self.data
 	}
 }
 
-impl<D: Send + Sync + ?Sized> DerefMut for QObject<D> {
+impl<T> DerefMut for Object<T> {
 	#[inline]
-	fn deref_mut(&mut self) -> &mut D {
+	fn deref_mut(&mut self) -> &mut T {
 		&mut self.data
 	}
 }
 
-impl<D: Send + Sync + ?Sized> QObject<D> {
-	pub fn id(&self) -> Id {
-		self.id
-	}
-
-	pub fn data(&self) -> &D {
-		&self.data
-	}
-	pub fn data_mut(&mut self) -> &mut D {
-		&mut self.data
-	}
-}
-
-impl<D: Debug + Send + Sync> From<D> for SharedObject<D> where SharedObject<D>: Class {
-	#[inline]
-	fn from(data: D) -> SharedObject<D> {
-		QObject::new(data).into()
-	}
-}
-
-impl<D: Clone + Send + Sync + Sized> Clone for QObject<D> {
-	fn clone(&self) -> Self {
-		QObject {
-			id: Id::next(), // if we clone ourself, we need a new Id
-			attrs: self.attrs.clone(),
-			data: self.data.clone(),
-			defaults: self.defaults
-		}
-	}
-}
-
-impl<D: Send + Sync + Hash> Hash for QObject<D> {
+impl Hash for AnyObject {
 	fn hash<H: Hasher>(&self, h: &mut H) {
-		self.id.hash(h)
+		(self.ops.hash)(self, Box::new(h));
+	}
+
+}
+impl<T: Hash> Hash for Object<T> {
+	fn hash<H: Hasher>(&self, h: &mut H) {
+		self.data.hash(h);
 	}
 }
 
-impl<D: Send + Sync + ?Sized> AsRef<D> for QObject<D> {
-	#[inline]
-	fn as_ref(&self) -> &D {
-		self.data()
+impl<T: Debug + PartialEq + Hash + Clone + 'static> Object<T> where Object<T>: Type {
+	pub fn duplicate(&self) -> SharedObject<T> {
+		Object::new(self.data.clone())
 	}
 }
 
-impl<D: Eq + Send + Sync + ?Sized> Eq for QObject<D> {}
-impl<D: PartialEq + Send + Sync + ?Sized> PartialEq for QObject<D> {
-	fn eq(&self, other: &QObject<D>) -> bool {
-		if cfg!(debug_assertions) && self.id == other.id {
-			assert!(self.data == other.data, "datas dont match but ids do")
-		}
-
-		self.data == other.data
+impl Eq for AnyObject {}
+impl PartialEq for AnyObject {
+	fn eq(&self, other: &AnyObject) -> bool {
+		(self.ops.eq)(self, other)
 	}
 }
-default impl<D: Debug + Send + Sync + ?Sized> Debug for QObject<D> {
+
+impl<T: Eq> Eq for Object<T> where Object<T>: PartialEq {}
+impl<T: 'static + PartialEq> PartialEq<AnyObject> for Object<T> {
+	fn eq(&self, other: &AnyObject) -> bool {
+		other.downcast_ref::<T>().map(|o| self.data == o.data).unwrap_or(false)
+	}
+}
+
+impl Debug for AnyObject {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		let mut f = f.debug_struct("QObject");
-		f.field("id", &self.id);
-
-		if !self.attrs.is_empty() {
-			f.field("attrs", &self.attrs.keys());
-		}
-
-		f.field("data", &&self.data);
-		f.finish()
+		(self.ops.debug_fmt)(self, f)
 	}
 }
 
-impl Debug for QObject<dyn Any + Send + Sync> {
+impl<T: Debug> Debug for Object<T> {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		let mut f = f.debug_struct("QObject");
-		f.field("id", &self.id);
-
+		let mut s = f.debug_struct("Object");
+		s.field("id", &self.id);
 		if !self.attrs.is_empty() {
-			f.field("attrs", &self.attrs.keys());
+			s.field("attrs", &self.attrs);
 		}
 
-		struct AnyFormatter<'a>(&'a dyn Any, fn(&'a dyn Any, f: &mut Formatter) -> fmt::Result);
-		impl<'a> Debug for AnyFormatter<'a> {
-			#[inline]
-			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-				(self.1)(self.0, f)
-			}
-		}
-
-		f.field("data", &AnyFormatter(&self.data, self.defaults.fmt));
-		f.finish()
+		s.field("data", &self.data);
+		s.finish()
 	}
 }
 
+impl Display for AnyObject {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		(self.ops.display_fmt)(self, f)
+	}
+}
 
-
-
+impl<T: Display> Display for Object<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{}", self.data)
+	}
+}
 

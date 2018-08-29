@@ -21,7 +21,7 @@ pub enum Precedence {
 
 #[derive(Debug, Clone)]
 pub enum Token {
-	Object(AnyObject, Precedence),
+	Object(AnyObject, Precedence, Executor),
 	NoObject,
 	Eof
 }
@@ -29,7 +29,7 @@ pub enum Token {
 impl<C: Debug + Send + Sync> From<C> for Token where SharedObject<C>: Class {
 	#[inline]
 	fn from(obj: C) -> Token {
-		Token::Object(SharedObject::from(obj) as _, Precedence::Literal)
+		Token::Object(SharedObject::from(obj) as _, Precedence::Literal, Executor(|obj, _| obj))
 	}
 }
 
@@ -40,20 +40,13 @@ pub trait Parsable {
 }
 
 
-#[derive(Clone, Copy)]
-pub struct Parser(pub fn(&mut Environment) -> Option<Token>);
-
-
-impl Eq for Parser {}
-impl PartialEq for Parser {
-	fn eq(&self, other: &Parser) -> bool {
-		self.0 as usize == other.0 as usize
-	}
+fn_struct!{
+	pub struct Parser(pub fn(&mut Environment) -> Option<Token>);
 }
-impl Debug for Parser {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		f.debug_tuple("Parser").field(&(self.0 as usize)).finish()
-	}
+
+
+fn_struct!{
+	pub struct Executor(pub fn(AnyObject, &mut Binding) -> AnyObject);
 }
 
 impl Parser {
@@ -90,8 +83,8 @@ impl<'a> Environment<'a> {
 		debug_assert!(self.binding.stack_is_empty(), "didn't start with an empty stack?");
 		'outer: while !self.stream.as_str().is_empty() {
 			match self.next_token() {
-				Some(Token::Object(obj, precedence)) => {
-					self.binding.handle(obj, precedence);
+				Some(Token::Object(obj, precedence, exec)) => {
+					self.binding.handle(obj, precedence, exec);
 					continue 'outer; // we've found an object, retry thru parsers
 				}
 				Some(Token::NoObject) => continue 'outer, // we found whitespace, so just restart iter search
@@ -105,6 +98,8 @@ impl<'a> Environment<'a> {
 		self.binding.finish()
 	}
 }
+
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Whitespace;

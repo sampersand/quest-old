@@ -1,5 +1,5 @@
 #![allow(unused)]
-#![feature(unsize, coerce_unsized, pattern, never_type, rc_downcast, specialization)]
+#![feature(unsize, coerce_unsized, fn_traits, never_type)]
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -9,12 +9,10 @@ extern crate regex;
 #[macro_use]
 extern crate log;
 
-#[macro_use]
-mod macros;
-
-
-mod shared;
-pub mod env;
+mod parse;
+mod env;
 mod obj;
+mod shared;
 
-pub use self::env::Binding;
+pub use self::env::Environment;
+pub use self::obj::_foo;

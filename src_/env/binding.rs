@@ -1,4 +1,4 @@
-use env::{Environment, Stream, parse::Precedence};
+use env::{Environment, Stream, parse::{Precedence, Executor}};
 use shared::{Shared, SharedMap};
 use obj::{Id, AnyObject};
 
@@ -9,10 +9,6 @@ use std::fmt::{self, Debug, Display, Formatter};
 type ObjectMap = SharedMap<Id, AnyObject>;
 type SharedBinding = Shared<Binding>;
 
-
-#[derive(Clone, Copy)]
-struct Executor(fn(&dyn Any, &mut Binding));
-
 #[derive(Debug, Clone, Default)]
 struct Stack {
 	objs: Vec<AnyObject>,
@@ -22,7 +18,6 @@ struct Stack {
 #[derive(Debug)]
 pub struct Binding {
 	locals: ObjectMap,
-	globals: ObjectMap,
 	stack: Stack,
 	caller: Option<SharedBinding>
 }
@@ -32,7 +27,6 @@ impl Default for Binding {
 		info!("TODO: defaults for globals");
 		Binding {
 			locals: ObjectMap::default(),
-			globals: ObjectMap::default(),
 			stack: Stack::default(),
 			caller: None
 		}
@@ -54,7 +48,7 @@ impl Binding {
 		self.stack.objs.pop()
 	}
 
-	pub(super) fn handle(&mut self, obj: AnyObject, precedence: Precedence) {
+	pub(super) fn handle(&mut self, obj: AnyObject, precedence: Precedence, exec: Executor) {
 		if precedence == Precedence::Literal {
 			self.stack.objs.push(obj);
 			return;
@@ -116,19 +110,3 @@ impl Display for Binding {
 		unimplemented!()
 	}
 }
-
-
-impl Debug for Executor {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		f.debug_tuple("Executor").field(&(self.0 as usize)).finish()
-	}
-}
-
-impl Eq for Executor {}
-impl PartialEq for Executor {
-	fn eq(&self, other: &Executor) -> bool {
-		self.0 as usize == other.0 as usize
-	}
-}
-
-

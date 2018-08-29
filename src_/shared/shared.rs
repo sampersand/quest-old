@@ -1,12 +1,11 @@
 use std::ops::CoerceUnsized;
 use std::marker::Unsize;
 
-use std::{any::Any, cmp::Ordering};
-use std::hash::{Hash, Hasher};
+use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::cell::UnsafeCell;
-use std::sync::{Arc, Weak as StdWeak, RwLock, RwLockReadGuard, RwLockWriteGuard, TryLockError};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, TryLockError};
 use std::thread;
 
 #[must_use = "if unused the Shared will immediately unlock"]
@@ -18,9 +17,12 @@ pub struct WriteGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockWriteGuard<'a, ()
 #[must_use = "memory leak occurs if rawshared isn't used correctly"]
 // used for converting to and from raw
 
-pub struct Shared<T: ?Sized>(Arc<SharedInner<T>>);
-pub struct Weak<T: ?Sized>(StdWeak<SharedInner<T>>);
+pub trait Foo {}
+impl<T> Foo for T {}
 
+pub type RawShared = *const ();
+
+pub struct Shared<T: ?Sized>(Arc<SharedInner<T>>);
 
 #[derive(Debug)]
 struct SharedInner<T: ?Sized>{
@@ -28,15 +30,11 @@ struct SharedInner<T: ?Sized>{
 	data: UnsafeCell<T>
 }
 
-#[derive(Debug)]
-pub struct RawShared<T: ?Sized>(*const SharedInner<T>);
 
 unsafe impl<T: ?Sized + Send> Send for SharedInner<T> {}
 unsafe impl<T: ?Sized + Send + Sync> Sync for SharedInner<T> {}
 
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Shared<U>> for Shared<T> {}
-impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Weak<U>> for Weak<T> {}
-impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<RawShared<U>> for RawShared<T> {}
 
 impl<T: ?Sized> Clone for Shared<T> {
 	fn clone(&self) -> Self {
@@ -55,44 +53,21 @@ impl<T: Sized> Shared<T> {
 	}
 }
 
-
-impl<T: ?Sized> RawShared<T> {
-	pub fn convert<I>(self) -> RawShared<I> {
-		RawShared(self.0 as *const SharedInner<I>)
-	}
-}
-
 impl<T: 'static + ?Sized> Shared<T> {
-	pub fn into_raw(self) -> RawShared<T> {
-		RawShared(Arc::<SharedInner<T>>::into_raw(self.0))
+	pub fn into_raw(self) -> RawShared {
+		Arc::<SharedInner<T>>::into_raw(self.0) as RawShared
 	}
 }
 
 impl<T: 'static + Sized> Shared<T> {
-	pub unsafe fn from_raw(raw: RawShared<T>) -> Self {
-		Shared(Arc::from_raw(raw.0))
-	}
-}
-
-impl<T: ?Sized> Weak<T> {
-	pub fn upgrade(&self) -> Option<Shared<T>> {
-		self.0.upgrade().map(Shared)
-	}
-}
-
-impl<T> Default for Weak<T> {
-	fn default() -> Self {
-		Weak(StdWeak::new())
+	pub unsafe fn from_raw(raw: RawShared) -> Self {
+		Shared(Arc::from_raw(raw as *const SharedInner<T>))
 	}
 }
 
 impl<T: ?Sized> Shared<T> {
-	pub fn downgrade(&self) -> Weak<T> {
-		Weak(Arc::downgrade(&self.0))
-	}
-
 	#[inline]
-	pub unsafe fn data(&self) -> &mut T {
+	unsafe fn data(&self) -> &mut T {
 		&mut *self.0.data.get()
 	}
 
@@ -112,7 +87,7 @@ impl<T: ?Sized> Shared<T> {
 
 	pub fn write(&self) -> WriteGuard<T> {
 		if cfg!(feature = "single-threaded") {
-			return self.try_write().expect("Blocking write encountered");
+			return self.try_write().expect("Blocking read encountered");
 		}
 
 		loop {
@@ -155,61 +130,13 @@ impl<T> From<T> for Shared<T> {
 	}
 }
 
-impl<T: Ord + ?Sized> Ord for Shared<T> {
-	fn cmp(&self, other: &Shared<T>) -> Ordering {
-		self.read().cmp(&other.read())
-	}
-}
-impl<T: PartialOrd + ?Sized> PartialOrd for Shared<T> {
-	fn partial_cmp(&self, other: &Shared<T>) -> Option<Ordering> {
-		self.read().partial_cmp(&other.read())
-	}	
-}
-
 impl<T: Eq + ?Sized> Eq for Shared<T> {}
 impl<T: PartialEq + ?Sized> PartialEq for Shared<T> {
 	fn eq(&self, other: &Shared<T>) -> bool {
 		if self as *const Shared<T> == other as *const Shared<T> {
-			true
-		} else {
-			(*self.read()) == (*other.read())
+			return true;
 		}
-	}
-}
-
-
-impl<T: Hash + ?Sized> Hash for Shared<T> {
-	fn hash<H: Hasher>(&self, h: &mut H) {
-		(*self.read()).hash(h);
-	}
-}
-
-
-impl<T: Display + ?Sized> Display for Shared<T> {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "{}", &*self.read())
-	}
-}
-
-impl<T: Debug + ?Sized> Debug for Shared<T> {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if f.alternate() {
-			f.debug_struct("Shared")
-			 .field("lock", &self.0.lock.try_read().and(Ok("<unlocked>")).unwrap_or("<locked>"))
-			 .field("data", unsafe{ &self.data() }).finish()
-		} else {
-			if let Some(data) = self.try_read() {
-				f.debug_tuple("Shared").field(&&data.deref()).finish()
-			} else {
-				f.debug_tuple("Shared").field(&"<locked>").finish()
-			}
-		}
-	}
-}
-
-impl<T: ?Sized> Debug for Weak<T> {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "Weak")
+		*self.read() == *other.read()
 	}
 }
 
@@ -240,6 +167,28 @@ impl<'a, T: 'a + ?Sized> DerefMut for WriteGuard<'a, T> {
 	fn deref_mut(&mut self) -> &mut T {
 		unsafe {
 			self.0.data()
+		}
+	}
+}
+
+impl<T: Display + ?Sized> Display for Shared<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{}", &*self.read())
+	}
+}
+
+impl<T: Debug + ?Sized> Debug for Shared<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			f.debug_struct("Shared")
+			 .field("lock", &self.0.lock.try_read().and(Ok("<unlocked>")).unwrap_or("<locked>"))
+			 .field("data", unsafe{ &self.data() }).finish()
+		} else {
+			if let Some(data) = self.try_read() {
+				f.debug_tuple("Shared").field(&&data.deref()).finish()
+			} else {
+				f.debug_tuple("Shared").field(&"<locked>").finish()
+			}
 		}
 	}
 }

@@ -16,9 +16,6 @@ lazy_static! {
 pub struct Id(usize);
 
 impl Id {
-	pub fn _id(&self) -> usize { self.0 }
-	pub fn _new(inner: usize) -> Self { Id(inner) }
-
 	pub(super) fn next() -> Id {
 		Id(ID_COUNTER.fetch_add(1, Relaxed))
 	}
