@@ -3,45 +3,32 @@ use shared::Shared;
 use std::hash::{Hash, Hasher};
 use obj::{Type, Object, AnyShared, AnyResult, SharedObject};
 
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
-type InnerFn = Fn(&[&AnyShared], &mut Environment) -> AnyResult;
+type InnerFn = (Fn(&[AnyShared], &Environment) -> AnyResult) + Send + Sync;
+
 pub struct BoundFn(Box<InnerFn>);
 
-impl<T: ?Sized + 'static> SharedObject<T> {
-	pub fn bind_to_shared(self, func: fn(&Self, &[&AnyShared], &mut Environment) -> AnyResult) -> BoundFn {
-		BoundFn(Box::new(move |args, env| func(&self, args, env)))
-	}
-
-	pub fn bind_to(self, func: fn(&Object<T>, &[&AnyShared], &mut Environment) -> AnyResult) -> BoundFn {
-		BoundFn(Box::new(move |args, env| func(&*self.read(), args, env)))
-	}
-
-	pub fn bind_to_mut(self, func: fn(&mut Object<T>, &[&AnyShared], &mut Environment) -> AnyResult) -> BoundFn {
-		BoundFn(Box::new(move |args, env| func(&mut *self.write(), args, env)))
+impl<T: Send + Sync + ?Sized + 'static> SharedObject<T> {
+	pub fn bind_to(self, func: fn(Self, &[AnyShared], &Environment) -> AnyResult) -> BoundFn {
+		BoundFn(Box::new(move |args, env| func(self.clone(), args, env)))
 	}
 }
 
-impl Type for Object<BoundFn> {
-	fn get_default_attr(&self, attr: &str) -> Option<BoundFn> {
-		match attr {
-			"()" => Some(self.upgrade().bind_to(|obj, args, env| obj.call_bound(args, env))),
-			_ => unimplemented!()
-		}
+impl_type! {
+	for BoundFn, with self attr;
+
+	fn "()" (this) env, args, {
+		this.read().data.call_bound(args, env)
 	}
 
-	fn debug_fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "{:?}", self.data())
+	fn _ () {
+		any::get_default_attr_typed(self, attr).or_else(|| any::get_default_attr_tostring(self, attr))
 	}
-
-	fn display_fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "<bound fn>")
-	}
-
 }
 
 impl BoundFn {
-	pub fn bind_void(func: fn(&[&AnyShared], &mut Environment) -> AnyResult) -> Self {
+	pub fn bind_void(func: fn(&[AnyShared], &Environment) -> AnyResult) -> Self {
 		BoundFn(Box::new(func))
 	}
 
@@ -49,7 +36,7 @@ impl BoundFn {
 		self.0.as_ref() as *const InnerFn
 	}
 
-	pub fn call_bound(&self, args: &[&AnyShared], env: &mut Environment) -> AnyResult {
+	pub fn call_bound(&self, args: &[AnyShared], env: &Environment) -> AnyResult {
 		(self.0)(args, env)
 	}
 }
@@ -58,8 +45,14 @@ impl BoundFn {
 impl Debug for BoundFn {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		f.debug_struct("BoundFn")
-		 .field("fn", &"<todo>")
+		 .field("fn", &"<bound function>")
 		 .finish()
+	}
+}
+
+impl Display for BoundFn {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "<todo: bound function>")
 	}
 }
 

@@ -7,7 +7,6 @@ impl AnyObject {
 	}
 }
 
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Null;
 
@@ -21,11 +20,11 @@ impl Display for Null {
 impl_type! {
 	for Null, with self attr;
 
-	fn "@bool" (this) {
+	fn "@bool" (_) {
 		Ok(false.into_object())
 	}
 
-	fn _ (_) {
+	fn _ () {
 		any::get_default_attr(self, attr)
 	}
 }

@@ -13,6 +13,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::{thread, mem, ptr};
 
 
+#[derive(Clone, Copy)]
 struct Ops {
 	debug_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
 	display_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
@@ -26,47 +27,61 @@ pub struct Object<T: ?Sized>{
 	id: Id,
 	pub attrs: Attributes,
 	ops: Ops,
-	pub(super) data: T,
+	pub data: T,
 }
 
 unsafe impl<T: Sync + ?Sized> Send for Object<T> {}
 unsafe impl<T: Send + Sync + ?Sized> Sync for Object<T> {}
 
-impl<T: CoerceUnsized<U>, U> CoerceUnsized<Object<U>> for Object<T> {}
+impl<T: CoerceUnsized<U> + ?Sized, U> CoerceUnsized<Object<U>> for Object<T> {}
 
-impl<T: Debug + PartialEq + Hash + 'static> Object<T> where Object<T>: Type {
+impl<T: Debug + PartialEq + Hash + Send + Sync + 'static> Object<T> where Object<T>: Type {
 	pub fn new(data: T) -> SharedObject<T> {
-		let object = SharedObject::new(Object {
+		let attrs = Attributes {
+			obj: unsafe{ mem::uninitialized() },
+			map: Default::default(),
+			defaults: |this, attr|
+				this.downcast_ref::<T>().unwrap().get_default_attr(
+					attr.read().downcast_ref::<super::types::Var>()?.data.try_as_str().expect("bad data str"))
+		};
+
+		let ops = Ops {
+			debug_fmt: |this, f| this.downcast_ref::<T>().unwrap().debug_fmt(f),
+			display_fmt: |this, f| this.downcast_ref::<T>().unwrap().display_fmt(f),
+			eq: |this, o| this.downcast_ref::<T>().unwrap() == o,
+			hash: |this, mut h| this.downcast_ref::<T>().unwrap().data.hash(&mut *h) 
+		};
+
+		let obj = Object::new_raw(data, attrs, ops);
+		unsafe {
+			ptr::write(&mut obj.data().attrs.obj as *mut WeakObject, obj.downgrade() as WeakObject);
+		}
+		obj
+	}
+}
+
+impl<T: Send + Sync + 'static> Object<T> {
+	fn new_raw(data: T, attrs: Attributes, ops: Ops) -> SharedObject<T> {
+		let obj = SharedObject::new(Object {
 			obj: unsafe{ mem::uninitialized() },
 			id: Id::next(),
-			attrs: Attributes {
-				obj: unsafe{ mem::uninitialized() },
-				map: Default::default(),
-				defaults: |this, attr| this.downcast_ref::<T>().unwrap().get_default_attr(attr)
-			},
-			ops: Ops {
-				debug_fmt: |this, f| this.downcast_ref::<T>().unwrap().debug_fmt(f),
-				display_fmt: |this, f| this.downcast_ref::<T>().unwrap().display_fmt(f),
-				eq: |this, o| this.downcast_ref::<T>().unwrap() == o,
-				hash: |this, mut h| this.downcast_ref::<T>().unwrap().data.hash(&mut *h) 
-			},
-			data: data
+			attrs, ops, data
 		});
 
 		unsafe {
-			ptr::write(&mut object.data().obj as *mut WeakObject, object.downgrade() as WeakObject);
-			ptr::write(&mut object.data().attrs.obj as *mut WeakObject, object.downgrade() as WeakObject);
+			ptr::write(&mut obj.data().obj as *mut WeakObject, obj.downgrade() as WeakObject);
 		}
+		obj
+	}
+}
 
-		object
+impl<T: Debug + PartialEq + Hash + Default + Send + Sync + 'static> Object<T> where Object<T>: Type {
+	pub fn default() -> SharedObject<T> {
+		Object::new(T::default())
 	}
 }
 
 impl<T: ?Sized> Object<T> {
-	pub fn data(&self) -> &T {
-		&self.data
-	}
-
 	pub fn id(&self) -> &Id {
 		&self.id
 	}
@@ -106,30 +121,6 @@ impl AnyObject {
 	}
 }
 
-impl<T: ?Sized> SharedObject<T> {
-	pub fn read_call(&self, attr: &'static str, args: &[&AnyShared], env: &mut Environment) -> AnyResult {
-		let func = self.read().attrs.get(attr)?;
-		let r = func.read();
-		r.attrs.call("()", args, env)
-	}
-}
-
-impl<T> Deref for Object<T> {
-	type Target = T;
-
-	#[inline]
-	fn deref(&self) -> &T {
-		&self.data
-	}
-}
-
-impl<T> DerefMut for Object<T> {
-	#[inline]
-	fn deref_mut(&mut self) -> &mut T {
-		&mut self.data
-	}
-}
-
 impl Hash for AnyObject {
 	fn hash<H: Hasher>(&self, h: &mut H) {
 		(self.ops.hash)(self, Box::new(h));
@@ -142,9 +133,9 @@ impl<T: Hash> Hash for Object<T> {
 	}
 }
 
-impl<T: Debug + PartialEq + Hash + Clone + 'static> Object<T> where Object<T>: Type {
+impl<T: Clone + Send + Sync + 'static> Object<T> {
 	pub fn duplicate(&self) -> SharedObject<T> {
-		Object::new(self.data.clone())
+		Object::new_raw(self.data.clone(), self.attrs.clone(), self.ops)
 	}
 }
 
@@ -156,8 +147,11 @@ impl PartialEq for AnyObject {
 }
 
 impl<T: Eq> Eq for Object<T> where Object<T>: PartialEq {}
-impl<T: 'static + PartialEq> PartialEq<AnyObject> for Object<T> {
+impl<T: PartialEq + Send + Sync + 'static> PartialEq<AnyObject> for Object<T> {
 	fn eq(&self, other: &AnyObject) -> bool {
+		if self as &AnyObject as *const AnyObject == other as *const AnyObject {
+			return true;
+		}
 		other.downcast_ref::<T>().map(|o| self.data == o.data).unwrap_or(false)
 	}
 }

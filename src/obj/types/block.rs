@@ -8,9 +8,9 @@ use obj::{AnyShared, SharedObject, types::IntoObject};
 use super::shared::{self, Offset::*};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct List(Vec<AnyShared>);
+pub struct Block(Vec<AnyShared>);
 
-impl Parsable for List {
+impl Parsable for Block {
 	fn parse(stream: &mut Stream, env: &Environment) -> ParseResult {
 		if stream.starts_with(']') {
 			stream.eof = true;
@@ -34,45 +34,45 @@ impl Parsable for List {
 // 		unimplemented!()
 	}
 }
+/*
 
-
-impl List {
+impl Block {
 	#[inline]
 	pub fn new(vec: Vec<AnyShared>) -> Self {
-		List(vec)
+		Block(vec)
 	}
 }
 
-impl From<Vec<AnyShared>> for List {
+impl From<Vec<AnyShared>> for Block {
 	#[inline]
-	fn from(vec: Vec<AnyShared>) -> List {
-		List::new(vec)
+	fn from(vec: Vec<AnyShared>) -> Block {
+		Block::new(vec)
 	}
 }
 
 impl IntoObject for Vec<AnyShared> {
-	type Type = List;
+	type Type = Block;
 	#[inline]
-	fn into_object(self) -> SharedObject<List> {
-		List::from(self).into_object()
+	fn into_object(self) -> SharedObject<Block> {
+		Block::from(self).into_object()
 	}
 }
 
 impl<'a> IntoObject for &'a [AnyShared] {
-	type Type = List;
+	type Type = Block;
 	#[inline]
-	fn into_object(self) -> SharedObject<List> {
-		List::from(self.to_vec()).into_object()
+	fn into_object(self) -> SharedObject<Block> {
+		Block::from(self.to_vec()).into_object()
 	}
 }
 
-impl Display for List {
+impl Display for Block {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		write!(f, "[{}]", self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))
 	}
 }
 
-impl Deref for List {
+impl Deref for Block {
 	type Target = Vec<AnyShared>;
 
 	#[inline]
@@ -81,7 +81,7 @@ impl Deref for List {
 	}
 }
 
-impl DerefMut for List {
+impl DerefMut for Block {
 	#[inline]
 	fn deref_mut(&mut self) -> &mut Vec<AnyShared> {
 		&mut self.0
@@ -89,7 +89,7 @@ impl DerefMut for List {
 }
 
 impl_type! {
-	for List, with self attr;
+	for Block, with self attr;
 
 	fn "@bool" (this) {
 		Ok((!this.read().data.is_empty()).into_object())
@@ -100,9 +100,9 @@ impl_type! {
 		       .data
 		       .iter()
 		       .enumerate()
-		       .map(|(i, o)| (i.into_object() as AnyShared, o.clone()))
+		       .map(|(i, o)| (i.into_anyobject(), o.clone()))
 		       .collect::<::std::collections::HashMap<AnyShared, AnyShared>>()
-		       .into_object() as AnyShared
+		       .into_anyobject()
 		)
 	}
 
@@ -186,11 +186,11 @@ impl_type! {
 	}
 
 	fn "<<" (this) env, args, {
-		this.read_call(&("push".into_object() as AnyShared), args, env)
+		this.read_call(&"push".into_anyobject(), args, env)
 	}
 
 	fn "+" (this) env, args, {
-		this.read().duplicate().read_call(&("+".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"+".into_anyobject(), args, env)
 	}
 
 	fn "+=" (this, other) env, {
@@ -200,7 +200,7 @@ impl_type! {
 	}
 
 	fn "-" (this) env, args, {
-		this.read().duplicate().read_call(&("+".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"+".into_anyobject(), args, env)
 	}
 
 	fn "-=" (this, other) env, {
@@ -217,7 +217,7 @@ impl_type! {
 	}
 
 	fn "|" (this) env, args, {
-		this.read().duplicate().read_call(&("|".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"|".into_anyobject(), args, env)
 	}
 
 	fn "|=" (this, other) env, {
@@ -236,7 +236,7 @@ impl_type! {
 	}
 
 	fn "&" (this) env, args, {
-		this.read().duplicate().read_call(&("&".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"&".into_anyobject(), args, env)
 	}
 
 	fn "&=" (this, other) env, {
@@ -246,7 +246,7 @@ impl_type! {
 	}
 
 	fn "^" (this) env, args, {
-		this.read().duplicate().read_call(&("^".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"^".into_anyobject(), args, env)
 	}
 
 	fn "^=" (this, other) env, {
@@ -261,7 +261,7 @@ impl_type! {
 	}
 
 	fn "uniq" (this) env, args, {
-		this.read().duplicate().read_call(&("uniq!".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"uniq!".into_anyobject(), args, env)
 	}
 
 	fn "uniq!" (this) env, args, {
@@ -288,3 +288,4 @@ impl_type! {
 
 
 
+*/

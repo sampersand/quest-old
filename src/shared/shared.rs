@@ -15,19 +15,18 @@ pub struct ReadGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockReadGuard<'a, ()>)
 #[must_use = "if unused the Shared will immediately unlock"]
 pub struct WriteGuard<'a, T: ?Sized + 'a>(&'a Shared<T>, RwLockWriteGuard<'a, ()>);
 
-#[must_use = "memory leak occurs if rawshared isn't used correctly"]
-// used for converting to and from raw
-
 pub struct Shared<T: ?Sized>(Arc<SharedInner<T>>);
 pub struct Weak<T: ?Sized>(StdWeak<SharedInner<T>>);
 
 
 #[derive(Debug)]
-struct SharedInner<T: ?Sized>{
+struct SharedInner<T: ?Sized> {
 	lock: RwLock<()>, // todo: make this an actual implementation of a RwLock (and not use the inbuilt one)
 	data: UnsafeCell<T>
 }
 
+#[must_use = "memory leak occurs if rawshared isn't used correctly"]
+// used for converting to and from raw
 #[derive(Debug)]
 pub struct RawShared<T: ?Sized>(*const SharedInner<T>);
 
@@ -44,14 +43,19 @@ impl<T: ?Sized> Clone for Shared<T> {
 	}
 }
 
+impl<T: ?Sized> Clone for Weak<T> {
+	fn clone(&self) -> Self {
+		Weak(self.0.clone())
+	}
+}
+
 impl<T: Sized> Shared<T> {
 	pub fn new(t: T) -> Self {
 		Shared(Arc::new(
 			SharedInner {
 				lock: RwLock::new(()),
 				data: UnsafeCell::from(t)
-			}
-		))
+			} ))
 	}
 }
 
@@ -89,6 +93,10 @@ impl<T> Default for Weak<T> {
 impl<T: ?Sized> Shared<T> {
 	pub fn downgrade(&self) -> Weak<T> {
 		Weak(Arc::downgrade(&self.0))
+	}
+
+	pub fn is_locked(&self) -> bool {
+		self.try_write().is_none()
 	}
 
 	#[inline]
@@ -195,7 +203,7 @@ impl<T: Debug + ?Sized> Debug for Shared<T> {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		if f.alternate() {
 			f.debug_struct("Shared")
-			 .field("lock", &self.0.lock.try_read().and(Ok("<unlocked>")).unwrap_or("<locked>"))
+			 .field("lock", &self.0.lock.try_write().and(Ok("<unlocked>")).unwrap_or("<locked>"))
 			 .field("data", unsafe{ &self.data() }).finish()
 		} else {
 			if let Some(data) = self.try_read() {

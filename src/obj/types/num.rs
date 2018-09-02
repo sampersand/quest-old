@@ -1,14 +1,18 @@
-use obj::{Result, SharedObject, types::IntoObject};
+use parse::{Parsable, Stream, ParseResult};
+use env::Environment;
+use obj::{Result, AnyShared, SharedObject, types::IntoObject};
 use std::fmt::{self, Display, Formatter};
 use std::ops::{
 	Add, Sub, Mul, Div, Rem, Neg,
 	BitAnd, BitOr, BitXor, Shr, Shl,
 	AddAssign, SubAssign, MulAssign, DivAssign, RemAssign,
+	BitAndAssign, BitOrAssign, BitXorAssign, ShrAssign, ShlAssign,
 };
+
 use std::cmp::{PartialOrd, Ord, Ordering};
 
-pub type Unsigned = u32;
-pub type Signed = i32;
+type Unsigned = u32;
+pub type Integer = i32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Sign {
@@ -25,28 +29,26 @@ impl Default for Sign {
 	}
 }
 
-
 impl IntoObject for usize {
 	type Type = Number;
 	fn into_object(self) -> SharedObject<Number> {
-		Number::from_integer(self as Signed).into_object()
+		Number::from(self as Integer).into_object()
 	}
 }
 
-
-impl IntoObject for Signed {
+impl IntoObject for Integer {
 	type Type = Number;
 	fn into_object(self) -> SharedObject<Number> {
-		Number::from_integer(self).into_object()
+		Number::from(self).into_object()
 	}
 }
 
 impl Mul<Unsigned> for Sign {
-	type Output = Signed;
-	fn mul(self, rhs: Unsigned) -> Signed {
+	type Output = Integer;
+	fn mul(self, rhs: Unsigned) -> Integer {
 		match self {
-			Positive =>   rhs as Signed,
-			Negative => -(rhs as Signed)
+			Positive =>   rhs as Integer,
+			Negative => -(rhs as Integer)
 		}
 	}
 }
@@ -86,18 +88,20 @@ impl Number {
 	pub fn e() -> Number { E }
 }
 
-impl Number {
-	#[inline]
-	pub fn new(sign: Sign, whole: Unsigned, frac: Unsigned) -> Self {
-		Number { sign, whole, frac }
-	}
-
-	pub fn from_integer(whole: Signed) -> Self {
+impl From<Integer> for Number {
+	fn from(whole: Integer) -> Self {
 		if whole < 0 {
 			Number::new(Negative, -whole as Unsigned, 0)
 		} else {
 			Number::new(Positive, whole as Unsigned, 0)
 		}
+	}
+}
+
+impl Number {
+	#[inline]
+	pub fn new(sign: Sign, whole: Unsigned, frac: Unsigned) -> Self {
+		Number { sign, whole, frac }
 	}
 
 	#[inline]
@@ -127,7 +131,7 @@ impl Number {
 
 
 	#[inline]
-	pub fn to_integer(self) -> Option<Signed> {
+	pub fn to_integer(self) -> Option<Integer> {
 		if self.is_integer() {
 			Some(self.sign * self.whole)
 		} else {
@@ -143,6 +147,76 @@ impl Number {
 
 	pub fn pow(self, other: Number) -> Number {
 		unimplemented!("TODO: pow for numbers")
+	}
+
+	pub fn pow_assign(&mut self, other: Number) {
+		*self = self.pow(other)
+	}
+}
+
+impl Parsable for Number {
+	fn parse(stream: &mut Stream, _: &Environment) -> ParseResult {
+
+		let mut sign = None;
+		let mut whole = 0;
+		let mut frac = 0;
+		let mut offset = 0;
+
+		{
+			let mut chars = stream.chars();
+
+			match chars.next()? {
+				'-' => sign = Some(Negative),
+				'+' => sign = Some(Positive),
+				digit if digit.is_digit(10) => whole = digit.to_digit(10).unwrap(),
+				_ => return None
+			}
+
+			if sign.is_some() {
+				for c in &mut chars {
+					if c.is_whitespace() {
+						continue;
+					}
+
+					if let Some(digit) = c.to_digit(10) {
+						whole = digit;
+						break
+					}
+
+					return None; // this is a `+/-` without a digit following it
+				}
+			}
+
+			let mut has_decimal = false;
+			while let Some(digit) = chars.next().and_then(|c| c.to_digit(10)) {
+				whole = whole * 10 + digit;
+			}
+
+			if chars.prev() == Some('.') {
+				while let Some(digit) = chars.next().and_then(|c| c.to_digit(10)) {
+					frac = frac * 10 + digit;
+				}
+			}
+
+			if chars.prev() == Some('e') || chars.prev() == Some('E') {
+				unimplemented!("TODO: scientific notation");
+			}
+			offset = chars.offset();
+		}
+
+		stream.offset_to(offset);
+
+		Some(Number::new(sign.unwrap_or(Positive), whole, frac))
+	}
+}
+
+impl Neg for Number {
+	type Output = Number;
+	fn neg(self) -> Number {
+		match self.sign {
+			Positive => Number { sign: Negative, ..self },
+			Negative => Number { sign: Positive, ..self },
+		}
 	}
 }
 
@@ -166,17 +240,7 @@ impl Add for Number {
 
 impl AddAssign for Number {
 	fn add_assign(&mut self, rhs: Number) {
-		unimplemented!("TODO: add assign")
-	}
-}
-
-impl Neg for Number {
-	type Output = Number;
-	fn neg(self) -> Number {
-		match self.sign {
-			Positive => Number { sign: Negative, ..self },
-			Negative => Number { sign: Positive, ..self },
-		}
+		*self = *self + rhs;
 	}
 }
 
@@ -189,7 +253,7 @@ impl Sub for Number {
 
 impl SubAssign for Number {
 	fn sub_assign(&mut self, rhs: Number) {
-		unimplemented!("TODO: sub assign")
+		*self = *self - rhs;
 	}
 }
 
@@ -215,7 +279,7 @@ impl Mul for Number {
 
 impl MulAssign for Number {
 	fn mul_assign(&mut self, rhs: Number) {
-		unimplemented!("TODO: mul assign")
+		*self = *self * rhs;
 	}
 }
 
@@ -228,7 +292,7 @@ impl Div for Number {
 
 impl DivAssign for Number {
 	fn div_assign(&mut self, rhs: Number) {
-		unimplemented!("TODO: div assign")
+		*self = *self / rhs;
 	}
 }
 
@@ -241,46 +305,44 @@ impl Rem for Number {
 
 impl RemAssign for Number {
 	fn rem_assign(&mut self, rhs: Number) {
-		unimplemented!("TODO: rem assign")
+		*self = *self % rhs;
 	}
 }
 
 impl BitAnd for Number {
 	type Output = Option<Number>;
 	fn bitand(self, rhs: Number) -> Option<Number> {
-		Some(Number::from_integer(self.to_integer()? & rhs.to_integer()?))
+		Some(Number::from(self.to_integer()? & rhs.to_integer()?))
 	}
 }
 
 impl BitOr for Number {
 	type Output = Option<Number>;
 	fn bitor(self, rhs: Number) -> Option<Number> {
-		Some(Number::from_integer(self.to_integer()? | rhs.to_integer()?))
+		Some(Number::from(self.to_integer()? | rhs.to_integer()?))
 	}
 }
 
 impl BitXor for Number {
 	type Output = Option<Number>;
 	fn bitxor(self, rhs: Number) -> Option<Number> {
-		Some(Number::from_integer(self.to_integer()? ^ rhs.to_integer()?))
+		Some(Number::from(self.to_integer()? ^ rhs.to_integer()?))
 	}
 }
 
 impl Shl for Number {
 	type Output = Option<Number>;
 	fn shl(self, rhs: Number) -> Option<Number> {
-		Some(Number::from_integer(self.to_integer()? << rhs.to_integer()?))
+		Some(Number::from(self.to_integer()? << rhs.to_integer()?))
 	}
 }
 
 impl Shr for Number {
 	type Output = Option<Number>;
 	fn shr(self, rhs: Number) -> Option<Number> {
-		Some(Number::from_integer(self.to_integer()? >> rhs.to_integer()?))
+		Some(Number::from(self.to_integer()? >> rhs.to_integer()?))
 	}
 }
-
-
 
 impl Ord for Number {
 	fn cmp(&self, num: &Number) -> Ordering {
@@ -309,15 +371,15 @@ impl PartialOrd for Number {
 	}
 }
 
-impl PartialEq<Signed> for Number {
-	fn eq(&self, whole: &Signed) -> bool {
-		*self == Number::from_integer(*whole)
+impl PartialEq<Integer> for Number {
+	fn eq(&self, whole: &Integer) -> bool {
+		*self == Number::from(*whole)
 	}
 }
 
-impl PartialOrd<Signed> for Number {
-	fn partial_cmp(&self, whole: &Signed) -> Option<Ordering> {
-		self.partial_cmp(&Number::from_integer(*whole))
+impl PartialOrd<Integer> for Number {
+	fn partial_cmp(&self, whole: &Integer) -> Option<Ordering> {
+		self.partial_cmp(&Number::from(*whole))
 	}
 }
 
@@ -348,37 +410,45 @@ impl Display for Sign {
 }
 
 macro_rules! binary_oper {
-	(assign $oper:tt $this:ident $other:ident $env:ident) => {{
-		$this.data $oper $other.attrs.into_num($env)?;
-		Ok($this.upgrade())
+	(assign $oper:ident $this:ident $other:ident $env:ident) => {{
+		let other = $other.read_into_num($env)?;
+		$this.write().data.$oper(other);
+		Ok($this.clone())
 	}};
 
-	($oper:tt $this:ident $other:ident $env:ident) => (Ok(($this.data $oper $other.attrs.into_num($env)?).into_object()))
+	($oper:ident $this:ident $other:ident $env:ident) => {{
+		let other = $other.read_into_num($env)?;
+		Ok($this.read().data.$oper(other).into_object())
+	}}
 }
 
 
 macro_rules! bit_oper {
-	(assign $oper:tt $this:ident $other:ident $env:ident) => ({
-		$this.data = ($this.data $oper $other.attrs.into_num($env)?)
+	(assign $oper:ident $this:ident $other:ident $env:ident) => ({
+		let other = $other.read_into_num($env)?;
+		let val = $this.read().data.$oper(other)
 			.ok_or_else(|| 
 				Error::BadArguments {
-					args: vec![$this.upgrade(), $other.upgrade()],
+					args: vec![$this.clone(), $other.clone()],
 					descr: concat!("whole numbers are needed for `", stringify!($oper), "`")
 				}
 			)?;
-		Ok($this.upgrade())
+		$this.write().data = val;
+		Ok($this.clone())
 	});
 
-	($oper:tt $this:ident $other:ident $env:ident) => (
-		($this.data $oper $other.attrs.into_num($env)?)
-			.map(IntoObject::into_anyobject)
-			.ok_or_else(|| 
-				Error::BadArguments {
-					args: vec![$this.upgrade(), $other.upgrade()],
-					descr: concat!("whole numbers are needed for `", stringify!($oper), "`")
-				}
-			)
-	)
+	($oper:tt $this:ident $other:ident $env:ident) => {{
+		let other = $other.read_into_num($env);
+		if let Ok(other) = $other.read_into_num($env) {
+			if let (Some(this), Some(other)) = ($this.read().data.to_integer(), other.to_integer()) {
+				return Ok(this.$oper(other).into_object());
+			}
+		}
+		Err(Error::BadArguments {
+			args: vec![$this.clone(), $other.clone()],
+			descr: concat!("whole numbers are needed for `", stringify!($oper), "`")
+		})
+	}}
 }
 
 
@@ -386,64 +456,70 @@ impl_type! {
 	for Number, with self attr;
 
 	fn "@bool" (this) {
-		Ok((!this.data.is_zero()).into_object())
+		Ok((!this.read().data.is_zero()).into_object())
 	}
 
 	fn "@num" (this) {
-		Ok(this.duplicate())
+		Ok(this.read().duplicate())
 	}
 
-	fn "()" (shared this) env, args, {
-		this.read_call("*", args, env)
+	fn "()" (this) env, args, {
+		this.read_call(&("*".into_object() as AnyShared), args, env)
 	}
 
-	fn "+"  (this, rhs) env, { binary_oper!(+ this rhs env) }
-	fn "-"  (this, rhs) env, { binary_oper!(- this rhs env) }
-	fn "*"  (this, rhs) env, { binary_oper!(* this rhs env) }
-	fn "/"  (this, rhs) env, { binary_oper!(/ this rhs env) }
-	fn "%"  (this, rhs) env, { binary_oper!(% this rhs env) }
-	fn "**"  (this, rhs) env, { Ok(this.data.pow(rhs.attrs.into_num(env)?).into_object()) }
+	fn "+"  (this, rhs) env, { binary_oper!(add this rhs env) }
+	fn "-"  (this, rhs) env, { binary_oper!(sub this rhs env) }
+	fn "*"  (this, rhs) env, { binary_oper!(mul this rhs env) }
+	fn "/"  (this, rhs) env, { binary_oper!(div this rhs env) }
+	fn "%"  (this, rhs) env, { binary_oper!(rem this rhs env) }
+	fn "**" (this, rhs) env, { binary_oper!(pow this rhs env) }
 
-	fn "+="  (mut this, rhs) env, { binary_oper!(assign += this rhs env) }
-	fn "-="  (mut this, rhs) env, { binary_oper!(assign -= this rhs env) }
-	fn "*="  (mut this, rhs) env, { binary_oper!(assign *= this rhs env) }
-	fn "/="  (mut this, rhs) env, { binary_oper!(assign /= this rhs env) }
-	fn "%="  (mut this, rhs) env, { binary_oper!(assign %= this rhs env) }
-	fn "**="  (mut this, rhs) env, {
-		this.data = this.data.pow(rhs.attrs.into_num(env)?);
-		Ok(this.upgrade())
+	fn "+="  (this, rhs) env, { binary_oper!(assign add_assign this rhs env) }
+	fn "-="  (this, rhs) env, { binary_oper!(assign sub_assign this rhs env) }
+	fn "*="  (this, rhs) env, { binary_oper!(assign mul_assign this rhs env) }
+	fn "/="  (this, rhs) env, { binary_oper!(assign div_assign this rhs env) }
+	fn "%="  (this, rhs) env, { binary_oper!(assign rem_assign this rhs env) }
+	fn "**=" (this, rhs) env, { binary_oper!(assign pow_assign this rhs env) }
+
+	fn "&" (this, rhs) env, { bit_oper!(bitand this rhs env) }
+	fn "|" (this, rhs) env, { bit_oper!(bitor this rhs env) }
+	fn "^" (this, rhs) env, { bit_oper!(bitxor this rhs env) }
+	fn "<<" (this, rhs) env, { bit_oper!(shl this rhs env) }
+	fn ">>" (this, rhs) env, { bit_oper!(shr this rhs env) }
+
+	fn "&=" (this, rhs) env, { bit_oper!(assign bitand this rhs env) }
+	fn "|=" (this, rhs) env, { bit_oper!(assign bitor this rhs env) }
+	fn "^=" (this, rhs) env, { bit_oper!(assign bitxor this rhs env) }
+	fn "<<=" (this, rhs) env, { bit_oper!(assign shl this rhs env) }
+	fn ">>=" (this, rhs) env, { bit_oper!(assign shr this rhs env) }
+
+	fn "<"  (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data <  other).into_object()) }
+	fn "<=" (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data <= other).into_object()) }
+	fn ">"  (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data >  other).into_object()) }
+	fn ">=" (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data >= other).into_object()) }
+	fn "==" (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data == other).into_object()) }
+
+	fn "@--" (this) {
+		let prev = this.read().data;
+		this.write().data -= Number::one();
+		Ok(prev.into_object())
 	}
 
-	fn "&" (this, rhs) env, { bit_oper!(& this rhs env) }
-	fn "|" (this, rhs) env, { bit_oper!(| this rhs env) }
-	fn "^" (this, rhs) env, { bit_oper!(^ this rhs env) }
-	fn "<<" (this, rhs) env, { bit_oper!(<< this rhs env) }
-	fn ">>" (this, rhs) env, { bit_oper!(>> this rhs env) }
-
-	fn "&=" (mut this, rhs) env, { bit_oper!(assign & this rhs env) }
-	fn "|=" (mut this, rhs) env, { bit_oper!(assign | this rhs env) }
-	fn "^=" (mut this, rhs) env, { bit_oper!(assign ^ this rhs env) }
-	fn "<<=" (mut this, rhs) env, { bit_oper!(assign << this rhs env) }
-	fn ">>=" (mut this, rhs) env, { bit_oper!(assign >> this rhs env) }
-
-
-
-	fn "<"  (this, rhs) env, { binary_oper!(< this rhs env) }
-	fn "<=" (this, rhs) env, { binary_oper!(<= this rhs env) }
-	fn ">"  (this, rhs) env, { binary_oper!(> this rhs env) }
-	fn ">=" (this, rhs) env, { binary_oper!(>= this rhs env) }
-	fn "==" (this, rhs) env, { binary_oper!(== this rhs env) }
-	fn "!=" (this, rhs) env, { binary_oper!(!= this rhs env) }
+	fn "--@" (this) {
+		this.write().data -= Number::one();
+		Ok(this.read().duplicate())
+	}
 
 	fn "<=>" (this, rhs) env, {
-		Ok(match this.data.cmp(&rhs.attrs.into_num(env)?) {
+		let rhs = rhs.read_into_num(env)?;
+		Ok(match this.read().data.cmp(&rhs) {
 			Ordering::Less => Number::neg_one(),
 			Ordering::Equal => Number::zero(),
 			Ordering::Greater => Number::one(),
 		}.into_object())
 	}
 
-	fn _ (_) {
+	fn _ () {
 		any::get_default_attr(self, attr)
 	}
 }
@@ -457,18 +533,18 @@ mod test {
 		Number::new(sign, amnt, 0)
 	}
 
-	fn i(amnt: Signed) -> Number {
-		Number::from_integer(amnt)
+	fn i(amnt: Integer) -> Number {
+		Number::from(amnt)
 	}
 
 	#[test]
 	fn creation(){
 		assert_eq!(Number::new(Positive, 43, 12841), Number { sign: Positive, whole: 43, frac: 12841 });
 		assert_eq!(Number::new(Negative, 43, 12841), Number { sign: Negative, whole: 43, frac: 12841 });
-		assert_eq!(Number::from_integer(0), Number { sign: Positive, whole: 0, frac: 0 });
-		assert_eq!(Number::from_integer(-0), Number { sign: Positive, whole: 0, frac: 0 });
-		assert_eq!(Number::from_integer(54), Number { sign: Positive, whole: 54, frac: 0 });
-		assert_eq!(Number::from_integer(-192351), Number { sign: Negative, whole: 192351, frac: 0 });
+		assert_eq!(Number::from(0), Number { sign: Positive, whole: 0, frac: 0 });
+		assert_eq!(Number::from(-0), Number { sign: Positive, whole: 0, frac: 0 });
+		assert_eq!(Number::from(54), Number { sign: Positive, whole: 54, frac: 0 });
+		assert_eq!(Number::from(-192351), Number { sign: Negative, whole: 192351, frac: 0 });
 	}
 
 	#[test]

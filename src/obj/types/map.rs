@@ -4,8 +4,23 @@ use std::collections::{HashMap, hash_map::{DefaultHasher, Entry}};
 use std::fmt::{self, Display, Formatter};
 use obj::{AnyShared, SharedObject, types::{IntoObject, Number}};
 
+type InnerMap = HashMap<AnyShared, AnyShared>;
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Map(HashMap<AnyShared, AnyShared>);
+pub struct Map(InnerMap);
+
+impl Map {
+	pub fn new(data: InnerMap) -> Self {
+		Map(data)
+	}
+}
+
+impl From<InnerMap> for Map {
+	#[inline]
+	fn from(inp: InnerMap) -> Map {
+		Map::new(inp)
+	}
+}
 
 impl Hash for Map {
 	fn hash<H: Hasher>(&self, h: &mut H) {
@@ -25,22 +40,22 @@ impl Hash for Map {
 }
 
 impl Deref for Map {
-	type Target = HashMap<AnyShared, AnyShared>;
+	type Target = InnerMap;
 
 	#[inline]
-	fn deref(&self) -> &HashMap<AnyShared, AnyShared> {
+	fn deref(&self) -> &InnerMap {
 		&self.0
 	}
 }
 
 impl DerefMut for Map {
 	#[inline]
-	fn deref_mut(&mut self) -> &mut HashMap<AnyShared, AnyShared> {
+	fn deref_mut(&mut self) -> &mut InnerMap {
 		&mut self.0
 	}
 }
 
-impl IntoObject for HashMap<AnyShared, AnyShared> {
+impl IntoObject for InnerMap {
 	type Type = Map;
 	fn into_object(self) -> SharedObject<Map> {
 		Map(self).into_object()
@@ -58,48 +73,49 @@ impl_type! {
 	for Map, with self attr;
 
 	fn "@bool" (this) {
-		Ok((!this.is_empty()).into_object())
+		Ok((!this.read().data.is_empty()).into_object())
 	}
 
 	fn "len" (this) {
-		Ok(this.len().into_object())
+		Ok(this.read().data.len().into_object())
 	}
 
-	fn "has" (this, key) {
-		Ok(this.0.keys().any(|k| *k.read() == *key).into_object())
+	fn "count_vals" (this, val) {
+		let ref val = *val.read();
+		let ref data = this.read().data;
+		Ok(data.iter().filter(|(_k, v)| &*v.read() == val).count().into_object())
 	}
 
-	fn "get" (this, shared key) {
-		this.get(key).map(Clone::clone).ok_or_else(|| panic!("TODO: error for doesnt exist"))
+	fn "has?" (this, key) {
+		let ref key = *key.read();
+		let ref data = this.read().data;
+		Ok(data.keys().any(|obj| &*obj.read() == key).into_object())
 	}
 
-	fn "set" (mut this, shared key, shared val) {
-		Ok(this.insert(key.clone(), val.clone()).unwrap_or_else(|| Object::null()))
+	fn "get" (this, key) {
+		Ok(this.read().data.get(&key).map(Clone::clone).unwrap_or_else(Object::null))
 	}
 
-	fn "del" (mut this, shared key) {
-		if let Some(val) = this.remove(key) {
-			Ok(val)
-		} else {
-			panic!("TODO: error for doesnt exist")
-		}
+	fn "set" (this, key, val) {
+		Ok(this.write().data.insert(key, val).unwrap_or_else(Object::null))
 	}
 
-	fn "[]" (this, shared key) {
-		Ok(this.get(key).map(Clone::clone).unwrap_or_else(|| Object::null()))
+	fn "del" (this, pos) {
+		Ok(this.write().data.remove(&pos).unwrap_or_else(Object::null))
 	}
 
-	fn "[]=" (mut this, shared key, shared val) {
-		this.insert(key.clone(), val.clone());
-		Ok(val.clone())
+	fn "+" (this, other) env, {
+		let other = other.read_into_map(env)?;
+		this.write().data.0.extend(other.0);
+		Ok(this)
 	}
 
-	fn "[]~" (mut this, shared pos) {
-		Ok(this.remove(pos).unwrap_or_else(|| Object::null()))
-	}
-
-	fn _ (_) {
+	fn _ () {
 		any::get_default_attr(self, attr)
 	}
 }
+
+
+
+
 

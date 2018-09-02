@@ -2,6 +2,7 @@ use obj::types::{Number, Sign};
 use obj::{Result, Error};
 use std::ops::{Index, Range};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Offset {
 	Valid(usize),
 	OutOfBounds(usize), // how much over it is
@@ -16,7 +17,7 @@ pub fn offset(len: usize, pos: Number) -> Result<Offset> {
 		Sign::Positive if pos == 0 => Offset::Valid(0),
 		Sign::Negative if pos == 0 => Offset::Valid(len - 1),
 		Sign::Positive if pos < len => Offset::Valid(pos),
-		Sign::Negative if pos < len => Offset::Valid(len - pos),
+		Sign::Negative if pos < len => Offset::Valid(len - pos - 1),
 		Sign::Positive => Offset::OutOfBounds(pos - len),
 		Sign::Negative => Offset::Underflow(pos - len)
 	})

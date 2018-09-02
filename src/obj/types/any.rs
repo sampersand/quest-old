@@ -1,31 +1,97 @@
-use shared::Shared;
-use obj::{Type, Object, types::{BoundFn, IntoObject}};
+// use shared::Shared;
+// use obj::{Type, Object, types::{BoundFn, IntoObject}};
 
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::any::Any;
+// use std::fmt::Debug;
+// use std::hash::Hash;
+// use std::any::Any;
 
-pub fn get_default_attr<T: 'static>(obj: &Object<T>, attr: &str) -> Option<BoundFn>
-			where Object<T>: Type + ToString,
-					T: Debug + PartialEq + Hash + Clone {
-	let obj = obj.upgrade();
+impl_type! {
+	defaults fn get_default_attr<T>(this, attr) where {
+		::obj::Object<T>: ::obj::types::Type + ToString,
+		T: ::std::fmt::Debug + PartialEq + ::std::hash::Hash + Clone + Send + Sync
+	};
 
-	match attr {
-		"@text" => Some(obj.bind_to(|obj, _, _| Ok(obj.to_string().into_object()))),
-		"clone" => Some(obj.bind_to(|obj, _, _| Ok(obj.duplicate()))),
-		"@bool" => Some(BoundFn::bind_void(|_, _| Ok(true.into_object()))),
-		"!" => Some(obj.bind_to(|obj, args, env| 
-			Ok((!obj.attrs.into_bool(env)?).into_object())
-			// let res = obj.attrs.call("@bool", args, env).expect("`@bool` is needed for `!`");
-			// let read = res.read();
-			// Ok(Object::<bool>::new(!read.downcast_ref::<bool>().expect("`@bool` didn't return a bool").data))
-		)),
-		"==" => Some(obj.bind_to(|obj, args, _| Ok(Object::<bool>::new(obj == &*args.get(0).expect("at least one arg is needed for `==`").read())))),
-		"!=" => Some(obj.read().attrs.get("==").ok()?.bind_to(|obj, args, env| {
-			let res = obj.attrs.call("()", args, env).expect("`()` is needed for `==` (for `!=`)");
-			let read = res.read();
-			Ok(read.attrs.call("!", args, env).expect("`!` needed for result of `==` (for `!=`)"))
-		})),
-		_ => None
+	fn _ () {
+		get_default_attr_clone(this, attr)
+			.or_else(|| get_default_attr_tostring(this, attr))
+			.or_else(|| get_default_attr_typed(this, attr))
+	}
+}
+
+impl_type! {
+	defaults fn get_default_attr_tostring<T>(this, attr) where { ::obj::Object<T>: ToString, T: Send + Sync };
+
+	fn "@text" (this) {
+		Ok(this.read().to_string().into_object())
+	}
+
+	fn _ () {
+		None
+	}
+}
+
+impl_type! {
+	defaults fn get_default_attr_clone<T>(this, attr) where { T: Send + Sync + Clone };
+
+	fn "clone" (this) {
+		Ok(this.read().duplicate())
+	}
+
+	fn _ () {
+		None
+	}
+}
+
+impl_type! {
+	defaults fn get_default_attr_typed<T>(this, attr) where {
+		::obj::Object<T>: ::obj::types::Type,
+		T: ::std::fmt::Debug + PartialEq + ::std::hash::Hash + Send + Sync + 'static
+	};
+
+	static ref VAR_EQ: SharedObject<Var> = "==".into_object();
+	static ref VAR_NOT: SharedObject<Var> = "!=".into_object();
+
+	fn "@bool" (_) {
+		Ok(true.into_object())
+	}
+
+	fn "!" (this) env, {
+		Ok((!this.read_into_bool(env)?).into_object() as AnyShared)
+	}
+
+	fn "==" (this, other) {
+		let ref other = *other.read();
+		Ok((&*this.read() == other).into_object() as AnyShared)
+	}
+
+	fn "!=" (this) env, args, {
+		this.read_call(&(VAR_EQ.clone() as AnyShared), args, env)?
+			.read_call(&(VAR_NOT.clone() as AnyShared), &[], env)
+	}
+
+	fn ".#" (this) {
+		Ok(this.read().attrs.len().into_object() as AnyShared)
+	}
+
+	fn ".?" (this, attr) {
+		Ok(this.read().attrs.has(&attr).into_object() as AnyShared)
+	}
+
+	fn "." (this, attr) {
+		this.read().attrs.get(&attr)
+	}
+
+	fn ".=" (this, attr, val) env, {
+		this.write().attrs.set(attr, val.clone());
+		Ok(val)
+	}
+
+	fn ".~" (this, attr) {
+		this.write().attrs.del(&attr);
+		Ok(this)
+	}
+
+	fn _ () {
+		None
 	}
 }

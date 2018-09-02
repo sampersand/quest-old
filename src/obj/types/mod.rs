@@ -1,104 +1,81 @@
 macro_rules! impl_type_pat_inner {
 	($_fn:expr, $_args:ident $_pos:expr; [] []) => {};
 
-
-	($fn:expr, $args:ident $pos:expr; [] [shared $opt:ident $opt_val:expr $(,$($oopt:ident)* $oopt_val:expr)*]) => {
-		let $opt = *$args.get($pos).map(|x| (**x).clone()).unwrap_or_else(|| $opt_val);
-		impl_type_pat_inner!($fn, $args $pos + 1; [] [$($oopt $oopt_val),*])
+	($fn:expr, $args:ident $pos:expr; [] [$opt:ident $(; $oopt:ident)*]) => {
+		let $opt = $args.get($pos).map(|x| (*x).clone());
+		impl_type_pat_inner!($fn, $args $pos + 1; [] [$($oopt)*])
 	};
 
-	($fn:expr, $args:ident $pos:expr; [] [mut $opt:ident $opt_val:expr $(,$($oopt:ident)* $oopt_val:expr)*]) => {
-		let opt_shared = $args.get($pos).map(|x| (**x).clone()).unwrap_or_else(|| $opt_val);
-		let ref mut $opt = *opt_shared.write();
-		impl_type_pat_inner!($fn, $args $pos + 1; [] [$($oopt $oopt_val),*])
+	($fn:expr, $args:ident $pos:expr; [$req:ident $($oreq:ident)*] $opts:tt) => {
+		let $req = $args.get($pos).expect(concat!("Missing expected arg `", stringify!($req), "` for `", $fn, "`")).clone();
+		impl_type_pat_inner!($fn, $args $pos + 1; [$($oreq)*] $opts)
 	};
-
-	($fn:expr, $args:ident $pos:expr; [] [$opt:ident $opt_val:expr $(,$($oopt:ident)* $oopt_val:expr)*]) => {
-		let opt_shared = $args.get($pos).map(|x| (**x).clone()).unwrap_or_else(|| $opt_val);
-		let ref $opt = *opt_shared.read();
-		impl_type_pat_inner!($fn, $args $pos + 1; [] [$($oopt $oopt_val),*])
-	};
-
-	($_fn:expr, $_args:ident $_pos:expr; [] [$bad:ident $opt:ident $($other:tt)*]) => {
-		compiler_error!("argument must either be `", $opt, "`, `mut ", $opt, "`, or `shared ", $opt, "` not `", $bad, " ", $opt, "`")
-	};
-
-
-	($fn:expr, $args:ident $pos:expr; [shared $req:ident $(,$($oreq:ident)*)*] $opts:tt) => {
-		let $req = *$args.get($pos).expect(concat!("Missing expected arg `", stringify!($req), "` for `", $fn, "`"));
-		impl_type_pat_inner!($fn, $args $pos + 1; [$($($oreq)*),*] $opts)
-	};
-
-	($fn:expr, $args:ident $pos:expr; [mut $req:ident $(,$($oreq:ident)*)*] $opts:tt) => {
-		let req_shared = $args.get($pos).expect(concat!("Missing expected arg `", stringify!($req), "` for `", $fn, "`"));
-		let ref mut $req = *req_shared.write();
-		impl_type_pat_inner!($fn, $args $pos + 1; [$($($oreq)*),*] $opts)
-	};
-
-	($fn:expr, $args:ident $pos:expr; [$req:ident $(,$($oreq:ident)*)*] $opts:tt) => {
-		let req_shared = $args.get($pos).expect(concat!("Missing expected arg `", stringify!($req), "` for `", $fn, "`"));
-		let ref $req = *req_shared.read();
-		impl_type_pat_inner!($fn, $args $pos + 1; [$($($oreq)*),*] $opts)
-	};
-
-	($_fn:expr, $_args:ident $_pos:expr; [$bad:ident $req:ident $(,$($_oreq:ident)*)*] $_opts:tt) => {
-		compiler_error!("argument must either be `", $req, "`, `mut ", $req, "`, or `shared ", $req, "` not `", $bad, " ", $req, "`")
-	};
-
 }
 
 macro_rules! impl_type_pat {
-	($_fn:expr, $_self:ident (_) $body:block) => { $body };
+	($_fn:expr, $_self:ident () $body:block) => { $body };
+	($_fn:expr, $_self:ident (_) $body:block) => { Some(BoundFn::bind_void(|_, _| $body)) };
 
-	($fn:expr, $self:ident $fn_args:tt $body:block) => {
-		impl_type_pat!($fn, $self $fn_args $body _);
+	($fn:expr, $self:ident $fnargs:tt $body:block) => {
+		impl_type_pat!($fn, $self $fnargs $body _);
 	};
 
-	($fn:expr, $self:ident $fn_args:tt $body:block $env:pat) => {
-		impl_type_pat!($fn, $self $fn_args $body $env, _args);
+	($fn:expr, $self:ident $fnargs:tt $body:block $env:pat) => {
+		impl_type_pat!($fn, $self $fnargs $body $env, _args);
 	};
 
 
-	($_fn:expr, $self:ident (shared $this:ident) $body:block $env:pat, $args:pat) => {
-		Some($self.upgrade().bind_to_shared(|$this, $args, $env| $body))
-	};
-
-	($_fn:expr, $self:ident (mut $this:ident) $body:block $env:pat, $args:pat) => {
-		Some($self.upgrade().bind_to_mut(|$this, $args, $env| $body))
-	};
-
-	($_fn:expr, $self:ident ($this:ident) $body:block $env:pat, $args:pat) => {
+	($_fn:expr, $self:ident ($this:pat) $body:block $env:pat, $args:pat) => {
 		Some($self.upgrade().bind_to(|$this, $args, $env| $body))
 	};
 
-
-	($fn:expr, $self:ident (shared $this:ident $(,$($req:ident)*)* $(;$($opt:ident)* = $val:expr)*) $body:block $env:pat, $args:ident) => {
-		Some($self.upgrade().bind_to_shared(|$this, $args, $env| {
-			impl_type_pat_inner!($fn, $args 0; [$($($req)*),*] [$($($opt)* $val),*]);
-			$body
-		}))
-	};
-
-	($fn:expr, $self:ident (mut $this:ident $(,$($req:ident)*)* $(;$($opt:ident)* = $val:expr)*) $body:block $env:pat, $args:ident) => {
-		Some($self.upgrade().bind_to_mut(|$this, $args, $env| {
-			impl_type_pat_inner!($fn, $args 0; [$($($req)*),*] [$($($opt)* $val),*]);
-			$body
-		}))
-	};
-
-	($fn:expr, $self:ident ($this:ident $(,$($req:ident)*)* $(;$($opt:ident)* = $val:expr)*) $body:block $env:pat, $args:ident) => {
+	($fn:expr, $self:ident ($this:ident $(, $req:ident)* $(; $opt:ident)*) $body:block $env:pat, $args:ident) => {
 		Some($self.upgrade().bind_to(|$this, $args, $env| {
-			impl_type_pat_inner!($fn, $args 0; [$($($req)*),*] [$($($opt)* $val),*]);
+			impl_type_pat_inner!($fn, $args 0; [$($req)*] [$($opt)*]);
 			$body
 		}))
-	}
+	};
 }
 
 macro_rules! impl_type {
-
-	(for $type:ty, with $self:ident $attr:ident; 
+	(defaults fn $fn_name:ident<$T:ident>($obj:ident, $attr:ident) where {$($params:tt)*};
+		$(static ref $static:ident: $static_ty:ty = $static_body:expr;)*
 		$(fn $fn:tt $args:tt $($vars:pat,)* $body:block)*
 	) => {
+		pub fn $fn_name<$T: 'static>($obj: &::obj::Object<$T>, $attr: &str) -> Option<::obj::types::BoundFn>
+			where $($params)* {
+			lazy_static! {
+				$(
+					static ref $static: $static_ty = $static_body;
+				)*
+			}
+
+			use obj::{*, types::*};
+			match $attr {
+				$(
+					$fn => impl_type_pat!(concat!(stringify!($type), ".", $fn), $obj $args $body $($vars),*)
+				),*
+			}
+		}
+	};
+
+	(for $type:ty, with $self:ident $attr:ident; 
+		$(static ref $static:ident: $static_ty:ty = $static_body:expr;)*
+		$(fn $fn:tt $args:tt $($vars:pat,)* $body:block)*
+	) => {
+		lazy_static! {
+			$(
+				static ref $static: $static_ty = $static_body;
+			)*
+		}
+
+		impl ::obj::types::IntoObject for $type {
+			type Type = Self;
+			fn into_object(self) -> ::obj::SharedObject<Self> {
+				::obj::Object::new(self).into()
+			}
+		}
+
 		impl $crate::obj::types::Type for $crate::obj::Object<$type> {
 			fn get_default_attr($self: &Self, $attr: &str) -> Option<$crate::obj::types::BoundFn> {
 				use obj::{*, types::*};
@@ -110,19 +87,14 @@ macro_rules! impl_type {
 			}
 
 			fn debug_fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-				::std::fmt::Debug::fmt(&self.data(), f)
+				::std::fmt::Debug::fmt(&self.data, f)
 			}
 
 			fn display_fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-				::std::fmt::Display::fmt(&self.data(), f)
+				::std::fmt::Display::fmt(&self.data, f)
 			}
 		}
 	}
-}
-
-impl_type! {
-	for !, with self attr;
-	fn _ (_) { unreachable!(); }
 }
 
 mod bool;
@@ -134,6 +106,9 @@ mod num;
 mod shared;
 mod map;
 mod list;
+mod var;
+mod oper;
+mod block;
 
 use std::fmt::{self, Debug, Formatter};
 
@@ -146,32 +121,51 @@ pub trait Type {
 use std::hash::Hash;
 use obj::{AnyShared, SharedObject, Object};
 
-pub trait IntoObject : Sized where Object<Self::Type>: Type {
-	type Type : Sized + Eq + Hash + Debug + 'static;
-	fn into_object(self) -> SharedObject<Self::Type>;
-	fn into_anyobject(self) -> AnyShared{
-		self.into_object() as AnyShared
+pub trait IntoAnyObject {
+	fn into_anyobject(&self) -> AnyShared;
+}
+
+impl<T: IntoObject + Clone> IntoAnyObject for T where T::Type: Sized {
+	fn into_anyobject(&self) -> AnyShared {
+		self.clone().into_object() as AnyShared
 	}
 }
 
-impl<T: Debug + Eq + Hash + 'static> IntoObject for SharedObject<T> where Object<T>: Type {
+pub trait IntoObject : Sized {
+	type Type : Send + Sync + 'static + ?Sized;
+	fn into_object(self) -> SharedObject<Self::Type>;
+}
+
+
+impl<F: FnOnce() -> AnyShared> IntoObject for F {
+	type Type = dyn (::std::any::Any) + Send + Sync;
+	fn into_object(self) -> AnyShared {
+		self()
+	}
+}
+
+
+// impl<T: Sized + Debug + Eq + Hash + Send + Sync + 'static> IntoObject for T where Object<T>: Type {
+// 	type Type = Self;
+// 	fn into_object(self) -> SharedObject<Self::Type> {
+// 		Object::new(self).into()
+// 	}
+// }
+
+
+impl<T: Debug + Eq + Hash + Send + Sync + 'static> IntoObject for SharedObject<T> where Object<T>: Type {
 	type Type = T;
 	fn into_object(self) -> SharedObject<Self::Type> {
 		self
 	}
 }
 
-impl<T: Sized + Debug + Eq + Hash + 'static> IntoObject for T where Object<T>: Type {
-	type Type = Self;
-	fn into_object(self) -> SharedObject<Self::Type> {
-		Object::new(self).into()
-	}
-}
-
-
 pub use self::boundfn::BoundFn;
-pub use self::num::{Number, Sign};
+pub use self::num::{Number, Sign, Integer};
 pub use self::map::Map;
 pub use self::list::List;
 pub use self::null::Null;
 pub use self::text::Text;
+pub use self::var::Var;
+pub use self::oper::Oper;
+pub use self::block::Block;

@@ -1,3 +1,4 @@
+use obj::AnyShared;
 use shared::SharedMap;
 
 use std::mem;
@@ -11,14 +12,10 @@ lazy_static! {
 	static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 }
 
-
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Id(usize);
 
 impl Id {
-	pub fn _id(&self) -> usize { self.0 }
-	pub fn _new(inner: usize) -> Self { Id(inner) }
-
 	pub(super) fn next() -> Id {
 		Id(ID_COUNTER.fetch_add(1, Relaxed))
 	}
