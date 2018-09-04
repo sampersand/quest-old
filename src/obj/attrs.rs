@@ -14,12 +14,12 @@ pub struct Attributes {
 }
 
 lazy_static! {
-	static ref VAR_CALL: SharedObject<Var> = Id::from("()").into_object();
-	static ref VAR_NUM: SharedObject<Var> = Id::from("@num").into_object();
-	static ref VAR_MAP: SharedObject<Var> = Id::from("@map").into_object();
-	static ref VAR_LIST: SharedObject<Var> = Id::from("@list").into_object();
-	static ref VAR_TEXT: SharedObject<Var> = Id::from("@text").into_object();
-	static ref VAR_BOOL: SharedObject<Var> = Id::from("@bool").into_object();
+	static ref VAR_CALL: AnyShared = Id::from("()").into_object();
+	static ref VAR_NUM: AnyShared = Id::from("@num").into_object();
+	static ref VAR_MAP: AnyShared = Id::from("@map").into_object();
+	static ref VAR_LIST: AnyShared = Id::from("@list").into_object();
+	static ref VAR_TEXT: AnyShared = Id::from("@text").into_object();
+	static ref VAR_BOOL: AnyShared = Id::from("@bool").into_object();
 }
 
 
@@ -59,7 +59,7 @@ impl Attributes {
 		if let Some(bound) = r.downcast_ref::<BoundFn>() {
 			bound.data.call_bound(args, env)
 		} else {
-			r.attrs.call(&(VAR_CALL.clone() as AnyShared), args, env)
+			r.attrs.call(&VAR_CALL, args, env)
 		}
 	}
 
@@ -77,38 +77,6 @@ impl Attributes {
 	}
 }
 
-impl Attributes {
-	pub fn into_num(&self, env: &Environment) -> Result<Number> {
-		// self.as_num(env).map(|x| x.read().data)
-		unimplemented!()
-	}
-
-	pub fn as_num(&self, env: &Environment) -> SharedResult<Number> {
-		// self.call("@num", &[], env).map(|x| x.read().try_upgrade::<Number>().expect("`@num` didn't return a number"))
-		unimplemented!()
-	}
-
-	pub fn into_bool(&self, env: &Environment) -> Result<bool> {
-		// self.as_bool(env).map(|x| x.read().data)
-		unimplemented!()
-	}
-
-	pub fn as_bool(&self, env: &Environment) -> SharedResult<bool> {
-		// self.call("@bool", &[], env).map(|x| x.read().try_upgrade::<bool>().expect("`@bool` didn't return a boolean"))
-		unimplemented!()
-	}
-
-	pub fn into_string(&self, env: &Environment) -> Result<Text> {
-		// self.as_string(env).map(|x| x.read().data.clone())
-		unimplemented!()
-	}
-
-	pub fn as_string(&self, env: &Environment) -> SharedResult<Text> {
-		// self.call("@text", &[], env).map(|x| x.read().try_upgrade::<Text>().expect("`@bool` didn't return a boolean"))
-		unimplemented!()
-	}
-}
-
 
 impl AnyShared {
 	pub fn read_execute(&self, args: &[AnyShared], env: &Environment) -> AnyResult {
@@ -116,7 +84,7 @@ impl AnyShared {
 			return func.data.call_bound(args, env);
 		}
 		// this way we no longer are within the `read` lock as before
-		self.read_call(&(VAR_CALL.clone() as AnyShared), args, env)
+		self.read_call(&VAR_CALL, args, env)
 	}
 }
 
@@ -127,51 +95,45 @@ impl<T: ?Sized> SharedObject<T> {
 
 	pub fn read_call(&self, attr: &AnyShared, args: &[AnyShared], env: &Environment) -> AnyResult {
 		self.read_get(attr, env)?.read_execute(args, env)
-		// func.
-		// let f = func.read();
-		// if let Some(bound) = f.downcast_ref::<BoundFn>() {
-		// 	return bound.data.call_bound(args, env);
-		// } 
-		// drop(f);
-		// func.read_call(&(VAR_CALL.clone() as AnyShared), args, env)
 	}
 
 	pub fn read_into_list(&self, env: &Environment) -> Result<List> {
-		let func = self.read().attrs.get(&(VAR_LIST.clone() as AnyShared))?;
-		let res = func.read_call(&(VAR_CALL.clone() as AnyShared), &[], env)?;
-		let n = res.read().try_upgrade::<List>().expect("`@list` didn't return a number");
+		let func = self.read().attrs.get(&VAR_LIST)?;
+		let res = func.read_call(&VAR_CALL, &[], env)?;
+		let n = res.read().try_upgrade::<List>().expect("`@list` didn't return a list");
 		let r2 = n.read();
 		Ok(r2.data.clone())
 	}
 
 	pub fn read_into_map(&self, env: &Environment) -> Result<Map> {
-		let func = self.read().attrs.get(&(VAR_MAP.clone() as AnyShared))?;
-		let res = func.read_call(&(VAR_CALL.clone() as AnyShared), &[], env)?;
-		let n = res.read().try_upgrade::<Map>().expect("`@map` didn't return a number");
+		let func = self.read().attrs.get(&VAR_MAP)?;
+		let res = func.read_call(&VAR_CALL, &[], env)?;
+		let n = res.read().try_upgrade::<Map>().expect("`@map` didn't return a map");
 		let r2 = n.read();
 		Ok(r2.data.clone())
 	}
 
 	pub fn read_into_num(&self, env: &Environment) -> Result<Number> {
-		let func = self.read().attrs.get(&(VAR_NUM.clone() as AnyShared))?;
-		let res = func.read_call(&(VAR_CALL.clone() as AnyShared), &[], env)?;
+		let func = self.read().attrs.get(&VAR_NUM)?;
+		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<Number>().expect("`@num` didn't return a number");
 		let r2 = n.read();
 		Ok(r2.data)
 	}
 
 	pub fn read_into_bool(&self, env: &Environment) -> Result<bool> {
-		let func = self.read().attrs.get(&(VAR_BOOL.clone() as AnyShared))?;
-		let res = func.read_call(&(VAR_CALL.clone() as AnyShared), &[], env)?;
-		let n = res.read().try_upgrade::<bool>().expect("`@num` didn't return a number");
+		let func = self.read().attrs.get(&VAR_BOOL)?;
+		let res = func.read_call(&VAR_CALL, &[], env)?;
+		let n = res.read().try_upgrade::<bool>().expect("`@bool` didn't return a bool");
 		let r2 = n.read();
 		Ok(r2.data)
 	}
 
 	pub fn read_into_text(&self, env: &Environment) -> Result<Text> {
-		let func = self.read().attrs.get(&(VAR_TEXT.clone() as AnyShared))?;
-		let res = func.read_call(&(VAR_CALL.clone() as AnyShared), &[], env)?;
-		let n = res.read().try_upgrade::<Text>().expect("`@num` didn't return a number");
+
+		let func = self.read().attrs.get(&VAR_TEXT)?;
+		let res = func.read_call(&VAR_CALL, &[], env)?;
+		let n = res.read().try_upgrade::<Text>().expect("`@text` didn't return text");
 		let r2 = n.read();
 		Ok(r2.data.clone())
 	}

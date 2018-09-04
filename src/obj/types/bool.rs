@@ -1,5 +1,4 @@
 use parse::{Parsable, Stream};
-use env::Environment;
 use obj::{AnyShared, types::IntoObject};
 
 impl_type! {

@@ -21,6 +21,7 @@ pub enum Error {
 
 use self::Error::*;
 
+#[must_use]
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 impl Display for Error {

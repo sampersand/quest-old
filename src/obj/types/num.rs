@@ -1,4 +1,4 @@
-use parse::{Parsable, Stream, ParseResult};
+use parse::{Parsable, Stream, Token};
 use env::Environment;
 use obj::{Result, AnyShared, SharedObject, types::IntoObject};
 use std::fmt::{self, Display, Formatter};
@@ -115,6 +115,11 @@ impl Number {
 	}
 
 	#[inline]
+	pub fn is_over_zero(&self) -> bool {
+		self.is_positive() && !self.is_zero()
+	}
+
+	#[inline]
 	pub fn is_positive(&self) -> bool {
 		self.sign == Positive
 	}
@@ -154,9 +159,47 @@ impl Number {
 	}
 }
 
-impl Parsable for Number {
-	fn parse(stream: &mut Stream, _: &Environment) -> ParseResult {
+impl Number {
+	pub fn parse_str<C: Iterator<Item=char>>(mut chars: C) -> Option<(Number, usize)> {
+		let mut num = Number::default();
+		let mut offset = 0;
+		let mut digit = chars.next()?;
+		if digit == '-' || digit == '+' {
+			debug_assert_eq!(num.sign, Positive); // sign defaults to positive
+			if digit == '-' {
+				num.sign = Negative;
+			}
+			offset += digit.len_utf8();
+			// digit = chars.by_ref().skip_while(|c| c.is_whitespace()).next()?;
+			digit = chars.next()?; // we can only have a `-` or `+` flush against a number. TODO: fix this?
+		}
+		offset += digit.len_utf8();
+		num.whole = digit.to_digit(10)?; // if its not a digit, this returns early
 
+		for chr in chars {
+			if let Some(digit) = chr.to_digit(10) {
+				num.whole = num.whole * 10 + digit;
+				offset += chr.len_utf8();
+			} else {
+				break
+			}
+		}
+		Some((num, offset))
+	}
+}
+impl Parsable for Number {
+	fn parse(stream: &mut Stream) -> Option<Token> {
+		let (num, offset) = Number::parse_str(stream.chars())?;
+
+
+
+		Some(Token::new_literal(stream.offset_to(offset), Default::default(), move || num.into_object()))
+	}
+}
+
+/*
+impl Parsable for Number {
+	fn parse(stream: &mut Stream) -> Option<Token> {
 		let mut sign = None;
 		let mut whole = 0;
 		let mut frac = 0;
@@ -204,11 +247,13 @@ impl Parsable for Number {
 			offset = chars.offset();
 		}
 
-		stream.offset_to(offset);
+		let text = stream.offset_to(offset);
+		let num = Number::new(sign.unwrap_or(Positive), whole, frac);
 
-		Some(Number::new(sign.unwrap_or(Positive), whole, frac))
+		Some(Token::new(text, move |_: &Environment| num.into_object() as AnyShared))
 	}
 }
+*/
 
 impl Neg for Number {
 	type Output = Number;
@@ -298,8 +343,22 @@ impl DivAssign for Number {
 
 impl Rem for Number {
 	type Output = Number;
-	fn rem(self, rhs: Number) -> Number {
-		unimplemented!("TODO: Modulo")
+	fn rem(mut self, rhs: Number) -> Number {
+		if !rhs.is_over_zero() {
+			panic!("Can't modulo negative numbers");
+		}
+
+		if let (Some(this), Some(rhs)) = (self.to_integer(), rhs.to_integer()) {
+			return Number::from(this % rhs);
+		}
+
+		panic!("Can only modulo integers");
+
+		while (self - rhs).is_over_zero() {
+			self -= rhs;
+		}
+
+		self
 	}
 }
 
@@ -499,6 +558,18 @@ impl_type! {
 	fn ">=" (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data >= other).into_object()) }
 	fn "==" (this, rhs) env, { let other = rhs.read_into_num(env)?; Ok((this.read().data == other).into_object()) }
 
+	fn "@++" (this) {
+		let prev = this.read().data;
+		this.write().data += Number::one();
+		Ok(prev.into_object())
+	}
+
+	fn "++@" (this) {
+		this.write().data += Number::one();
+		Ok(this.read().duplicate())
+	}
+
+
 	fn "@--" (this) {
 		let prev = this.read().data;
 		this.write().data -= Number::one();
@@ -518,6 +589,18 @@ impl_type! {
 			Ordering::Greater => Number::one(),
 		}.into_object())
 	}
+
+/*
+	fn "." (this, rhs) env, {
+		if let Ok(rhs) = rhs.read_into_num(env) {
+			let num = Number { frac: rhs.whole, ..this.read().data };
+			Ok(num.into_object() as AnyShared)
+		} else {
+			unimplemented!("TODO: attrs for num");
+			// Ok(any::get_default_attr(self, rhs).map(|x| x as AnyShared).unwrap_or(Object::null))
+		}
+	}
+*/
 
 	fn _ () {
 		any::get_default_attr(self, attr)

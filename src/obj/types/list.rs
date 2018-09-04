@@ -1,26 +1,36 @@
-use parse::{Parsable, Stream, ParseResult};
-use env::Environment;
+use parse::{Parsable, Stream, Token};
+use env::{Environment, Executable};
 
 use std::ops::{Deref, DerefMut};
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Display, Formatter};
 use obj::{AnyShared, SharedObject, types::IntoObject};
 use super::shared::{self, Offset::*};
+use super::block;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct List(Vec<AnyShared>);
 
 impl Parsable for List {
-	fn parse(stream: &mut Stream, env: &Environment) -> ParseResult {
-		if stream.starts_with(']') {
-			stream.eof = true;
-			return None;
-		}
+	fn parse(stream: &mut Stream) -> Option<Token> {
+		let (raw, data) = block::parse_block('[', ']', stream)?;
+		Some(Token::new_env(raw, Default::default(), move |env| {
+			let env_new = env.new_stack();
+			env_new.execute(data.into_iter())?;
+			env.push(env_new.stack().clone());
+			Ok(())
+		}))
 
-		if !stream.starts_with('[') {
-			return None;
-		}
-		None
+		// if stream.as_str().starts_with(']') {
+		// 	stream.eof = true;
+		// 	return None;
+		// }
+
+		// if !stream.as_str().starts_with('[') {
+		// 	return None;
+		// }
+
+		// None
 
 // {
 // 	1 + 2 // }
@@ -34,7 +44,6 @@ impl Parsable for List {
 // 		unimplemented!()
 	}
 }
-
 
 impl List {
 	#[inline]
@@ -68,6 +77,7 @@ impl<'a> IntoObject for &'a [AnyShared] {
 
 impl Display for List {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		println!("self: {:?}", self);
 		write!(f, "[{}]", self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))
 	}
 }
@@ -90,6 +100,10 @@ impl DerefMut for List {
 
 impl_type! {
 	for List, with self attr;
+
+	fn "@list" (this) {
+		Ok(this.read().duplicate())
+	}
 
 	fn "@bool" (this) {
 		Ok((!this.read().data.is_empty()).into_object())

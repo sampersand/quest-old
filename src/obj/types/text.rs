@@ -1,4 +1,4 @@
-use parse::{Parsable, Stream, ParseResult};
+use parse::{Parsable, Stream, Token};
 use env::Environment;
 
 use obj::{AnyShared, SharedObject, types::IntoObject};
@@ -9,12 +9,10 @@ use super::shared::{self, Offset};
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Text(String);
 
-
-
 impl Parsable for Text {
-	fn parse(stream: &mut Stream, env: &Environment) -> ParseResult {
+	fn parse(stream: &mut Stream) -> Option<Token> {
 		let mut offset;
-		let mut text = String::new();
+		let mut data = String::new();
 		{
 			let mut chars = stream.chars();
 			let quote = chars.next()?;
@@ -38,31 +36,31 @@ impl Parsable for Text {
 						let c = chars.next().expect("Unterminated quote found");
 						offset += c.len_utf8();
 
-						text.push(match chr {
+						data.push(match c {
 							'n' => '\n',
 							't' => '\t',
 							'r' => '\r',
 							'x' => unimplemented!("TODO: escape sequence \\x"),
 							'u' => unimplemented!("TODO: escape sequence \\u"),
-							other => other
+							'#' => '#',
+							_ => panic!("Unrecognized escape character `\\{}`", c)
 						});
 					},
 
 					'#' => match chars.next() {
 						Some('{') => unimplemented!("lol"),
-						Some(other) => { text.push('#'); text.push(other) },
-						None => text.push('#')
+						Some(other) => { data.push('#'); data.push(other) },
+						None => data.push('#')
 					},
 
 					_ if chr == quote => break,
-					_ => text.push(chr)
+					_ => data.push(chr)
 				}
 			}
 		}
 
-		stream.offset_to(offset);
-
-		Some(Box::new(text))
+		let text = stream.offset_to(offset);
+		Some(Token::new_literal(text, Default::default(), move || data.into_object()))
 	}
 }
 
@@ -117,6 +115,12 @@ impl_type! {
 		Ok(this.read().duplicate())
 	}
 
+	fn "@num" (this) {
+		Ok(Number::parse_str(this.read().data.chars())
+			.map(|(num, _)| num.into_object() as AnyShared)
+			.unwrap_or_else(Object::null))
+	}
+
 	fn "@list" (this) {
 		Ok(this.read().data.chars().map(|c| c.to_string().into_object() as AnyShared).collect::<Vec<_>>().into_object() as AnyShared)
 	}
@@ -127,7 +131,7 @@ impl_type! {
 
 	fn "+" (this) env, args, {
 		let dup = this.read().duplicate();
-		dup.read_call(&("+".into_object() as AnyShared), args, env)
+		dup.read_call(&("+=".into_object() as AnyShared), args, env)
 	}
 
 	fn "+=" (this, other) env, {

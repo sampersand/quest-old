@@ -1,5 +1,5 @@
-use parse::{Parsable, Stream, ParseResult};
-use env::Environment;
+use parse::{Parsable, Stream, Token};
+use env::{Environment, Executable};
 use obj::{Object, AnyShared, SharedObject, types::IntoObject};
 use std::ops::{Deref, DerefMut};
 use std::fmt::{self, Debug, Display, Formatter};
@@ -8,39 +8,72 @@ use obj::Id;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Var(Id);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Missing(Id);
+
+impl Var {
+	pub fn id_str(&self) -> &'static str {
+		self.0.try_as_str().expect("no str associated with variable?")
+	}
+}
+
 impl Parsable for Id {
-	fn parse(stream: &mut Stream, env: &Environment) -> ParseResult {
-		let mut offset = 0;
+	fn parse(stream: &mut Stream) -> Option<Token> {
+		let mut offset;
 		let mut eval = true;
 		{
 			let mut chars = stream.chars();
 
-			offset = match chars.next()? {
-				c if c.is_alphabetic() => c.len_utf8(),
-				c @ '_' | c @ '@' | c @ '$' => c.len_utf8(),
-				'`' => { eval = false; '`'.len_utf8() },
-				_ => return None
-			};
-
-			for chr in chars {
-				if chr.is_alphanumeric() || chr == '_' || chr == '?' || chr == '!' {
+			let mut is_special = false;
+			let mut c = chars.next()?;
+			offset = c.len_utf8();
+			if c == '`' {
+				eval = false;
+				while let Some(chr) = chars.next() {
 					offset += chr.len_utf8();
-				} else {
-					break;
+					if chr == '`' {
+						break
+					} else if chr == '\\' {
+						offset += chars.next()?.len_utf8();
+					}
+				}
+			} else {
+				match c {
+					'@' | '$'  => is_special = true,
+					'_' => {},
+					_ if c.is_alphabetic() => {},
+					_ => return None
+				}
+
+				if is_special {
+					offset += chars.next()?.len_utf8();
+				}
+
+				for c in chars {
+					match c {
+						_ if c.is_alphanumeric() => offset += c.len_utf8(),
+						'_' | '?' | '!' => offset += c.len_utf8(),
+						'`' if eval == false => {
+							offset += c.len_utf8();
+							break;
+						}
+						_ => break // if we find anything else, we're done
+					}
 				}
 			}
 		}
 
-		let id = Id::from_nonstatic_str(stream.offset_to(offset));
-
-		let func = move || {
-			env.get(&(id.into_object() as AnyShared)).unwrap_or_else(Object::null)
-		};
+		let text = stream.offset_to(offset);
+		let id = if eval { text } else { &text[1..text.len() - 1] }.to_string();
 
 		if eval {
-			Some(Box::new(func))
+			Some(Token::new_env(text, Default::default(), move |env| {
+				let id = Id::from_nonstatic_str(&id);
+				env.push(env.get(&(id.into_object() as AnyShared)).unwrap_or_else(|| Missing(id).into_object() as AnyShared));
+				Ok(())
+			}))
 		} else {
-			Some(Box::new(id))
+			Some(Token::new_literal(text, Default::default(), move || Id::from_nonstatic_str(&id).into_object()))
 		}
 	}
 }
@@ -59,7 +92,6 @@ impl IntoObject for &'static str {
 		Id::from(self).into_object()
 	}
 }
-
 
 
 impl IntoObject for Id {
@@ -91,11 +123,40 @@ impl Display for Var {
 	}
 }
 
+impl Display for Missing {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "<missing {}>", self.0)
+	}
+}
+
+impl From<Missing> for Var {
+	fn from(missing: Missing) -> Var {
+		Var::from(missing.0)
+	}
+}
+
+impl_type! {
+	for Missing, with self attr;
+
+	fn "@bool" (_) {
+		Ok(false.into_object())
+	}
+
+	fn "=" (this, val) env, {
+		env.set(Var::from(this.read().data.0).into_object(), val.clone());
+		Ok(val.clone())
+	}
+
+	fn _ () {
+		any::get_default_attr(self, attr)
+	}
+}
+
 impl_type! {
 	for Var, with self attr;
 
 	fn "@text" (this) {
-		Ok(this.read().data.0.try_as_str().expect("All Var Ids should have `str`s associated with them?").into_object())
+		Ok(this.read().data.id_str().into_object())
 	}
 
 	fn "?" (this) env, {

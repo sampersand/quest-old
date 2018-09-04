@@ -69,6 +69,7 @@ macro_rules! impl_type {
 			)*
 		}
 
+
 		impl ::obj::types::IntoObject for $type {
 			type Type = Self;
 			fn into_object(self) -> ::obj::SharedObject<Self> {
@@ -84,10 +85,6 @@ macro_rules! impl_type {
 						$fn => impl_type_pat!(concat!(stringify!($type), ".", $fn), $self $args $body $($vars),*)
 					),*
 				}
-			}
-
-			fn debug_fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-				::std::fmt::Debug::fmt(&self.data, f)
 			}
 
 			fn display_fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
@@ -107,58 +104,9 @@ mod shared;
 mod map;
 mod list;
 mod var;
-mod oper;
 mod block;
+pub mod opers;
 
-use std::fmt::{self, Debug, Formatter};
-
-pub trait Type {
-	fn get_default_attr(&self, attr: &str) -> Option<BoundFn>;
-	fn debug_fmt(&self, f: &mut Formatter) -> fmt::Result;
-	fn display_fmt(&self, f: &mut Formatter) -> fmt::Result;
-}
-
-use std::hash::Hash;
-use obj::{AnyShared, SharedObject, Object};
-
-pub trait IntoAnyObject {
-	fn into_anyobject(&self) -> AnyShared;
-}
-
-impl<T: IntoObject + Clone> IntoAnyObject for T where T::Type: Sized {
-	fn into_anyobject(&self) -> AnyShared {
-		self.clone().into_object() as AnyShared
-	}
-}
-
-pub trait IntoObject : Sized {
-	type Type : Send + Sync + 'static + ?Sized;
-	fn into_object(self) -> SharedObject<Self::Type>;
-}
-
-
-impl<F: FnOnce() -> AnyShared> IntoObject for F {
-	type Type = dyn (::std::any::Any) + Send + Sync;
-	fn into_object(self) -> AnyShared {
-		self()
-	}
-}
-
-
-// impl<T: Sized + Debug + Eq + Hash + Send + Sync + 'static> IntoObject for T where Object<T>: Type {
-// 	type Type = Self;
-// 	fn into_object(self) -> SharedObject<Self::Type> {
-// 		Object::new(self).into()
-// 	}
-// }
-
-
-impl<T: Debug + Eq + Hash + Send + Sync + 'static> IntoObject for SharedObject<T> where Object<T>: Type {
-	type Type = T;
-	fn into_object(self) -> SharedObject<Self::Type> {
-		self
-	}
-}
 
 pub use self::boundfn::BoundFn;
 pub use self::num::{Number, Sign, Integer};
@@ -166,6 +114,28 @@ pub use self::map::Map;
 pub use self::list::List;
 pub use self::null::Null;
 pub use self::text::Text;
-pub use self::var::Var;
-pub use self::oper::Oper;
-pub use self::block::Block;
+pub use self::var::{Var, Missing};
+pub use self::block::{Block, BlockExec};
+
+use std::fmt::{self, Debug, Formatter};
+
+pub trait Type {
+	fn get_default_attr(&self, attr: &str) -> Option<BoundFn>;
+	fn display_fmt(&self, f: &mut Formatter) -> fmt::Result;
+}
+
+use std::hash::Hash;
+use env::Environment;
+use obj::{AnyShared, SharedObject, Object};
+
+pub trait IntoObject : Sized {
+	type Type : Send + Sync + 'static + ?Sized;
+	fn into_object(self) -> SharedObject<Self::Type>;
+}
+
+impl<T: Debug + Eq + Hash + Send + Sync + 'static> IntoObject for SharedObject<T> where Object<T>: Type {
+	type Type = T;
+	fn into_object(self) -> SharedObject<Self::Type> {
+		self
+	}
+}

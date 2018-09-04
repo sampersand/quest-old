@@ -25,7 +25,7 @@ impl Id {
 	}
 
 	pub fn from_nonstatic_str(str_id: &str) -> Id {
-		assert!(!str_id.is_empty(), "cannot have emptpy string ids");
+		assert!(!str_id.is_empty(), "cannot have empty string ids");
 		if let Some(id) = STR_ID_MAPPINGS.read().get(&str_id) {
 			return *id;
 		}

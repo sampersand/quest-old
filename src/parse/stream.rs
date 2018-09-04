@@ -1,14 +1,14 @@
-use obj::{AnyShared, types::IntoAnyObject};
+use obj::AnyShared;
 use env::Environment;
 
 use std::ops::{Deref, DerefMut};
-use parse::{ParserFn, ParseResult};
+use parse::{ParserFn, Token};
 use std::str::Chars;
 use std::path::Path;
 use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone, Default)]
-struct ParserFnVec(Vec<ParserFn>);
+pub struct ParserFnVec(Vec<ParserFn>);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Stream<'a> {
@@ -36,17 +36,34 @@ impl<'a> Stream<'a> {
 		Stream { parsers: ParserFnVec(parsers), data, ..Default::default() }
 	}
 
-	pub fn offset_by(&mut self, s: &str) {
-		assert!(self.starts_with(s));
-		self.offset_to(s.len());
+	pub fn as_str(&self) -> &str {
+		self.as_ref()
+	}
+
+	pub fn as_str_raw(&self) -> &str {
+		self.data
+	}
+
+
+	pub fn offset_by_char(&mut self, c: char) -> &str{
+		self.offset_to(c.len_utf8())
+	}
+
+	pub fn offset_by(&mut self, s: &str) -> &str {
+		assert!(self.as_str().starts_with(s));
+		self.offset_to(s.len())
 	}
 
 	pub fn offset_to(&mut self, amnt: usize) -> &str {
 		let (old, new) = self.data.split_at(amnt);
 		self.data = new;
 		self.line += old.matches('\n').count();
+		if self.data.is_empty() {
+			self.eof = true;
+		}
 		old
 	}
+
 	pub fn chars(&mut self) -> StreamChars {
 		StreamChars {
 			offset: 0,
@@ -54,6 +71,25 @@ impl<'a> Stream<'a> {
 			eof: &self.eof,
 			chars: self.data.chars()
 		}
+	}
+}
+
+impl<'a> Iterator for Stream<'a> {
+	type Item = Token;
+	fn next(&mut self) -> Option<Token> {
+		let parsers = self.parsers.clone();
+
+		for parser in parsers.iter() {
+			if let Some(result) = (parser)(self) {
+				return Some(result);
+			}
+
+			if self.eof { 
+				return None;
+			}
+		}
+
+		panic!("No rules could find a token at the stream: {:#?}", self)
 	}
 }
 
@@ -85,36 +121,6 @@ impl<'a> Iterator for StreamChars<'a> {
 	}
 }
 
-
-
-pub struct StreamIter<'a: 'b, 'b, 'c>(&'b mut Stream<'a>, &'c Environment);
-
-impl<'a> Stream<'a> {
-	pub fn iter<'b, 'c>(&'b mut self, env: &'c Environment) -> StreamIter<'a, 'b, 'c> {
-		StreamIter(self, env)
-	}
-}
-
-impl<'a: 'b, 'b, 'c> Iterator for StreamIter<'a, 'b, 'c> {
-	type Item = Box<dyn IntoAnyObject>;
-	fn next(&mut self) -> ParseResult {
-		let parsers = self.0.parsers.clone();
-
-		for parser in parsers.iter() {
-			if let Some(result) = (parser)(self.0, self.1) {
-				return Some(result);
-			}
-
-			if self.0.data.is_empty() {
-				return None;
-			}
-		}
-
-		panic!("No rules could find a token at the stream: {:#?}", self.0)
-	}
-}
-
-
 impl<'a> AsRef<str> for Stream<'a> {
 	#[inline]
 	fn as_ref(&self) -> &str {
@@ -123,14 +129,6 @@ impl<'a> AsRef<str> for Stream<'a> {
 		} else {
 			&self.data
 		}
-	}
-}
-
-impl<'a> Deref for Stream<'a> {
-	type Target = str;
-
-	fn deref(&self) -> &str {
-		self.data.as_ref()
 	}
 }
 

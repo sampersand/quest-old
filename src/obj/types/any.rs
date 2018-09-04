@@ -33,7 +33,7 @@ impl_type! {
 impl_type! {
 	defaults fn get_default_attr_clone<T>(this, attr) where { T: Send + Sync + Clone };
 
-	fn "clone" (this) {
+	fn "clone" (this) env, {
 		Ok(this.read().duplicate())
 	}
 
@@ -95,3 +95,5 @@ impl_type! {
 		None
 	}
 }
+
+

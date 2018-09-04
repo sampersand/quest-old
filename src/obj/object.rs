@@ -1,6 +1,5 @@
 use shared::Shared;
 use obj::{Type, Id, AnyObject, AnyResult, SharedObject, AnyShared, WeakObject, attrs::Attributes};
-use env::Environment;
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -18,8 +17,7 @@ struct Ops {
 	debug_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
 	display_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
 	eq: fn(&AnyObject, &AnyObject) -> bool,
-	hash: fn(&AnyObject, Box<&mut dyn Hasher>)
-
+	hash: fn(&AnyObject, Box<&mut dyn Hasher>),
 }
 
 pub struct Object<T: ?Sized>{
@@ -42,14 +40,16 @@ impl<T: Debug + PartialEq + Hash + Send + Sync + 'static> Object<T> where Object
 			map: Default::default(),
 			defaults: |this, attr|
 				this.downcast_ref::<T>().unwrap().get_default_attr(
-					attr.read().downcast_ref::<super::types::Var>()?.data.try_as_str().expect("bad data str"))
+					attr.read().downcast_ref::<super::types::Var>().map(|x| x.data)
+					.or_else(|| attr.read().downcast_ref::<super::types::Missing>().map(|x| x.data.into()))?
+					.try_as_str().expect("bad data str"))
 		};
 
 		let ops = Ops {
-			debug_fmt: |this, f| this.downcast_ref::<T>().unwrap().debug_fmt(f),
+			debug_fmt: |this, f| Debug::fmt(this.downcast_ref::<T>().unwrap(), f),
 			display_fmt: |this, f| this.downcast_ref::<T>().unwrap().display_fmt(f),
 			eq: |this, o| this.downcast_ref::<T>().unwrap() == o,
-			hash: |this, mut h| this.downcast_ref::<T>().unwrap().data.hash(&mut *h) 
+			hash: |this, mut h| this.downcast_ref::<T>().unwrap().data.hash(&mut *h) ,
 		};
 
 		let obj = Object::new_raw(data, attrs, ops);
