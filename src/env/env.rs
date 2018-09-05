@@ -1,6 +1,6 @@
 use parse::{Stream, Token};
 use std::borrow::Borrow;
-use obj::{Id, Object, AnyShared, AnyResult, SharedObject};
+use obj::{Id, Object, Error, AnyShared, AnyResult, SharedObject};
 use obj::types::{self, Map, List, IntoObject};
 use obj::Result;
 use std::sync::Mutex;
@@ -62,13 +62,27 @@ impl Environment {
 	pub fn execute<I: Iterator<Item=Token>>(&self, mut iter: I) -> Result<()> {
 		let mut peeker = (&mut iter as &mut dyn Iterator<Item=Token>).peekable();
 		while let Some(token) = peeker.next() {
-			token.execute(self, &mut peeker)?;
+			match token.execute(self, &mut peeker) {
+				Ok(()) => {},
+				Err(Error::Return { levels: 0, obj }) => {
+					self.push(obj);
+					break;
+				},
+				Err(Error::Return { levels, obj }) => return Err(Error::Return { levels: levels - 1, obj }),
+				Err(err) => return Err(err)
+			}
 		}
 		Ok(())
 	}
 
 	pub fn execute_stream(&self, stream: Stream) -> Result<()> {
-		self.execute(stream)
+		match self.execute(stream) {
+			Err(Error::Return { levels: _, obj }) => {
+				self.push(obj);
+				Ok(())
+			},
+			other => other
+		}
 	}
 
 	pub fn stack(&self) -> &SharedObject<List> {
@@ -80,12 +94,44 @@ impl Environment {
 	}
 }
 
-impl Environment {
-	fn env_object(&self) -> SharedObject<Map> {
+impl IntoObject for Environment {
+	type Type = Map;
+	fn into_object(self) -> SharedObject<Map> {
 		let mut map = Map::default();
 		map.insert(VAR_LOCALS.clone(), self.locals.clone());
 		map.insert(VAR_STACK.clone(), self.stack.clone());
 		return map.into_object();
+	}
+}
+
+impl Environment {
+	fn binding_iter(&self) -> impl Iterator<Item=&Environment> {
+		struct BindingIter<'a>(Option<&'a Environment>);
+		impl<'a> Iterator for BindingIter<'a> {
+			type Item = &'a Environment;
+			fn next(&mut self) -> Option<&'a Environment> {
+				let binding = self.0?.binding.as_ref();
+				self.0 = binding.map(Box::as_ref);
+				return self.0;
+			}
+		}
+
+		BindingIter(Some(self))
+	}
+
+	fn get_var(&self, var: &str) -> Option<AnyShared> {
+		if var.chars().next()? != '@' {
+			return None;
+		}
+
+		match &var[1..] {
+			"env" => Some(self.clone().into_anyshared()),
+			"stack" => Some(self.stack.clone() as AnyShared),
+			"locals" => Some(self.locals.clone() as AnyShared),
+			"binding" => Some(self.binding_iter().map(|x| x.clone().into_anyshared()).collect::<Vec<_>>().into_anyshared()),
+			// x if var[0] == '@' => @locals.0,
+			_ => None
+		}
 	}
 
 	pub fn get(&self, key: &AnyShared) -> Option<AnyShared> {
@@ -93,57 +139,55 @@ impl Environment {
 			return Some(val.clone())
 		}
 
-		if key == &*VAR_ENV {
-			return Some(self.env_object() as AnyShared);
-		}
+		key.read().downcast_ref::<::obj::types::Var>()
+			.and_then(|var| self.get_var(var.data.id_str()))
+			.or_else(|| self.binding.as_ref().and_then(|p| p.get(key)))
 
-		if key == &*VAR_STACK {
-			return Some(self.stack.clone() as AnyShared);
-		}
+		// if key == &*VAR_ENV {
+		// 	return Some(self.env_object() as AnyShared);
+		// }
 
-		if key == &*VAR_LOCALS {
-			return Some(self.locals.clone() as AnyShared);
-		}
+		// if key == &*VAR_STACK {
+		// 	return Some(self.stack.clone() as AnyShared);
+		// }
 
-		if let Some(var) = key.read().downcast_ref::<::obj::types::Var>() {
-			let id_str = var.data.id_str();
-			if id_str.len() >= 2 {
-				match id_str.chars().next().unwrap() {
-					'@' => 
-						if let Ok(stack_pos) = usize::from_str(&id_str[1..]) {
-							if stack_pos == 0 {
-								return Some(self.binding.as_ref()?.env_object());
-							}
-							return Some(self.stack.read().data.get(stack_pos - 1).map(Clone::clone).unwrap_or_else(Object::null));
-						},
-					'$' => 
-						if let Ok(mut bind_pos) = usize::from_str(&id_str[1..]) {
-							if bind_pos == 0 {
-								return Some(self.env_object())
-							}
+		// if key == &*VAR_LOCALS {
+		// 	return Some(self.locals.clone() as AnyShared);
+		// }
 
-							bind_pos -= 1;
-							let mut binding = self.binding.as_ref();
-							while bind_pos > 0 && binding.is_some() {
-								if binding.unwrap().binding.is_none() {
-									break
-								}
-								binding = binding.unwrap().binding.as_ref();
-								bind_pos -= 1;
-							}
+		// if let Some(var) = key.read().downcast_ref::<::obj::types::Var>() {
+		// 	let id_str = var.data.id_str();
+		// 	if id_str.len() >= 2 {
+		// 		match id_str.chars().next().unwrap() {
+		// 			'@' => 
+		// 				if let Ok(stack_pos) = usize::from_str(&id_str[1..]) {
+		// 					if stack_pos == 0 {
+		// 						return Some(self.binding.as_ref()?.env_object());
+		// 					}
+		// 					return Some(self.stack.read().data.get(stack_pos - 1).map(Clone::clone).unwrap_or_else(Object::null));
+		// 				},
+		// 			'$' => 
+		// 				if let Ok(mut bind_pos) = isize::from_str(&id_str[1..]) {
+		// 					if bind_pos < 0 {
+		// 						bind_pos += self.binding_iter().count() as isize;
+		// 					}
 
-							return Some(binding.map(|x| x.env_object()).unwrap_or_else(|| self.env_object()))
-						},
-					_ => {}
-				}
-			}
-		}
+		// 					if bind_pos < 0 {
+		// 						return Some(self.env_object());
+		// 					}
 
-		if let Some(val) = self.binding.as_ref().map(|p| p.get(key)) {
-			return val
-		}
+		// 					return self.binding_iter().nth(bind_pos as usize).map(|x| x.env_object() as AnyShared);
+		// 				},
+		// 			_ => {}
+		// 		}
+		// 	}
+		// }
 
-		None
+		// if let Some(val) = self.binding.as_ref().map(|p| p.get(key)) {
+		// 	return val
+		// }
+
+		// None
 	}
 
 	pub fn has(&self, key: &AnyShared) -> bool {

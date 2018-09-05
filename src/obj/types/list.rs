@@ -113,9 +113,9 @@ impl_type! {
 		       .data
 		       .iter()
 		       .enumerate()
-		       .map(|(i, o)| (i.into_object() as AnyShared, o.clone()))
+		       .map(|(i, o)| (i.into_anyshared(), o.clone()))
 		       .collect::<::std::collections::HashMap<AnyShared, AnyShared>>()
-		       .into_object() as AnyShared
+		       .into_object()
 		)
 	}
 
@@ -198,12 +198,8 @@ impl_type! {
 		Ok(this.write().data.pop().unwrap_or_else(Object::null))
 	}
 
-	fn "<<" (this) env, args, {
-		this.read_call(&("push".into_object() as AnyShared), args, env)
-	}
-
 	fn "+" (this) env, args, {
-		this.read().duplicate().read_call(&("+".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"+=".into_anyshared(), args, env)
 	}
 
 	fn "+=" (this, other) env, {
@@ -213,7 +209,7 @@ impl_type! {
 	}
 
 	fn "-" (this) env, args, {
-		this.read().duplicate().read_call(&("+".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"-=".into_anyshared(), args, env)
 	}
 
 	fn "-=" (this, other) env, {
@@ -229,11 +225,11 @@ impl_type! {
 		Ok(this)
 	}
 
-	fn "|" (this) env, args, {
-		this.read().duplicate().read_call(&("|".into_object() as AnyShared), args, env)
+	fn "bitor" (this) env, args, {
+		this.read().duplicate().read_call(&"bitor=".into_anyshared(), args, env)
 	}
 
-	fn "|=" (this, other) env, {
+	fn "bitor=" (this, other) env, {
 		let other = other.read_into_list(env)?;
 		{
 			let ref mut data = this.write().data;
@@ -248,33 +244,33 @@ impl_type! {
 		Ok(this)
 	}
 
-	fn "&" (this) env, args, {
-		this.read().duplicate().read_call(&("&".into_object() as AnyShared), args, env)
+	fn "bitand" (this) env, args, {
+		this.read().duplicate().read_call(&"bitand".into_anyshared(), args, env)
 	}
 
-	fn "&=" (this, other) env, {
+	fn "bitand=" (this, other) env, {
 		let other = other.read_into_list(env)?;
 		this.write().data.retain(|x| other.contains(x));
 		Ok(this)
 	}
 
-	fn "^" (this) env, args, {
-		this.read().duplicate().read_call(&("^".into_object() as AnyShared), args, env)
+	fn "bitxor" (this) env, args, {
+		this.read().duplicate().read_call(&"bitxor".into_anyshared(), args, env)
 	}
 
-	fn "^=" (this, other) env, {
+	fn "bitxor=" (this, other) env, {
 		let other = other.read_into_list(env)?;
 		{
 			let ref mut data = this.write().data;
 			data.retain(|x| !other.contains(x));
-			let o = other.0.iter().filter(|e| !data.contains(e)).map(Clone::clone).collect::<Vec<_>>();
+			let o = other.0.iter().filter(|e| !data.contains(e)).cloned().collect::<Vec<_>>();
 			data.extend_from_slice(&o);
 		}
 		Ok(this)
 	}
 
 	fn "uniq" (this) env, args, {
-		this.read().duplicate().read_call(&("uniq!".into_object() as AnyShared), args, env)
+		this.read().duplicate().read_call(&"uniq!".into_anyshared(), args, env)
 	}
 
 	fn "uniq!" (this) env, args, {

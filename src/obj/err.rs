@@ -16,6 +16,10 @@ pub enum Error {
 	BadArguments {
 		args: Vec<AnyShared>, 
 		descr: &'static str
+	},
+	Return {
+		levels: usize,
+		obj: AnyShared
 	}
 }
 
@@ -29,7 +33,8 @@ impl Display for Error {
 		match self {
 			MissingAttr { obj, attr } => write!(f, "Object `{}` is missing attribute `{}`", obj, attr),
 			InvalidAttrResult { obj, attr, res } => write!(f, "Method `{}` on object `{}` returned an invalid value: `{}`", attr, obj, res),
-			BadArguments { args, descr } => write!(f, "Bad arguments supplied ({}): {}", args.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "), descr)
+			BadArguments { args, descr } => write!(f, "Bad arguments supplied ({}): {}", args.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "), descr),
+			Return { levels, obj } => write!(f, "Returning `{}` levels with obj: {}", levels, obj),
 		}
 	}
 }
@@ -39,7 +44,8 @@ impl ErrorTrait for Error {
 		match self {
 			MissingAttr { .. } => "an attribute is missing",
 			InvalidAttrResult { .. } => "an attrinbteu returned an invalid value",
-			BadArguments { descr, .. } => descr
+			BadArguments { descr, .. } => descr,
+			Return { .. } => "returning from a method",
 		}
 	}
 }
@@ -51,6 +57,7 @@ impl PartialEq for Error {
 			(MissingAttr { obj: s_o, attr: s_a }, MissingAttr { obj: o_o, attr: o_a }) => s_o == o_o && s_a == o_a, 
 			(InvalidAttrResult { obj: s_o, attr: s_a, res: s_r }, InvalidAttrResult { obj: o_o, attr: o_a, res: o_r }) => s_o == o_o && s_a == o_a && s_r == o_r,
 			(BadArguments { args: s_a, descr: s_d }, BadArguments { args: o_a, descr: o_d }) => s_a == o_a && s_d == o_d,
+			(Return { levels: s_l, obj: s_o }, Return { levels: o_l, obj: o_o }) => s_l == o_l && s_o == o_o,
 			_ => false
 		}
 	}

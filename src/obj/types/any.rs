@@ -1,5 +1,5 @@
 // use shared::Shared;
-// use obj::{Type, Object, types::{BoundFn, IntoObject}};
+use obj::AnyShared;
 
 // use std::fmt::Debug;
 // use std::hash::Hash;
@@ -48,8 +48,8 @@ impl_type! {
 		T: ::std::fmt::Debug + PartialEq + ::std::hash::Hash + Send + Sync + 'static
 	};
 
-	static ref VAR_EQ: SharedObject<Var> = "==".into_object();
-	static ref VAR_NOT: SharedObject<Var> = "!=".into_object();
+	static ref VAR_EQ: AnyShared = "==".into_anyshared();
+	static ref VAR_NOT: AnyShared = "!=".into_anyshared();
 
 
 	fn "and" (this, rhs) env, {
@@ -73,25 +73,25 @@ impl_type! {
 	}
 
 	fn "!" (this) env, {
-		Ok((!this.read_into_bool(env)?).into_object() as AnyShared)
+		Ok((!this.read_into_bool(env)?).into_object())
 	}
 
 	fn "==" (this, other) {
 		let ref other = *other.read();
-		Ok((&*this.read() == other).into_object() as AnyShared)
+		Ok((&*this.read() == other).into_object())
 	}
 
 	fn "!=" (this) env, args, {
-		this.read_call(&(VAR_EQ.clone() as AnyShared), args, env)?
-			.read_call(&(VAR_NOT.clone() as AnyShared), &[], env)
+		this.read_call(&(VAR_EQ.clone()), args, env)?
+			.read_call(&(VAR_NOT.clone()), &[], env)
 	}
 
 	fn ".#" (this) {
-		Ok(this.read().attrs.len().into_object() as AnyShared)
+		Ok(this.read().attrs.len().into_object())
 	}
 
 	fn ".?" (this, attr) {
-		Ok(this.read().attrs.has(&attr).into_object() as AnyShared)
+		Ok(this.read().attrs.has(&attr).into_object())
 	}
 
 	fn "." (this, attr) {

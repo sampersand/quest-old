@@ -117,12 +117,12 @@ impl_type! {
 
 	fn "@num" (this) {
 		Ok(Number::parse_str(this.read().data.chars())
-			.map(|(num, _)| num.into_object() as AnyShared)
+			.map(|(num, _)| num.into_anyshared())
 			.unwrap_or_else(Object::null))
 	}
 
 	fn "@list" (this) {
-		Ok(this.read().data.chars().map(|c| c.to_string().into_object() as AnyShared).collect::<Vec<_>>().into_object() as AnyShared)
+		Ok(this.read().data.chars().map(|c| c.to_string().into_anyshared()).collect::<Vec<_>>().into_anyshared())
 	}
 
 	fn "@bool" (this) {
@@ -131,7 +131,7 @@ impl_type! {
 
 	fn "+" (this) env, args, {
 		let dup = this.read().duplicate();
-		dup.read_call(&("+=".into_object() as AnyShared), args, env)
+		dup.read_call(&"+=".into_anyshared(), args, env)
 	}
 
 	fn "+=" (this, other) env, {

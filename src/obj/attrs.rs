@@ -90,7 +90,7 @@ impl AnyShared {
 
 impl<T: ?Sized> SharedObject<T> {
 	pub fn read_get(&self, attr: &AnyShared, env: &Environment) -> AnyResult {
-		self.read().attrs.call(&(".".into_object() as AnyShared), &[attr.clone()], env) // this might not
+		self.read().attrs.call(&".".into_anyshared(), &[attr.clone()], env) // this might not
 	}
 
 	pub fn read_call(&self, attr: &AnyShared, args: &[AnyShared], env: &Environment) -> AnyResult {

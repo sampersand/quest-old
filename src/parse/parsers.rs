@@ -18,7 +18,8 @@ pub const ALL_PARSERS: &'static [ParserFn] = &[
 	parse_whitespace, parse_comment, parse_eof,
 
 	Number::parse, Text::parse,
-	Block::parse, List::parse, BlockExec::parse,	Id::parse
+	Block::parse, List::parse, BlockExec::parse,
+	Var::parse, RawVar::parse
 ];
 
 

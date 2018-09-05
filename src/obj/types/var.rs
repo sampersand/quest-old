@@ -11,70 +11,76 @@ pub struct Var(Id);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Missing(Id);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RawVar; // this is _just_ for implementing Parsable for "`" vars
+
 impl Var {
 	pub fn id_str(&self) -> &'static str {
 		self.0.try_as_str().expect("no str associated with variable?")
 	}
 }
 
-impl Parsable for Id {
+impl Parsable for RawVar {
 	fn parse(stream: &mut Stream) -> Option<Token> {
 		let mut offset;
-		let mut eval = true;
+		{
+			let mut chars = stream.chars();
+			if chars.next()? != '`' {
+				return None;
+			}
+			offset = '`'.len_utf8();
+			loop {
+				let chr = chars.next()?;
+				offset += chr.len_utf8();
+				match chr {
+					'\\' => offset += chars.next()?.len_utf8(),
+					'`' => break,
+				_ => { /* we already added the offset here */ }
+				}
+			}
+		}
+		let text = stream.offset_to(offset);
+		let id = text[1..text.len() - 1].to_string();
+		Some(Token::new_literal(text, Default::default(), move || Id::from_nonstatic_str(&id).into_object()))
+	}
+}
+impl Parsable for Var {
+	fn parse(stream: &mut Stream) -> Option<Token> {
+		let mut offset;
 		{
 			let mut chars = stream.chars();
 
 			let mut is_special = false;
 			let mut c = chars.next()?;
 			offset = c.len_utf8();
-			if c == '`' {
-				eval = false;
-				while let Some(chr) = chars.next() {
-					offset += chr.len_utf8();
-					if chr == '`' {
-						break
-					} else if chr == '\\' {
-						offset += chars.next()?.len_utf8();
-					}
-				}
-			} else {
+			match c {
+				'@' | '$'  => is_special = true,
+				'_' => {},
+				_ if c.is_alphabetic() => {},
+				_ => return None
+			}
+
+			if is_special {
+				offset += chars.next()?.len_utf8();
+			}
+
+			for c in chars {
 				match c {
-					'@' | '$'  => is_special = true,
-					'_' => {},
-					_ if c.is_alphabetic() => {},
-					_ => return None
-				}
-
-				if is_special {
-					offset += chars.next()?.len_utf8();
-				}
-
-				for c in chars {
-					match c {
-						_ if c.is_alphanumeric() => offset += c.len_utf8(),
-						'_' | '?' | '!' => offset += c.len_utf8(),
-						'`' if eval == false => {
-							offset += c.len_utf8();
-							break;
-						}
-						_ => break // if we find anything else, we're done
-					}
+					_ if c.is_alphanumeric() => offset += c.len_utf8(),
+					'_' | '?' | '!' => offset += c.len_utf8(),
+					_ => break // if we find anything else, we're done
 				}
 			}
 		}
 
 		let text = stream.offset_to(offset);
-		let id = if eval { text } else { &text[1..text.len() - 1] }.to_string();
+		let id = text.to_string();
 
-		if eval {
-			Some(Token::new_env(text, Default::default(), move |env| {
-				let id = Id::from_nonstatic_str(&id);
-				env.push(env.get(&(id.into_object() as AnyShared)).unwrap_or_else(|| Missing(id).into_object() as AnyShared));
-				Ok(())
-			}))
-		} else {
-			Some(Token::new_literal(text, Default::default(), move || Id::from_nonstatic_str(&id).into_object()))
-		}
+		Some(Token::new_env(text, Default::default(), move |env| {
+			let id = Id::from_nonstatic_str(&id);
+		env.push(env.get(&id.into_anyshared()).unwrap_or_else(|| Missing(id).into_anyshared()));
+			Ok(())
+		}))
 	}
 }
 
@@ -159,7 +165,7 @@ impl_type! {
 		Ok(this.read().data.id_str().into_object())
 	}
 
-	fn "?" (this) env, {
+	fn "@bool" (this) env, {
 		Ok(env.has(&(this.clone() as AnyShared)).into_object())
 	}
 

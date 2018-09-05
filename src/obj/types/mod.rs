@@ -113,7 +113,7 @@ pub use self::map::Map;
 pub use self::list::List;
 pub use self::null::Null;
 pub use self::text::Text;
-pub use self::var::{Var, Missing};
+pub use self::var::{Var, RawVar, Missing};
 pub use self::block::{Block, BlockExec};
 
 use std::fmt::{self, Debug, Formatter};
@@ -130,6 +130,9 @@ use obj::{AnyShared, SharedObject, Object};
 pub trait IntoObject : Sized {
 	type Type : Send + Sync + 'static + ?Sized;
 	fn into_object(self) -> SharedObject<Self::Type>;
+	fn into_anyshared(self) -> AnyShared where Self::Type: Sized {
+		self.into_object() as AnyShared
+	}
 }
 
 impl<T: Debug + Eq + Hash + Send + Sync + 'static> IntoObject for SharedObject<T> where Object<T>: Type {

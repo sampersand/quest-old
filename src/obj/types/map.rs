@@ -93,7 +93,7 @@ impl_type! {
 	}
 
 	fn "get" (this, key) {
-		Ok(this.read().data.get(&key).map(Clone::clone).unwrap_or_else(Object::null))
+		Ok(this.read().data.get(&key).cloned().unwrap_or_else(Object::null))
 	}
 
 	fn "set" (this, key, val) {

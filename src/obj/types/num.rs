@@ -523,7 +523,7 @@ impl_type! {
 	}
 
 	fn "()" (this) env, args, {
-		this.read_call(&("*".into_object() as AnyShared), args, env)
+		this.read_call(&"*".into_anyshared(), args, env)
 	}
 
 	fn "+"  (this, rhs) env, { binary_oper!(add this rhs env) }

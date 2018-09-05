@@ -25,13 +25,14 @@ impl<F: FnBox(&Environment, &mut Peeker) -> Result<()>> Executable for F {
 
 fn default_globals() -> HashMap<AnyShared, AnyShared> {
 	let mut map = HashMap::new();
-	map.insert("true".into_object() as AnyShared, true.into_object() as AnyShared);
-	map.insert("false".into_object() as AnyShared, false.into_object() as AnyShared);
-	map.insert("null".into_object() as AnyShared, Object::null());
-	map.insert("if".into_object() as AnyShared, builtins::if_fn().into_object() as AnyShared);
-	map.insert("disp".into_object() as AnyShared, builtins::disp_fn().into_object() as AnyShared);
-	map.insert("rand".into_object() as AnyShared, builtins::rand_fn().into_object() as AnyShared);
-	map.insert("prompt".into_object() as AnyShared, builtins::prompt_fn().into_object() as AnyShared);
-	map.insert("while".into_object() as AnyShared, builtins::while_fn().into_object() as AnyShared);
+	map.insert("true".into_anyshared(), true.into_anyshared());
+	map.insert("false".into_anyshared(), false.into_anyshared());
+	map.insert("null".into_anyshared(), Object::null());
+	map.insert("if".into_anyshared(), builtins::if_fn().into_anyshared());
+	map.insert("disp".into_anyshared(), builtins::disp_fn().into_anyshared());
+	map.insert("rand".into_anyshared(), builtins::rand_fn().into_anyshared());
+	map.insert("prompt".into_anyshared(), builtins::prompt_fn().into_anyshared());
+	map.insert("while".into_anyshared(), builtins::while_fn().into_anyshared());
+	map.insert("return".into_anyshared(), builtins::return_fn().into_anyshared());
 	map
 }
