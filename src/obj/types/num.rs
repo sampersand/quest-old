@@ -531,18 +531,18 @@ impl_type! {
 	fn "*"  (this, rhs) env, { binary_oper!(mul this rhs env) }
 	fn "/"  (this, rhs) env, { binary_oper!(div this rhs env) }
 	fn "%"  (this, rhs) env, { binary_oper!(rem this rhs env) }
-	fn "**" (this, rhs) env, { binary_oper!(pow this rhs env) }
+	fn "^" (this, rhs) env, { binary_oper!(pow this rhs env) }
 
 	fn "+="  (this, rhs) env, { binary_oper!(assign add_assign this rhs env) }
 	fn "-="  (this, rhs) env, { binary_oper!(assign sub_assign this rhs env) }
 	fn "*="  (this, rhs) env, { binary_oper!(assign mul_assign this rhs env) }
 	fn "/="  (this, rhs) env, { binary_oper!(assign div_assign this rhs env) }
 	fn "%="  (this, rhs) env, { binary_oper!(assign rem_assign this rhs env) }
-	fn "**=" (this, rhs) env, { binary_oper!(assign pow_assign this rhs env) }
+	fn "6=" (this, rhs) env, { binary_oper!(assign pow_assign this rhs env) }
 
-	fn "&" (this, rhs) env, { bit_oper!(bitand this rhs env) }
-	fn "|" (this, rhs) env, { bit_oper!(bitor this rhs env) }
-	fn "^" (this, rhs) env, { bit_oper!(bitxor this rhs env) }
+	fn "bitand" (this, rhs) env, { bit_oper!(bitand this rhs env) }
+	fn "bitor" (this, rhs) env, { bit_oper!(bitor this rhs env) }
+	fn "bitxor" (this, rhs) env, { bit_oper!(bitxor this rhs env) }
 	fn "<<" (this, rhs) env, { bit_oper!(shl this rhs env) }
 	fn ">>" (this, rhs) env, { bit_oper!(shr this rhs env) }
 

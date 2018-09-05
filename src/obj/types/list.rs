@@ -77,7 +77,6 @@ impl<'a> IntoObject for &'a [AnyShared] {
 
 impl Display for List {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		println!("self: {:?}", self);
 		write!(f, "[{}]", self.0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))
 	}
 }

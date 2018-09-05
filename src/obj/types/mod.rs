@@ -105,7 +105,6 @@ mod map;
 mod list;
 mod var;
 mod block;
-pub mod opers;
 
 
 pub use self::boundfn::BoundFn;

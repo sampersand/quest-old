@@ -4,15 +4,34 @@ use std::hash::{Hash, Hasher};
 use env::{Environment, Executable, Peeker};
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+// pub enum Precedence {
+// 	Literal, Accessor, Block,
+// 	Pow,
+// 	MulDivMod,
+// 	AddSub,
+
+// 	AssignAug,
+// 	Assign,
+// 	Endline
+// }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
-	Literal, Accessor, Block,
-	Pow,
-	MulDivMod,
-	AddSub,
-	Assign,
+	Literal = 0, Accessor, Block,
+	Unary, Pow, UnaryNeg,
+	MulDivMod, AddSub,
+	BwShift, BwAnd, BwOrXor,
+	Ordering, Equality,
+	And, Or,
+
+	TernaryElse,
+	TernaryIf,
+	Assign, AssignAug,
+	Comma,
 	Endline
 }
+
 
 impl Default for Precedence {
 	fn default() -> Precedence {

@@ -51,6 +51,23 @@ impl_type! {
 	static ref VAR_EQ: SharedObject<Var> = "==".into_object();
 	static ref VAR_NOT: SharedObject<Var> = "!=".into_object();
 
+
+	fn "and" (this, rhs) env, {
+		if this.read_into_bool(env)? {
+			Ok(rhs)
+		} else {
+			Ok(this)
+		}
+	}
+
+	fn "or" (this, rhs) env, {
+		if this.read_into_bool(env)? {
+			Ok(this)
+		} else {
+			Ok(rhs)
+		}
+	}
+
 	fn "@bool" (_) {
 		Ok(true.into_object())
 	}

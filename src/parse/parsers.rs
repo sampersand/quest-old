@@ -1,19 +1,24 @@
-use parse::{ParserFn, Stream, Parsable, Token};
+use parse::{ParserFn, Stream, Parsable, Token, opers::*};
 
 use env::Environment;
-use obj::{Object, AnyShared, Id, types::{*, opers::*}};
+use obj::{Object, AnyShared, Id, types::*};
 use std::fmt::{self, Debug, Formatter};
 
 pub const ALL_PARSERS: &'static [ParserFn] = &[
-	parse_whitespace, parse_comment, parse_eof,
-	Number::parse,
-	Id::parse,
-	Text::parse,
-	Block::parse,
-	List::parse,
-	BlockExec::parse,
-	Add::parse, Mul::parse, Endline::parse, Comma::parse, Accessor::parse,
+	Add::parse, AddAug::parse, Sub::parse, SubAug::parse,
+	Mul::parse, MulAug::parse, Div::parse, DivAug::parse, Mod::parse, ModAug::parse,
+	Pow::parse, PowAug::parse,
+
+	Lt::parse, Gt::parse, Le::parse, Ge::parse, Eq::parse, Ne::parse, Cmp::parse,
+	And::parse, Or::parse, 
+
+	Endline::parse, Comma::parse, Accessor::parse,
 	Assign::parse,
+
+	parse_whitespace, parse_comment, parse_eof,
+
+	Number::parse, Text::parse,
+	Block::parse, List::parse, BlockExec::parse,	Id::parse
 ];
 
 

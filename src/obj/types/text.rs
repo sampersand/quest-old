@@ -47,11 +47,11 @@ impl Parsable for Text {
 						});
 					},
 
-					'#' => match chars.next() {
-						Some('{') => unimplemented!("lol"),
-						Some(other) => { data.push('#'); data.push(other) },
-						None => data.push('#')
-					},
+					// '#' => match chars.next() {
+					// 	Some('{') => unimplemented!("lol"),
+					// 	Some(other) => { data.push('#'); data.push(other) },
+					// 	None => data.push('#')
+					// },
 
 					_ if chr == quote => break,
 					_ => data.push(chr)

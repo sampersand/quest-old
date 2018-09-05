@@ -91,6 +91,10 @@ impl<T> Default for Weak<T> {
 }
 
 impl<T: ?Sized> Shared<T> {
+	pub fn ptr_eq<F: ?Sized>(&self, other: &Shared<F>) -> bool {
+		&*self.0 as *const SharedInner<T> as *const () == &*other.0 as *const SharedInner<F> as *const ()
+	}
+
 	pub fn downgrade(&self) -> Weak<T> {
 		Weak(Arc::downgrade(&self.0))
 	}

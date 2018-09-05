@@ -2,6 +2,7 @@ mod tree;
 mod stream;
 mod parsers;
 mod token;
+mod opers;
 
 pub use self::tree::Tree;
 pub use self::token::{Token, Precedence};

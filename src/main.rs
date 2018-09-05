@@ -14,7 +14,7 @@ fn main() {
 	simple_logger::init_with_level(log::Level::Trace).unwrap();
 	let ref mut env = quest::Environment::new();
 
-	let path = Path::new("code/guess.qs");
+	let path = Path::new("code/test.qs");
 	let data = fs::read_to_string(path).unwrap();
 	let parsers = parse::default_parsers();{}
 	let mut stream = Stream::from_path(path, &data, parsers);
