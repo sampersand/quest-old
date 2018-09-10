@@ -69,7 +69,7 @@ impl Display for Map {
 	}
 }
 
-impl_type! {
+__impl_type! {
 	for Map, with self attr;
 
 	fn "@bool" (this) {
@@ -111,11 +111,6 @@ impl_type! {
 	}
 
 	fn _ () {
-		any::get_default_attr(self, attr)
+		any::__get_default(self, attr)
 	}
 }
-
-
-
-
-

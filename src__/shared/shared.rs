@@ -25,21 +25,21 @@ struct SharedInner<T: ?Sized> {
 	data: UnsafeCell<T>
 }
 
+#[must_use = "memory leak occurs if rawshared isn't used correctly"]
+// used for converting to and from raw
+#[derive(Debug)]
+pub struct RawShared<T: ?Sized>(*const SharedInner<T>);
+
 unsafe impl<T: ?Sized + Send> Send for SharedInner<T> {}
 unsafe impl<T: ?Sized + Send + Sync> Sync for SharedInner<T> {}
 
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Shared<U>> for Shared<T> {}
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Weak<U>> for Weak<T> {}
+impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<RawShared<U>> for RawShared<T> {}
 
 impl<T: ?Sized> Clone for Shared<T> {
 	fn clone(&self) -> Self {
 		Shared(self.0.clone())
-	}
-}
-
-impl<T> From<T> for Shared<T> {
-	fn from(data: T) -> Self {
-		Shared::new(data)
 	}
 }
 
@@ -56,6 +56,25 @@ impl<T: Sized> Shared<T> {
 				lock: RwLock::new(()),
 				data: UnsafeCell::from(t)
 			} ))
+	}
+}
+
+
+impl<T: ?Sized> RawShared<T> {
+	pub fn convert<I>(self) -> RawShared<I> {
+		RawShared(self.0 as *const SharedInner<I>)
+	}
+}
+
+impl<T: 'static + ?Sized> Shared<T> {
+	pub fn into_raw(self) -> RawShared<T> {
+		RawShared(Arc::<SharedInner<T>>::into_raw(self.0))
+	}
+}
+
+impl<T: 'static + Sized> Shared<T> {
+	pub unsafe fn from_raw(raw: RawShared<T>) -> Self {
+		Shared(Arc::from_raw(raw.0))
 	}
 }
 
@@ -179,10 +198,16 @@ impl<T: Display + ?Sized> Display for Shared<T> {
 
 impl<T: Debug + ?Sized> Debug for Shared<T> {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if let Some(data) = self.try_read() {
-			f.debug_tuple("Shared").field(&&data.deref()).finish()
+		if f.alternate() {
+			f.debug_struct("Shared")
+			 .field("lock", &self.0.lock.try_write().and(Ok("<unlocked>")).unwrap_or("<locked>"))
+			 .field("data", unsafe{ &self.data() }).finish()
 		} else {
-			f.debug_tuple("Shared").field(&"<locked>").finish()
+			if let Some(data) = self.try_read() {
+				f.debug_tuple("Shared").field(&&data.deref()).finish()
+			} else {
+				f.debug_tuple("Shared").field(&"<locked>").finish()
+			}
 		}
 	}
 }

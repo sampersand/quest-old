@@ -1,6 +1,6 @@
 mod shared;
-pub mod map;
+mod spinlock;
 
-pub use self::shared::{Shared, Weak, ReadGuard, WriteGuard};
-pub use self::map::SharedMap;
- 
+use std::process::Output;
+pub use self::shared::Shared;
+pub use self::spinlock::SpinLock;

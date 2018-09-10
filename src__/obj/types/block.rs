@@ -105,7 +105,7 @@ impl Block {
 
 impl Display for Block {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(&self.raw, f)
+		write!(f, "Block({:?})", self.raw)
 	}
 }
 
@@ -125,7 +125,7 @@ impl DerefMut for Block {
 	}
 }
 
-impl_type! {
+__impl_type! {
 	for Block, with self attr;
 
 	fn "()" (this) env, args, {
@@ -138,7 +138,7 @@ impl_type! {
 	}
 
 	fn _ () {
-		any::get_default_attr(self, attr)
+		any::__get_default(self, attr)
 	}
 }
 

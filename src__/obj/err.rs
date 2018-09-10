@@ -1,6 +1,7 @@
 use std::error::Error as ErrorTrait;
 use std::fmt::{self, Display, Formatter};
-use obj::AnyShared;
+use obj::{AnyShared, SharedObject};
+use env::Environment;
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -18,7 +19,7 @@ pub enum Error {
 		descr: &'static str
 	},
 	Return {
-		levels: usize,
+		env: SharedObject<Environment>,
 		obj: AnyShared
 	}
 }
@@ -34,7 +35,7 @@ impl Display for Error {
 			MissingAttr { obj, attr } => write!(f, "Object `{}` is missing attribute `{}`", obj, attr),
 			InvalidAttrResult { obj, attr, res } => write!(f, "Method `{}` on object `{}` returned an invalid value: `{}`", attr, obj, res),
 			BadArguments { args, descr } => write!(f, "Bad arguments supplied ({}): {}", args.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "), descr),
-			Return { levels, obj } => write!(f, "Returning `{}` levels with obj: {}", levels, obj),
+			Return { env, obj } => write!(f, "Returning to `{}` with obj: {}", env, obj),
 		}
 	}
 }
@@ -57,7 +58,7 @@ impl PartialEq for Error {
 			(MissingAttr { obj: s_o, attr: s_a }, MissingAttr { obj: o_o, attr: o_a }) => s_o == o_o && s_a == o_a, 
 			(InvalidAttrResult { obj: s_o, attr: s_a, res: s_r }, InvalidAttrResult { obj: o_o, attr: o_a, res: o_r }) => s_o == o_o && s_a == o_a && s_r == o_r,
 			(BadArguments { args: s_a, descr: s_d }, BadArguments { args: o_a, descr: o_d }) => s_a == o_a && s_d == o_d,
-			(Return { levels: s_l, obj: s_o }, Return { levels: o_l, obj: o_o }) => s_l == o_l && s_o == o_o,
+			(Return { env: s_e, obj: s_o }, Return { env: o_e, obj: o_o }) => s_e == o_e && s_o == o_o,
 			_ => false
 		}
 	}

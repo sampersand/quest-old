@@ -1,22 +1,29 @@
-mod err;
-mod id;
 mod object;
-mod attrs;
+mod types;
 
-pub mod types;
-
-pub use self::id::Id;
-pub use self::types::Type;
 pub use self::object::Object;
-pub use self::err::{Error, Result};
 
 use std::any::Any;
-use shared::{Shared, Weak};
+use shared::Shared;
 
 pub type AnyObject = Object<dyn Any + Send + Sync>;
-pub type WeakObject = Weak<AnyObject>;
-pub type SharedObject<T> = Shared<Object<T>>;
 pub type AnyShared = Shared<AnyObject>;
+pub type SharedObject<T> = Shared<Object<T>>;
 
-pub type SharedResult<T> = Result<SharedObject<T>>;
-pub type AnyResult = Result<AnyShared>;
+impl<T: Send + Sync + 'static> Object<T> {
+	pub fn shared(self) -> SharedObject<T> {
+		Shared::new(self)
+	}
+
+	#[inline]
+	pub fn any(self) -> AnyShared {
+		self.shared().any()
+	}
+}
+
+impl<T: Send + Sync + 'static> SharedObject<T> {
+	#[inline(always)]
+	pub fn any(self) -> AnyShared {
+		self as AnyShared
+	}
+}

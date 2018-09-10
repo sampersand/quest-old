@@ -511,7 +511,7 @@ macro_rules! bit_oper {
 }
 
 
-impl_type! {
+__impl_type! {
 	for Number, with self attr;
 
 	fn "@bool" (this) {
@@ -597,13 +597,13 @@ impl_type! {
 			Ok(num.into_object() as AnyShared)
 		} else {
 			unimplemented!("TODO: attrs for num");
-			// Ok(any::get_default_attr(self, rhs).map(|x| x as AnyShared).unwrap_or(Object::null))
+			// Ok(any::__get_default(self, rhs).map(|x| x as AnyShared).unwrap_or(Object::null))
 		}
 	}
 */
 
 	fn _ () {
-		any::get_default_attr(self, attr)
+		any::__get_default(self, attr)
 	}
 }
 

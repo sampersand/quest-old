@@ -1,7 +1,7 @@
 use env::Environment;
 use shared::Shared;
 use obj::{Id, AnyObject, AnyShared, AnyResult, SharedResult, Result, Error, WeakObject, Object, SharedObject};
-use obj::types::{IntoObject, BoundFn, Number, Text, Var, List, Map};
+use obj::types::{IntoObject, BoundFnOld, Number, Text, Var, List, Map};
 use std::collections::HashMap;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug, Formatter};
@@ -10,7 +10,7 @@ use std::fmt::{self, Debug, Formatter};
 pub struct Attributes {
 	pub(super) obj: WeakObject,
 	pub(super) map: HashMap<AnyShared, AnyShared>,
-	pub(super) defaults: fn(&AnyObject, &AnyShared) -> Option<BoundFn>
+	pub(super) defaults: fn(&AnyObject, &AnyShared, &Environment) -> Option<AnyResult>
 }
 
 lazy_static! {
@@ -37,7 +37,7 @@ impl Attributes {
 		self.map.is_empty()
 	}
 
-	pub fn get(&self, attr: &AnyShared) -> Result<AnyShared> {
+	pub fn get(&self, attr: &AnyShared, env: &Environment) -> AnyResult {
 		// todo: convert from `str` to `Var` to allow for `map` overriding this
 		let obj = self.upgrade();
 		let attr = attr.borrow();
@@ -45,18 +45,16 @@ impl Attributes {
 		if let Some(attr) = self.map.get(attr) {
 			Ok(attr.clone())
 		} else {
-			(self.defaults)(&*obj.read(), attr)
-				.map(|bound| Object::new(bound) as AnyShared)
-				.ok_or_else(|| Error::MissingAttr { obj: obj.clone(), attr: attr.clone() })
-
+			(self.defaults)(&*obj.read(), attr, env)
+				.unwrap_or_else(|| Err(Error::MissingAttr { obj: obj.clone(), attr: attr.clone() }))
 		}
 	}
 
 	pub fn call(&self, attr: &AnyShared, args: &[AnyShared], env: &Environment) -> AnyResult {
 		// todo: convert from `str` to `Var` to allow for `map` overriding this
-		let func = self.get(attr)?;
+		let func = self.get(attr, env)?;
 		let r = func.read();
-		if let Some(bound) = r.downcast_ref::<BoundFn>() {
+		if let Some(bound) = r.downcast_ref::<BoundFnOld>() {
 			bound.data.call_bound(args, env)
 		} else {
 			r.attrs.call(&VAR_CALL, args, env)
@@ -80,7 +78,7 @@ impl Attributes {
 
 impl AnyShared {
 	pub fn read_execute(&self, args: &[AnyShared], env: &Environment) -> AnyResult {
-		if let Some(func) = self.read().downcast_ref::<BoundFn>() {
+		if let Some(func) = self.read().downcast_ref::<BoundFnOld>() {
 			return func.data.call_bound(args, env);
 		}
 		// this way we no longer are within the `read` lock as before
@@ -98,7 +96,7 @@ impl<T: ?Sized> SharedObject<T> {
 	}
 
 	pub fn read_into_list(&self, env: &Environment) -> Result<List> {
-		let func = self.read().attrs.get(&VAR_LIST)?;
+		let func = self.read().attrs.get(&VAR_LIST, env)?;
 		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<List>().expect("`@list` didn't return a list");
 		let r2 = n.read();
@@ -106,7 +104,7 @@ impl<T: ?Sized> SharedObject<T> {
 	}
 
 	pub fn read_into_map(&self, env: &Environment) -> Result<Map> {
-		let func = self.read().attrs.get(&VAR_MAP)?;
+		let func = self.read().attrs.get(&VAR_MAP, env)?;
 		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<Map>().expect("`@map` didn't return a map");
 		let r2 = n.read();
@@ -114,7 +112,7 @@ impl<T: ?Sized> SharedObject<T> {
 	}
 
 	pub fn read_into_num(&self, env: &Environment) -> Result<Number> {
-		let func = self.read().attrs.get(&VAR_NUM)?;
+		let func = self.read().attrs.get(&VAR_NUM, env)?;
 		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<Number>().expect("`@num` didn't return a number");
 		let r2 = n.read();
@@ -122,7 +120,7 @@ impl<T: ?Sized> SharedObject<T> {
 	}
 
 	pub fn read_into_bool(&self, env: &Environment) -> Result<bool> {
-		let func = self.read().attrs.get(&VAR_BOOL)?;
+		let func = self.read().attrs.get(&VAR_BOOL, env)?;
 		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<bool>().expect("`@bool` didn't return a bool");
 		let r2 = n.read();
@@ -131,7 +129,7 @@ impl<T: ?Sized> SharedObject<T> {
 
 	pub fn read_into_text(&self, env: &Environment) -> Result<Text> {
 
-		let func = self.read().attrs.get(&VAR_TEXT)?;
+		let func = self.read().attrs.get(&VAR_TEXT, env)?;
 		let res = func.read_call(&VAR_CALL, &[], env)?;
 		let n = res.read().try_upgrade::<Text>().expect("`@text` didn't return text");
 		let r2 = n.read();

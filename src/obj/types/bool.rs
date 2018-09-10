@@ -1,18 +1,30 @@
-use parse::{Parsable, Stream};
-use obj::{AnyShared, types::IntoObject};
+use shared::Shared;
+use obj::{Object, AnyShared, SharedObject};
+use obj::types::{BoundFn, Var, Basic};
+use env::{Parent, Mapping, Binding};
 
-impl_type! {
-	for bool, with self attr;
 
-	fn "@bool" (this) {
-		Ok(this.read().duplicate())
+impl Object<bool> {
+	pub fn new_bool<B: Into<bool>>(val: B) -> Self {
+		Object::new(val.into())
 	}
-
-	fn "@num" (this) {
-		Ok(Number::from(this.read().data as Integer).into_object())
+}
+impl AnyShared {
+	pub fn cast_bool(self) -> Result<SharedObject<bool>, Self> {
+		unimplemented!();
 	}
+}
 
-	fn _ () {
-		any::get_default_attr(self, attr)
+impl Parent for bool {
+	fn binding() -> Shared<Binding> {
+		println!("called binding on bool: {:#?}", &*DEFAULT_ATTRS);
+		DEFAULT_ATTRS.clone()
 	}
+}
+
+lazy_static! {
+	static ref DEFAULT_ATTRS: Shared<Binding> = Binding::new(Basic::binding(), {
+		let mut h = Mapping::new();
+		h
+	});
 }
