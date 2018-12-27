@@ -1,3 +1,4 @@
+__EOF__
 add_two = { + 2 };
 
 disp(1.`@env`)
