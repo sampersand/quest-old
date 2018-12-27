@@ -8,7 +8,7 @@ use obj::{AnyShared, SharedObject, Error, types::IntoObject};
 use super::shared::{self, Offset::*};
 use super::block;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct List(Vec<AnyShared>);
 
 impl Parsable for List {
@@ -49,6 +49,10 @@ impl List {
 	#[inline]
 	pub fn new(vec: Vec<AnyShared>) -> Self {
 		List(vec)
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.0.is_empty()
 	}
 }
 
@@ -116,7 +120,7 @@ impl_type! {
 			       .iter()
 			       .enumerate()
 			       .map(|(i, o)| (i.into_anyshared(), o.clone()))
-			       .collect::<::std::collections::HashMap<AnyShared, AnyShared>>()
+			       .collect::<::map::ObjMap>()
 			       .into_object()
 			)
 		}),

@@ -1,4 +1,95 @@
-disp(true.`foo`());
+add_two = { + 2 };
+
+disp(1.`@env`)
+disp(add_two(3));
+
+
+__END__
+
+if(x){
+	y = 3
+} else {
+	y = 4;
+}
+
+
+y = if(x, 3, 4);
+
+if(x, {
+	$1.`.=`(`y`, 3)
+}, {
+	$1.`.=`(`y`, 4)
+})();
+
+{
+	 $1.`.=`(`x`, 1);
+}();
+
+disp(x);
+
+__END__
+
+x = {
+	$1.`.=`(`y`, 1);
+}();
+
+disp(
+	4(3 + 2)
+);
+
+__END__
+//disp(y);
+
+//fib = {
+//	arr = @2 or [0, 1];
+//	if(@2.`not`(), { @1 -= 2; });
+//
+//	if(@1 < 0, { return($2, @2) });
+//
+//	@2.`push`(@2.-1);
+//	disp(arr);
+//};
+
+fib = {
+	arr = @2 or [0, 1];
+	arr.`push`(2);
+	disp(arr).`get`(1)
+};
+
+disp(fib(3));
+
+__END__
+
+add_two = { @1 + 2 };
+disp(add_two(3));
+
+__END__
+MAX = 10;
+secret = rand() % MAX;
+guesses = 0;
+
+done = false;
+
+while({ done == false }, {
+	guess = prompt("Pick a number from 0 to " + MAX + " (guess #" + guesses + ")").@num();
+	guesses.`@++`();
+	if(guess < secret, {
+		disp("too low!");
+	}, if(guess > secret, {
+		disp("too high!");
+	}, {
+		$2.`.=`(`done`, true);//(`@locals`).set(`done`, true);
+	}))();
+});
+
+disp("it took you", guesses, "tries to guess the number");
+
+
+
+__END__
+1 - 3;
+#true.`foo`()
+true.`foo`
 
 __END__
 fib = {
@@ -218,9 +309,6 @@ map = {
 
 disp(list, map);
 __END__
-
-
-
 
 
 

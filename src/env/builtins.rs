@@ -1,5 +1,4 @@
 use obj::{Object, AnyShared, Result, Error, types::{IntoObject, BoundFnOld}};
-use std::collections::HashMap;
 use env::Environment;
 use std::cmp::Ordering;
 use parse::Token;

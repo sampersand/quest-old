@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use quest::{*, obj::{*, types::*}};
+use quest::{*, obj::{*, types::*}, map::ObjMap};
 
 pub fn var(data: &'static str) -> AnyShared {
 	Id::from(data).into_object() as AnyShared
@@ -17,8 +16,8 @@ pub fn list(data: Vec<AnyShared>) -> AnyShared {
 	List::from(data).into_object() as AnyShared
 }
 
-pub fn map(data: HashMap<AnyShared, AnyShared>) -> AnyShared {
-	Map::from(data).into_object() as AnyShared
+pub fn map(data: ObjMap) -> AnyShared {
+	ObjMap::from(data).into_object() as AnyShared
 }
 
 macro_rules! var {
@@ -35,7 +34,7 @@ macro_rules! list {
 }
 macro_rules! map {
 	($($x:expr => $y:expr),*) => (map({
-		let mut m = ::std::collections::HashMap::<AnyShared, AnyShared>::new();
+		let mut m = ::std::collections::Map::<AnyShared, AnyShared>::new();
 		$(m.insert($x, $y);)*
 		m
 	}))

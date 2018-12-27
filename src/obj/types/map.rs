@@ -1,61 +1,43 @@
 use std::ops::{Deref, DerefMut};
 use std::hash::{Hash, Hasher};
+use map::ObjMap;
 use std::collections::{HashMap, hash_map::{DefaultHasher, Entry}};
 use std::fmt::{self, Display, Formatter};
 use obj::{AnyShared, SharedObject, types::{IntoObject, Number}};
 
-type InnerMap = HashMap<AnyShared, AnyShared>;
-
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Map(InnerMap);
+pub struct Map(ObjMap);
 
 impl Map {
-	pub fn new(data: InnerMap) -> Self {
+	pub fn new(data: ObjMap) -> Self {
 		Map(data)
 	}
 }
 
-impl From<InnerMap> for Map {
+impl From<ObjMap> for Map {
 	#[inline]
-	fn from(inp: InnerMap) -> Map {
+	fn from(inp: ObjMap) -> Map {
 		Map::new(inp)
 	}
 }
 
-impl Hash for Map {
-	fn hash<H: Hasher>(&self, h: &mut H) {
-		let mut keys = self.0.keys().collect::<Vec<_>>();
-		keys.sort_by(|x, y| {
-			let mut hx = DefaultHasher::new();
-			let mut hy = DefaultHasher::new();
-			x.hash(&mut hx);
-			y.hash(&mut hy);
-			hx.finish().cmp(&hy.finish())
-		});
-
-		for key in keys {
-			self.get(key).unwrap().hash(h);
-		}
-	}
-}
-
 impl Deref for Map {
-	type Target = InnerMap;
+	type Target = ObjMap;
 
 	#[inline]
-	fn deref(&self) -> &InnerMap {
+	fn deref(&self) -> &ObjMap {
 		&self.0
 	}
 }
 
 impl DerefMut for Map {
 	#[inline]
-	fn deref_mut(&mut self) -> &mut InnerMap {
+	fn deref_mut(&mut self) -> &mut ObjMap {
 		&mut self.0
 	}
 }
 
-impl IntoObject for InnerMap {
+impl IntoObject for ObjMap {
 	type Type = Map;
 	fn into_object(self) -> SharedObject<Map> {
 		Map(self).into_object()
@@ -83,13 +65,15 @@ __impl_type! {
 	fn "count_vals" (this, val) {
 		let ref val = *val.read();
 		let ref data = this.read().data;
-		Ok(data.iter().filter(|(_k, v)| &*v.read() == val).count().into_object())
+		unimplemented!("count vals");
+		// Ok(data.iter().filter(|(_k, v)| &*v.read() == val).count().into_object())
 	}
 
 	fn "has?" (this, key) {
 		let ref key = *key.read();
 		let ref data = this.read().data;
-		Ok(data.keys().any(|obj| &*obj.read() == key).into_object())
+		// Ok(data.keys().any(|obj| &*obj.read() == key).into_object())
+		unimplemented!("has ?");
 	}
 
 	fn "get" (this, key) {

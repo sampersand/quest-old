@@ -8,7 +8,7 @@ use std::str::FromStr;
 use env::Executable;
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct Environment {
 	stack: SharedObject<List>,
 	locals: SharedObject<Map>,
@@ -54,7 +54,7 @@ impl Environment {
 	pub fn new_binding(&self, args: &[AnyShared]) -> Self {
 		Environment {
 			parent: Some(Box::new(self.clone())),
-			stack: Object::default(),
+			stack: args.into_object(),
 			locals: {
 				let locals: SharedObject<Map> = Object::default();
 				{
@@ -138,9 +138,10 @@ impl Environment {
 	}
 
 	fn get_var(&self, var: &str) -> Option<AnyShared> {
-		if var.chars().next()? != '$' {
+		if var.chars().next()? != '$' &&  var.chars().next()? != '@' {
 			return None;
 		}
+
 		match &var[1..] {
 			"env" => Some(self.clone().into_anyshared()),
 			"stack" => Some(self.stack.clone() as AnyShared),
@@ -152,12 +153,15 @@ impl Environment {
 				}
 
 				if bind_pos < 0 {
-					Some(self.clone().into_anyshared())
+					None
+					// Some(self.clone().into_anyshared())
 				} else {
-					Some(self.binding_iter()
-						.nth(bind_pos as usize)
-						.unwrap_or_else(|| self.get_module_env())
-						.clone().into_anyshared())
+					self.binding_iter()
+						.nth((bind_pos + 1) as usize)
+						.map(|x| x.clone().into_anyshared())
+						// .unwrap_or_else(Object::null))
+						// .unwrap_or_else(|| self.get_module_env())
+						// .clone().into_anyshared())
 				}
 			} else {
 				None
@@ -169,6 +173,8 @@ impl Environment {
 		if let Some(val) = self.locals.read().data.get(key) {
 			return Some(val.clone())
 		}
+
+		// println!("key: {:?} / {:?}", key, key.read().downcast_ref::<::obj::types::Var>());
 
 		key.read().downcast_ref::<::obj::types::Var>()
 			.and_then(|var| self.get_var(var.data.id_str()))
@@ -222,7 +228,8 @@ impl Environment {
 	}
 
 	pub fn has(&self, key: &AnyShared) -> bool {
-		self.locals.read().data.contains_key(key) || self.parent.as_ref().map(|p| p.has(key)).unwrap_or(false)
+		self.locals.read().data.contains_key(key) || 
+			self.parent.as_ref().map(|p| p.has(key)).unwrap_or(false)
 	}
 
 	pub fn set(&self, key: AnyShared, val: AnyShared) -> AnyShared {
@@ -256,7 +263,15 @@ impl Environment {
 
 impl Display for Environment {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "<env {} levels down>", self.binding_iter().count())
+		let stack_empty = self.stack.read().data.is_empty();
+		let locals_empty = self.locals.read().data.is_empty();
+
+		match (stack_empty, locals_empty) {
+			(true, true) => write!(f, "<empty env {} level(s) down>", self.binding_iter().count() - 1),
+			(true, false) => Display::fmt(&self.locals.read().data, f),
+			(false, true) => Display::fmt(&self.stack.read().data, f),
+			(false, false) => write!(f, "<env {} level(s) down>", self.binding_iter().count() - 1)
+		}
 	}
 }
 

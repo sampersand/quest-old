@@ -1,4 +1,6 @@
-use obj::{Id, AnyObject, SharedObject, classes::{Class, GetDefault, HasDefault}};
+use obj::{Id, AnyObject, SharedObject, classes::{Class, GetDefault, HasDefault}, Result};
+use env::Environment;
+use std::borrow::Borrow;
 
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
@@ -56,6 +58,63 @@ impl AnyObject {
 		}
 	}
 }
+
+
+impl AnyObject {
+	pub fn get_attr<Q: Borrow<Id>>(&self, attr: Q) -> Option<AnyObject> {
+		let attr = attr.borrow();
+		if let Some(obj) = self.read().attrs.get(attr) {
+			Some(obj.clone())
+		} else {
+			(self.read().defaults.get)(self, attr)
+		}
+	}
+
+
+	pub fn has_attr<Q: Borrow<Id>>(&self, attr: Q) -> bool {
+		let attr = attr.borrow();
+		self.read().attrs.contains_key(attr) || (self.read().defaults.has)(attr)
+	}
+
+	pub fn set_attr<Q: Into<Id>>(&self, attr: Q, obj: AnyObject) -> Option<AnyObject> {
+		let ref mut attrs = self.write().attrs;
+		let attr = attr.into();
+		let prev = attrs.remove_entry(&attr).map(|(_, v)| v);
+		assert!(attrs.insert(attr, obj).is_none());
+		prev
+	}
+
+	pub fn del_attr<Q: Borrow<Id>>(&self, attr: Q) -> Option<AnyObject> {
+		self.write().attrs.remove_entry(attr.borrow()).map(|(_, obj)| obj)
+	}
+
+	pub fn call_attr<Q: Borrow<Id>>(&self, attr: Q, args: &[&AnyObject], env: &Environment) -> Result<AnyObject> {
+		if let Some(attr) = self.get_attr(attr.borrow()) {
+			// this is playing with fire here; we need a better way to determine the type at runtime
+			unsafe {
+				::obj::classes::QBoundFn::from_raw(attr.into_raw())
+			}.call(args, env)
+			// attr.call_attr("()", args, env);
+			// attr.into_raw();
+			// Ok(unimplemented!())
+		} else {
+			panic!("Attribute `{}` doesn't exist for {:#?}", attr.borrow(), self)
+		}
+		// self.get_attr(attr)?.ca
+		// if let Some(qboundfn) = self.attrs.get(id.clone(), self) {
+		// 	if let Classes::BoundFn(boundfn) = qboundfn.data().deref() {
+		// 		boundfn.call(args, env)
+		// 	} else {
+		// 		panic!("BoundFn is needed to call attr")
+		// 	}
+		// } else {
+		// 	warn!("Missing attribute {} for {:?}", id, self);
+		// 	Ok(().into())
+		// }
+	}
+}
+
+
 
 
 impl<D: Send + Sync + ?Sized> Deref for QObject<D> {
@@ -128,6 +187,7 @@ impl<D: PartialEq + Send + Sync + ?Sized> PartialEq for QObject<D> {
 		self.data == other.data
 	}
 }
+
 default impl<D: Debug + Send + Sync + ?Sized> Debug for QObject<D> {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		let mut f = f.debug_struct("QObject");

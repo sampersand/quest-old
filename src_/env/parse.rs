@@ -36,7 +36,10 @@ impl<C: Debug + Send + Sync> From<C> for Token where SharedObject<C>: Class {
 pub trait Parsable {
 	fn try_parse(env: &mut Environment) -> Option<Token>;
 	fn precedence(&self) -> Precedence { Precedence::Literal }
-	fn execute(obj: &dyn Any, env: &mut Environment) -> AnyObject { unimplemented!("execute") }
+	// env used to be binding
+	fn execute(_obj: AnyObject, _env: &mut Environment) -> AnyObject {
+		unimplemented!("execute")
+	}	
 }
 
 
@@ -46,7 +49,7 @@ fn_struct!{
 
 
 fn_struct!{
-	pub struct Executor(pub fn(AnyObject, &mut Binding) -> AnyObject);
+	pub struct Executor(pub fn(AnyObject, &mut Environment) -> AnyObject);
 }
 
 impl Parser {
@@ -95,7 +98,10 @@ impl<'a> Environment<'a> {
 			panic!("No Tokens could be found starting at {}", &self.stream.as_str()[0..10]);
 		}
 
-		self.binding.finish()
+		while let Some((oper, _, exec)) = self.binding.stack.opers.pop() {
+			(exec.0)(oper, &mut self);
+		}
+		self.binding
 	}
 }
 
@@ -108,9 +114,10 @@ impl Parsable for Whitespace {
 	fn try_parse(env: &mut Environment) -> Option<Token> {
 		env.stream.try_get(regex!(r"\A\s+")).and(Some(Token::NoObject))
 	}
-	// fn execute(self, _: &mut Environment) -> AnyObject {
-	// 	unreachable!("Can't execute whitespace");
-	// }
+	
+	fn execute(_: AnyObject, _: &mut Environment) -> AnyObject {
+		unreachable!("Can't execute whitespace");
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -120,9 +127,11 @@ impl Parsable for Comment {
 	fn try_parse(env: &mut Environment) -> Option<Token> {
 		env.stream.try_get(regex!(r"(?m)\A(//|#).*$")).and(Some(Token::NoObject))
 	}
-	// fn execute(self, _: &mut Environment) -> AnyObject {
-	// 	unreachable!("Can't execute comments");
-	// }
+	
+	
+	fn execute(_: AnyObject, _: &mut Environment) -> AnyObject {
+		unreachable!("Can't execute comments");
+	}
 }
 
 
@@ -133,7 +142,8 @@ impl Parsable for LParen {
 	fn try_parse(env: &mut Environment) -> Option<Token> {
 		env.stream.try_get(regex!(r"\A[})\]]")).and(Some(Token::Eof))
 	}
-	// fn execute(self, _: &mut Environment) -> AnyObject {
-	// 	unreachable!("Can't execute lparens");
-	// }
+	
+	fn execute(_: AnyObject, _: &mut Environment) -> AnyObject {
+		unreachable!("Can't execute lparens");
+	}
 }

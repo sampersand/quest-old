@@ -1,5 +1,5 @@
 #![allow(unused)]
-#![feature(unsize, coerce_unsized, pattern, never_type, rc_downcast, specialization)]
+#![feature(unsize, coerce_unsized, pattern, never_type, specialization)]
 #![recursion_limit = "1024"]
 
 #[macro_use]

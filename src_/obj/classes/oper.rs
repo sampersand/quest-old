@@ -112,7 +112,11 @@ impl Parsable for Oper {
 				$(
 					if env.stream.try_get(regex!(concat!("\\A(?:", $regex, ")"))).is_some() {
 						let oper = Oper::$oper;
-						return Some(Token::Object(SharedObject::from(oper), oper.precedence(), Oper::execute));
+						return Some(Token::Object(
+							SharedObject::from(oper),
+							oper.precedence(),
+							::env::parse::Executor(Oper::execute)
+						));
 					}
 				)*
 			}
@@ -142,6 +146,14 @@ impl Parsable for Oper {
 		};
 		None
 	}
+
+	fn execute(obj: AnyObject, env: &mut Environment) -> AnyObject {
+		let rhs = env.binding.pop().expect("no rhs");
+		let lhs = env.binding.pop().expect("no lhs");
+
+		// let env = ::env::Environment { binding: bind.clone(), stream: ::env::Stream::new("", None, None) };
+		obj.call_attr("()", &[&lhs, &rhs], &env).unwrap()
+	}	
 }
 
 define_attrs! { for QOper;
@@ -150,7 +162,18 @@ define_attrs! { for QOper;
 	fn "@num" () {
 		Ok(QBool::from(false))
 	}
+
+	fn "()" (this, lhs, rhs) {
+		println!("{:?}, {:?}, {:?}", this, lhs, rhs);
+		unimplemented!()
+	}
+
+	// fn "()" (this) with env args obj {
+	// 	unimplemented!("TODO: call qblock");
+	// 	Ok(obj.clone())
+	// }
 }
+
 
 
 

@@ -1,15 +1,15 @@
 use env::Environment;
 use shared::Shared;
+use map::ObjMap;
 use obj::{Id, AnyObject, AnyShared, AnyResult, SharedResult, Result, Error, WeakObject, Object, SharedObject};
 use obj::types::{IntoObject, BoundFnOld, Number, Text, Var, List, Map};
-use std::collections::HashMap;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone)]
 pub struct Attributes {
 	pub(super) obj: WeakObject,
-	pub(super) map: HashMap<AnyShared, AnyShared>,
+	pub(super) map: ObjMap,
 	pub(super) defaults: fn(&AnyObject, &AnyShared, &Environment) -> Option<AnyResult>
 }
 
@@ -66,8 +66,8 @@ impl Attributes {
 	}
 
 	pub fn has(&self, attr: &AnyShared) -> bool {
-		unimplemented!()
-		// self.defaults.contains_key(attr.borrow())
+		// self.defaults.contains_key(attr)
+		unimplemented!("todo: attrs.has")
 	}
 
 	pub fn del(&mut self, attr: &AnyShared) -> Option<AnyShared> {

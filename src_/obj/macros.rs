@@ -2,12 +2,12 @@ macro_rules! __define_attr_fn {
 	(assign_args $args:ident $num:expr; [] []) => { };
 	(assign_args $args:ident $num:expr; [] [$optional:ident opt:expr, $($opt:ident $opt_val:expr),*]) => {
 		let $optional = $args.get($num).unwrap_or_else(|| $opt);
-		__define_attr_fn!(assign_args args $num + 1; ; [$($opt $opt_val)*] );
+		__define_attr_fn!(assign_args $args $num + 1; ; [$($opt $opt_val)*] );
 	};
 
 	(assign_args $args:ident $num:expr; [$required:ident $($required_other:ident)*] $optional:tt) => {
 		let $required = $args[$num];
-		__define_attr_fn!(assign_args args $num + 1; $($required_other)*; $optional);
+		__define_attr_fn!(assign_args $args $num + 1; [$($required_other)*] $optional);
 	};
 
 	(main $fn:tt $ty:ty; $env:ident $args:ident $obj:ident [$($req:ident)*] [$($opt:ident $opt_val:expr),*] $block:block) => {
@@ -19,11 +19,10 @@ macro_rules! __define_attr_fn {
 
 			__define_attr_fn!(assign_args $args 0; [$($req)*] [$($opt $opt_val,)*]);
 
-			// match $block { // so type inferences can be made
-			// 	Ok(obj) => Some($crate::env::Token::Obj(obj as AnyObject)),
-			// 	Err(err) => Err(err)
-			// }
-			unimplemented!()
+			match $block { // so type inferences can be made
+				Ok(o) => Ok(o),
+				Err(e) => Err(e)
+			}
 		}
 	};
 

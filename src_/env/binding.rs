@@ -10,15 +10,15 @@ type ObjectMap = SharedMap<Id, AnyObject>;
 type SharedBinding = Shared<Binding>;
 
 #[derive(Debug, Clone, Default)]
-struct Stack {
+pub(super) struct Stack {
 	objs: Vec<AnyObject>,
-	opers: Vec<(AnyObject, Precedence, Executor)>
+	pub(super) opers: Vec<(AnyObject, Precedence, Executor)>
 }
 
 #[derive(Debug)]
 pub struct Binding {
 	locals: ObjectMap,
-	stack: Stack,
+	pub(super) stack: Stack,
 	caller: Option<SharedBinding>
 }
 
@@ -63,13 +63,7 @@ impl Binding {
 			}
 		}
 
-		self.stack.opers.push((obj, precedence, unimplemented!()));
-	}
-	pub(super) fn finish(mut self) -> Binding {
-		while let Some((oper, _, exec)) = self.stack.opers.pop() {
-			(exec.0)(oper, &mut self);
-		}
-		self
+		self.stack.opers.push((obj, precedence, exec));//unimplemented!()));
 	}
 }
 

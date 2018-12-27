@@ -1,100 +1,194 @@
-use std::borrow::Borrow;
-use env::{Binding, Parent};
-use err::Result;
-use obj::AnyShared;
 use shared::Shared;
+use obj::{Type, Id, AnyObject, AnyResult, SharedObject, AnyShared, WeakObject, attrs::Attributes};
+use obj::types::HasDefaults;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::any::Any;
+use std::cell::UnsafeCell;
+use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::borrow::Borrow;
+use std::marker::Unsize;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::{thread, mem, ptr};
 
-/* MRO (method resolution order):
 
-1. User-defined values (eg `foo.my_value`)
-2. Specials (ie `@env`, `@attrs` or `@data` (possibly not `@data`?))
-3. Class-defined values (eg `list.get(2)`)
-4. Class parents
-*/
-
-#[derive(Clone)]
-pub struct Object<T: ?Sized> {
-	pub env: Shared<Binding>,
-	pub attrs: Shared<Binding>,
-	pub data: T
+struct Ops {
+	eq: fn(&AnyObject, &AnyObject) -> bool,
+	debug_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
+	display_fmt: fn(&AnyObject, &mut Formatter) -> fmt::Result,
 }
 
-impl<T: Parent> Object<T> {
-	#[inline]
-	pub fn new(data: T) -> Self {
-		Object {
-			env: Binding::current(),
-			attrs: Binding::new_child::<T>(),
-			data
-		}
-	}
+pub struct Object<T: ?Sized>{
+	ops: Ops,
+	obj: WeakObject,
+	id: Id,
+	pub attrs: Attributes,
+	pub data: T,
+}
 
-	pub fn new_shared(data: T) -> Shared<Self> {
-		Shared::new(Object::new(data))
+unsafe impl<T: Sync + ?Sized> Send for Object<T> {}
+unsafe impl<T: Send + Sync + ?Sized> Sync for Object<T> {}
+
+impl<T: CoerceUnsized<U> + ?Sized, U> CoerceUnsized<Object<U>> for Object<T> where Object<T>: HasDefaults  {}
+
+impl<T: PartialEq + Display + Debug + Send + Sync + 'static> Object<T> where Object<T>: HasDefaults {
+	pub fn new(data: T) -> SharedObject<T> {
+		let attrs = Attributes {
+			obj: unsafe{ mem::uninitialized() },
+			map: Default::default(),
+			defaults: |this, attr, env| this.downcast_ref::<T>().unwrap().get_default(attr.clone(), env)
+		};
+
+		let obj = Object::new_raw(data, attrs);
+		unsafe {
+			ptr::write(&mut obj.data().attrs.obj as *mut WeakObject, obj.downgrade() as WeakObject);
+		}
+		obj
+	}
+}
+
+impl<T: PartialEq + Display + Debug + Send + Sync + 'static> Object<T> {
+	fn new_raw(data: T, attrs: Attributes) -> SharedObject<T> {
+		let obj = SharedObject::new(Object {
+			obj: unsafe{ mem::uninitialized() },
+			ops: Ops {
+				eq: |k, v| if let Some(v) = v.data.downcast_ref::<T>() {
+					v == k.data.downcast_ref::<T>().expect("cant downcast K for ==")
+				} else {
+					false
+				},
+				debug_fmt: |k, f|
+					Debug::fmt(k.data.downcast_ref::<T>().expect("cant downcast K for debug_fmt"), f),
+				display_fmt: |k, f|
+					Display::fmt(k.data.downcast_ref::<T>().expect("cant downcast K for display_fmt"), f),
+
+			},
+			id: Id::next(),
+			attrs,
+			data
+		});
+
+		unsafe {
+			ptr::write(&mut obj.data().obj as *mut WeakObject, obj.downgrade() as WeakObject);
+		}
+		obj
+	}
+}
+
+impl<T: Type + Default> Object<T> where Object<T>: HasDefaults {
+	pub fn default() -> SharedObject<T> {
+		Object::new(T::default())
 	}
 }
 
 impl<T: ?Sized> Object<T> {
-	pub fn get_attr(&self, attr: &AnyShared) -> Option<AnyShared> {
-		self.attrs.read().get(attr)
-	}
-
-	pub fn set_attr(&self, attr: AnyShared, val: AnyShared) {
-		self.attrs.write().set(attr, val);
-	}
-
-	pub fn del_attr(&self, attr: &AnyShared) -> Option<AnyShared> {
-		self.attrs.write().del(attr)
-	}
-
-	pub fn has_attr(&self, attr: &AnyShared) -> bool {
-		self.attrs.read().has(attr)
-	}
-
-	pub fn call_attr(&self, attr: &AnyShared, args: &[AnyShared]) -> Option<Result<AnyShared>> {
-		let obj = self.get_attr(attr)?;
-		unimplemented!("TODO: CALL")
+	pub fn id(&self) -> &Id {
+		&self.id
 	}
 }
 
-impl<T: Parent> From<T> for Object<T> {
-	fn from(data: T) -> Self {
-		Object::new(data)
+impl<T: 'static> Object<T> {
+	pub fn upgrade(&self) -> SharedObject<T> {
+		let shared = self.obj.upgrade().expect("Arc doesn't exist but its contents do?");
+		assert!(shared.read().data.is::<T>(), "bad obj passed?");
+		unsafe {
+			Shared::from_raw(shared.into_raw().convert::<Object<T>>())
+		}
 	}
 }
 
-impl<T: ?Sized> Eq for Object<T> {}
-impl<T: ?Sized, O: ?Sized> PartialEq<Object<O>> for Object<T> {
-	fn eq(&self, other: &Object<O>) -> bool {
-		self.call_attr(&Object::new_var("==").any(), &[unimplemented!("{:?}", other)])
-			.and_then(Result::ok)
-			.and_then(|x| x.cast_bool().ok().map(|x| x.read().data))
-			.unwrap_or(false)
+impl AnyObject {
+	pub fn upgrade(&self) -> AnyShared {
+		self.obj.upgrade().expect("Arc doesn't exist but its contents do?")
+	}
+
+	pub fn try_upgrade<T: 'static>(&self) -> Option<SharedObject<T>> {
+		if !self.data.is::<T>() {
+			None
+		} else {
+			self.downcast_ref::<T>().map(Object::<T>::upgrade)
+		}
+	}
+
+	pub fn downcast_ref<T: 'static>(&self) -> Option<&Object<T>> {
+		if self.data.is::<T>() {
+			unsafe {
+				Some(&*(self as *const AnyObject as *const Object<T>))
+			}
+		} else {
+			None
+		}
 	}
 }
 
-impl<T: ?Sized> Hash for Object<T> {
-	fn hash<H: Hasher>(&self, h: &mut H) {
-		self.call_attr(&Object::new_var("hash").any(), &[])
-			.and_then(Result::ok)
-			.map(|x| {unimplemented!(); 1i32})
-			.unwrap_or(self as *const _ as *const () as usize as i32)
-			.hash(h);
+// impl Hash for AnyObject {
+// 	fn hash<H: Hasher>(&self, h: &mut H) {
+// 		unimplemented!();
+// 		// (self.ops.hash)(self, Box::new(h));
+// 	}
+// }
+
+impl<T: PartialEq + Display + Debug + Clone + Send + Sync + 'static> Object<T> {
+	pub fn duplicate(&self) -> SharedObject<T> {
+		Object::new_raw(self.data.clone(), self.attrs.clone())
 	}
 }
 
-impl<T: ?Sized> Debug for Object<T> {
+impl Eq for AnyObject {}
+impl PartialEq for AnyObject {
+	fn eq(&self, other: &AnyObject) -> bool {
+		(self.ops.eq)(self, other)
+	}
+}
+
+impl<T: Eq> Eq for Object<T> where Object<T>: PartialEq {}
+impl<T: PartialEq + Send + Sync + 'static> PartialEq<AnyObject> for Object<T> {
+	fn eq(&self, other: &AnyObject) -> bool {
+		if self as &AnyObject as *const AnyObject == other as *const AnyObject {
+			return true;
+		}
+		other.downcast_ref::<T>().map(|o| self == o).unwrap_or(false)
+	}
+}
+
+impl<T: PartialEq + Send + Sync + 'static> PartialEq<Object<T>> for Object<T> {
+	fn eq(&self, other: &Object<T>) -> bool {
+		if self as &AnyObject as *const AnyObject == other as *const AnyObject {
+			return true;
+		}
+		self.data == other.data
+	}
+}
+
+
+impl Debug for AnyObject {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		let data_str = self.call_attr(&Object::new_var("inspect").any(), &[])
-			.and_then(Result::ok)
-			.and_then(|x| x.cast_text().ok().map(|x| x.read().data.clone()))
-			.expect("Couldn't call `inspect` and get a repr");
-		f.debug_struct("Object")
-		 .field("env", &self.env)
-		 .field("attrs", &self.attrs)
-		 .field("data", &data_str)
-		 .finish()
+		(self.ops.debug_fmt)(self, f)
 	}
 }
+
+impl<T: Debug> Debug for Object<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		let mut s = f.debug_struct("Object");
+		s.field("id", &self.id);
+		if !self.attrs.is_empty() {
+			s.field("attrs", &self.attrs);
+		}
+
+		s.field("data", &self.data);
+		s.finish()
+	}
+}
+
+impl Display for AnyObject {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		(self.ops.display_fmt)(self, f)
+	}
+}
+
+impl<T: Display> Display for Object<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "{}", self.data)
+	}
+}
+

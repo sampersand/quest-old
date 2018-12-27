@@ -1,19 +1,38 @@
-mod binding;
-pub mod current;
+mod env;
+mod builtins;
 
-pub use self::binding::Binding;
+pub use self::env::Environment;
 
-use shared::Shared;
-use obj::AnyShared;
-use std::collections::HashMap;
+use obj::{Object, AnyShared, Result, types::IntoObject};
+use map::ObjMap;
+use parse::Token;
+use std::boxed::FnBox;
 
-pub trait Parent {
-	fn binding() -> Shared<Binding>;
+
+pub type Peeker<'a> = ::std::iter::Peekable<&'a mut dyn Iterator<Item=Token>>;
+
+pub trait Executable {
+	fn execute(self: Box<Self>, env: &Environment, iter: &mut Peeker) -> Result<()>;
 }
 
-pub type Mapping = HashMap<AnyShared, AnyShared>;
+impl<F: FnBox(&Environment, &mut Peeker) -> Result<()>> Executable for F {
+	fn execute(self: Box<Self>, env: &Environment, iter: &mut Peeker) -> Result<()> {
+		self.call_box((env, iter))
+	}
+}
 
 
-pub fn init(binding: Shared<Binding>) {
-	assert_eq!(current::set_current(binding), None, "Initialized when a current existed!");
+
+fn default_globals() -> ObjMap {
+	let mut map = ObjMap::new();
+	map.insert("true".into_anyshared(), true.into_anyshared());
+	map.insert("false".into_anyshared(), false.into_anyshared());
+	map.insert("null".into_anyshared(), Object::null());
+	map.insert("if".into_anyshared(), builtins::if_fn().into_anyshared());
+	map.insert("disp".into_anyshared(), builtins::disp_fn().into_anyshared());
+	map.insert("rand".into_anyshared(), builtins::rand_fn().into_anyshared());
+	map.insert("prompt".into_anyshared(), builtins::prompt_fn().into_anyshared());
+	map.insert("while".into_anyshared(), builtins::while_fn().into_anyshared());
+	map.insert("return".into_anyshared(), builtins::return_fn().into_anyshared());
+	map
 }

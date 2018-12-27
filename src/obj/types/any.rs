@@ -1,5 +1,6 @@
 // use shared::Shared;
 use obj::{AnyShared, AnyObject, AnyResult, Object, types::{HasDefaults, Type}};
+use std::fmt::{Display, Debug};
 use obj::types::Var;
 use env::Environment;
 
@@ -32,7 +33,7 @@ __impl_type! {
 }
 
 __impl_type! {
-	defaults fn __get_default_clone<T>(this, attr) where { T: Send + Sync + Clone };
+	defaults fn __get_default_clone<T>(this, attr) where { T: PartialEq + Display + Debug + Display + Send + Sync + Clone };
 
 	fn "clone" (this) env, {
 		Ok(this.read().duplicate())
@@ -148,7 +149,7 @@ pub fn get_default_eq<T>(obj: &Object<T>, attr: AnyShared, env: &Environment) ->
 	}
 }
 pub fn get_default_clone<T>(obj: &Object<T>, attr: AnyShared, env: &Environment) -> Option<AnyResult>
-			where T: Send + Sync + 'static + Clone {
+			where T: Send + Sync + 'static + Clone + Debug + Display + PartialEq {
 	match_defaults! {
 		with obj attr ele _env;
 		for<Var> { ele.data.id_str() } {
