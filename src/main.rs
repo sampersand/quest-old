@@ -14,13 +14,14 @@ fn main() -> ::std::result::Result<(), String> {
 	simple_logger::init_with_level(log::Level::Trace).unwrap();
 	let ref mut env = quest::Environment::new();
 
-	let path = Path::new("code/test.qs");
+	let path = Path::new("code/foo.qs");
 	let data = fs::read_to_string(path).unwrap();
 	let parsers = parse::default_parsers();{}
 	let mut stream = Stream::from_path(path, &data, parsers);
 
 	env.execute_stream(stream).map_err(|err| err.to_string())?;
 	println!("{:#?}", env.pop());//.unwrap().read_call(&("()".into_object() as AnyShared), &[], env));
+	
 	Ok(())
 }
 /*

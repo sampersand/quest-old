@@ -105,7 +105,11 @@ impl Block {
 
 impl Display for Block {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "Block({:?})", self.raw)
+		if f.alternate() {
+			write!(f, "Block({:?})", self.raw)
+		} else {
+			write!(f, "Block(\"...\")")
+		}
 	}
 }
 

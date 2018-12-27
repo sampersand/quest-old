@@ -1,3 +1,17 @@
+init = {};
+disp(`init`);
+return();
+Car = {
+	init = { disp(@0); 1 };
+	disp($0);
+	$0.`@locals`()
+}();
+
+car = Car.get(`init`);
+car( Car );
+disp(car);
+
+
 __EOF__
 add_two = { + 2 };
 

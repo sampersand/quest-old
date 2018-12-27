@@ -37,7 +37,9 @@ impl<T: Send + Sync + 'static> Object<T> {
 impl<T: Send + Sync + 'static> HasDefaults for Object<BoundFn<T>> {
 	fn get_default_var(&self, attr: &str, env: &Environment) -> Option<AnyResult> {
 		match attr {
-			"()" => Some(self.data.func.call(self.data.obj.clone(), &[], env)),
+			"()" => Some(self.data.func.call(self.data.obj.clone(), &[], {
+				&env.new_binding(&[self.data.obj.clone()])
+			})),
 			// "()" => Some(Ok(
 			// 		Object::new(self.bind_to(|b, args, env| {
 			// 			let b = b.read();

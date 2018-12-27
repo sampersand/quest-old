@@ -54,6 +54,10 @@ impl List {
 	pub fn is_empty(&self) -> bool {
 		self.0.is_empty()
 	}
+
+	pub fn __get(&self, pos: usize) -> Option<AnyShared> {
+		self.0.get(pos).cloned()
+	}
 }
 
 impl From<Vec<AnyShared>> for List {

@@ -174,7 +174,7 @@ __impl_type! {
 	for Var, with self attr;
 
 	fn "@text" (this) {
-		Ok(this.read().data.id_str().into_object())
+		Ok(format!("`{}`", this.read().data.id_str()).into_object())
 	}
 
 	fn "@bool" (this) env, {

@@ -89,6 +89,10 @@ impl<'a> Iterator for Stream<'a> {
 			}
 		}
 
+		if self.data.is_empty() {
+			return None
+		}
+
 		panic!("No rules could find a token at the stream: {:#?}", self)
 	}
 }

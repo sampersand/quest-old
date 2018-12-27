@@ -138,18 +138,22 @@ impl Environment {
 	}
 
 	fn get_var(&self, var: &str) -> Option<AnyShared> {
-		if var.chars().next()? != '$' &&  var.chars().next()? != '@' {
-			return None;
-		}
-
-		match &var[1..] {
-			"env" => Some(self.clone().into_anyshared()),
-			"stack" => Some(self.stack.clone() as AnyShared),
-			"locals" => Some(self.locals.clone() as AnyShared),
-			"bindings" => Some(self.binding_iter().map(|x| x.clone().into_anyshared()).collect::<Vec<_>>().into_anyshared()),
-			_ => if let Ok(mut bind_pos) = isize::from_str(&var[1..]) {
+		if var.chars().next()? == '@' {
+			match &var[1..] {
+				"env" => Some(self.clone().into_anyshared()),
+				"stack" => Some(self.stack.clone() as AnyShared),
+				"locals" => Some(self.locals.clone() as AnyShared),
+				"bindings" => Some(self.binding_iter().map(|x| x.clone().into_anyshared()).collect::<Vec<_>>().into_anyshared()),
+				_ => if let Ok(mut stack_pos) = usize::from_str(&var[1..]) {
+					self.stack.read().data.__get(stack_pos).clone()
+				} else {
+					None
+				}
+			}
+		} else if var.chars().next()? == '$' {
+			if let Ok(mut bind_pos) = isize::from_str(&var[1..]) {
 				if bind_pos < 0 {
-					bind_pos += self.binding_iter().count() as isize;
+					bind_pos += 1 + self.binding_iter().count() as isize;
 				}
 
 				if bind_pos < 0 {
@@ -157,7 +161,7 @@ impl Environment {
 					// Some(self.clone().into_anyshared())
 				} else {
 					self.binding_iter()
-						.nth((bind_pos + 1) as usize)
+						.nth((bind_pos) as usize)
 						.map(|x| x.clone().into_anyshared())
 						// .unwrap_or_else(Object::null))
 						// .unwrap_or_else(|| self.get_module_env())
@@ -166,6 +170,9 @@ impl Environment {
 			} else {
 				None
 			}
+
+		} else {
+			None
 		}
 	}
 
@@ -266,12 +273,13 @@ impl Display for Environment {
 		let stack_empty = self.stack.read().data.is_empty();
 		let locals_empty = self.locals.read().data.is_empty();
 
-		match (stack_empty, locals_empty) {
-			(true, true) => write!(f, "<empty env {} level(s) down>", self.binding_iter().count() - 1),
-			(true, false) => Display::fmt(&self.locals.read().data, f),
-			(false, true) => Display::fmt(&self.stack.read().data, f),
-			(false, false) => write!(f, "<env {} level(s) down>", self.binding_iter().count() - 1)
-		}
+		write!(f, "<env #{}: {}, {}>", self.binding_iter().count() - 1, self.locals.read().data, self.stack.read().data)
+		// match (stack_empty, locals_empty) {
+		// 	(true, true) => write!(f, "<empty env {} level(s) down>", self.binding_iter().count() - 1),
+		// 	(true, false) => write!("<env: {}Display::fmt(&self.locals.read().data, f),
+		// 	(false, true) => Display::fmt(&self.stack.read().data, f),
+		// 	(false, false) => write!(f, "<env {} level(s) down>", self.binding_iter().count() - 1)
+		// }
 	}
 }
 
