@@ -34,5 +34,6 @@ fn default_globals() -> ObjMap {
 	map.insert("prompt".into_anyshared(), builtins::prompt_fn().into_anyshared());
 	map.insert("while".into_anyshared(), builtins::while_fn().into_anyshared());
 	map.insert("return".into_anyshared(), builtins::return_fn().into_anyshared());
+	map.insert("system".into_anyshared(), builtins::system_fn().into_anyshared());
 	map
 }

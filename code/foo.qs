@@ -1,3 +1,8 @@
+open("foo")
+
+
+__END__
+
 Car = {
 	init = {
 		@self = Car.clone();

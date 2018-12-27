@@ -5,7 +5,6 @@ use parse::Token;
 use std::io::{self, BufRead};
 use rand;
 
-
 pub fn disp_fn() -> BoundFnOld {
 	BoundFnOld::bind_void(|args, env| {
 		if args.len() != 0 {
