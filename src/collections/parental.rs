@@ -1,8 +1,8 @@
-use crate::collections::{Collection, Mapping};
+use crate::collections::{Collection, Mapping, Map};
 use crate::SharedObject;
 
 #[derive(Debug, Clone)]
-pub struct ParentalMap<M: Mapping> {
+pub struct ParentalMap<M: Mapping = Map> {
 	parent: SharedObject,
 	map: M
 }
@@ -10,6 +10,12 @@ pub struct ParentalMap<M: Mapping> {
 impl<M: Mapping + Default> ParentalMap<M> {
 	pub fn new(parent: SharedObject) -> ParentalMap<M> {
 		ParentalMap::new_mapped(parent, M::default())
+	}
+}
+
+impl ParentalMap {
+	pub fn new_default(parent: SharedObject) -> ParentalMap {
+		ParentalMap::new_mapped(parent, Map::default())
 	}
 }
 

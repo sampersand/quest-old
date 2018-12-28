@@ -4,9 +4,7 @@ use quest::*;
 
 fn main() {
     simple_logger::init().unwrap();
-
-
-	let o = quest::object::r#type::Number::from(0);
-	let o = o.into_shared();
+	let o = quest::object::TypedObject::new_num(123);
+	let o = o.objectify();
 	println!("{:#?}", o);
 }
