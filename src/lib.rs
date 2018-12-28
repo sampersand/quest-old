@@ -1,22 +1,13 @@
 #![allow(unused)]
-#![deny(unused_must_use)]
-#![feature(unsize, coerce_unsized, fn_traits, const_fn, fnbox, transpose_result, specialization)]
-// #![recursion_limit = "1024"]
-#![allow(deprecated)]
 
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
+mod object;
+mod shared;
+mod map;
+mod env;
 
-#[macro_use]
-extern crate log;
-
-extern crate rand;
-
-pub mod parse;
-pub mod env;
-pub mod obj;
-pub mod shared;
-pub mod map;
-
-pub use self::env::Environment;
+use self::{
+	shared::Shared,
+	map::Map,
+	object::Object,
+	env::Environment
+};
