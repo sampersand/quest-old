@@ -2,12 +2,12 @@
 
 mod object;
 mod shared;
-mod map;
+mod collections;
 mod env;
 
 use self::{
 	shared::Shared,
-	map::Map,
+	collections::{Map, List},
 	object::Object,
 	env::Environment
 };

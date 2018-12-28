@@ -14,6 +14,7 @@ impl<T> Shared<T> {
 		}
 	}
 }
+
 impl<T: ?Sized> Shared<T> {
 
 	pub fn ptr_eq(&self, other: &Shared<T>) -> bool {
