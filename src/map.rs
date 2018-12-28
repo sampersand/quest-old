@@ -5,4 +5,3 @@ use crate::{Shared, Object};
 pub struct Map {
 	// objs: HashMap<Shared<Object>, Shared<Object>>
 }
-
