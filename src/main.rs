@@ -1,5 +1,5 @@
 #![allow(unused)]
-use quest::object::r#type::IntoObject;
+use quest::object;
 use quest::*;
 
 fn main() {

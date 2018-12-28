@@ -1,113 +1,88 @@
-mod data_mapping;
-mod ops;
-pub mod r#type;
-
-use self::data_mapping::DataMapping;
-use self::r#type::{Type, IntoObject};
-use self::ops::Ops;
+mod data;
+// mod data_object;
+// mod ops;
+// mod map;
 
 use crate::{Shared, Environment};
 use crate::collections::{Collection, Mapping};
+
+use std::any::TypeId;
 use std::fmt::{self, Debug, Formatter};
 
+pub trait ObjectMapping : Mapping + Debug + Send + Sync {
+	fn eq(&self) -> fn(&Object, &Object) -> bool;
+	fn clone(&self) -> Object;
+}
 
-pub type Object = Shared<dyn Mapping>;
+pub struct Object {
+	id: usize,
+	mapid: TypeId,
+	map: Shared<dyn ObjectMapping>,
+	env: Shared<Environment>
+}
 
-// // Note:
-// // because the user could edit how things are hashed whenever they want, i've decided to forgo hashing for now. Plus, how do you hash a hashmap
-// pub struct Object {
-// 	ops: Ops,
-// 	map: Shared<dyn Mapping>,
-// 	bound_env: Shared<Environment>
-// }
+impl Object {
+	pub fn new<M: ObjectMapping + 'static>(map: M) -> Self {
+		use std::sync::atomic::{AtomicUsize, Ordering};
+		lazy_static::lazy_static! {
+			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
+		}
 
-// impl Object {
-// 	pub fn new<T: Type>(data: T) -> Object {
-// 		Object::new_mapped(data, T::create_map())
-// 	}
+		Object {
+			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
+			mapid: TypeId::of::<M>(),
+			map: Shared::new(map) as _,
+			env: Environment::current()
+		}
+	}
+}
 
+impl Eq for Object {}
+impl PartialEq for Object {
+	fn eq(&self, other: &Object) -> bool {
+		let eq = self.map.read().eq();
+		(eq)(self, other)
+	}
+}
 
-// 	pub fn new_mapped<T>(data: T, map: Shared<dyn Mapping>) -> Object 
-// 				where T: Eq + Debug + Clone + Send + Sync + 'static {
-// 		trace!("Object being made for: {:?}", data);
-// 		Object {
-// 			data: Data::new(data),
-// 			ops: Ops::from::<T>(),
-// 			map,
-// 			bound_env: Environment::current()
-// 		}
+impl Debug for Object {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		f.debug_struct("Object")
+		 .field("id", &self.id)
+		 .field("map", &self.map)
+		 .field("env", &self.env)
+		 .finish()
+	}
+}
 
-// 	}
+impl Collection for Object {
+	fn len(&self) -> usize {
+		self.map.read().len()
+	}
 
-// 	pub fn shared(self) -> Shared<Object> {
-// 		Shared::new(self)
-// 	}
-// }
+	fn is_empty(&self) -> bool {
+		self.map.read().is_empty()
+	}
+}
 
+impl Mapping for Object {
+	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+		self.map.read().get(key)
+	}
 
+	#[inline]
+	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
+		self.map.write().set(key, val)
+	}
 
-// impl Collection for Object {
-// 	fn len(&self) -> usize {
-// 		self.map.read().len()
-// 	}
+	#[inline]
+	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
+		self.map.write().del(key)
+	}
 
-// 	fn is_empty(&self) -> bool {
-// 		self.map.read().is_empty()
-// 	}
-// }
+	#[inline]
+	fn has(&self, key: &Shared<Object>) -> bool {
+		self.map.read().has(key)
+	}
+}
 
-// impl Mapping for Object {
-// 	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
-// 		self.map.read().get(key)
-// 	}
-
-// 	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
-// 		self.map.write().set(key, val)
-// 	}
-
-// 	#[inline]
-// 	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
-// 		self.map.write().del(key)
-// 	}
-
-// 	#[inline]
-// 	fn has(&self, key: &Shared<Object>) -> bool {
-// 		self.map.read().has(key)
-// 	}
-// }
-
-// impl Clone for Object {
-// 	fn clone(&self) -> Object {
-// 		trace!("Object being cloned");
-// 		Object { 
-// 			ops: self.ops,
-// 			map: self.map.clone(), // should this be deep-copy
-// 			bound_env: self.bound_env.clone()
-// 		}
-// 	}
-// }
-
-// impl Eq for Object {}
-// impl PartialEq for Object {
-// 	fn eq(&self, other: &Object) -> bool {
-// 		// todo: make this call `map.==` for all but variables, and self.ops.eq for variables
-// 		(self.ops.eq)(&self, &other)
-// 	}
-// }
-
-// impl Debug for Object {
-// 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-// 		struct DataDebug<'a>(&'a Object);
-// 		impl Debug for DataDebug<'_> {
-// 			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-// 				(self.0.ops.debug)(&self.0, f)
-// 			}
-// 		}
-
-// 		f.debug_struct("Object")
-// 		 .field("data", &DataDebug(self))
-// 		 .field("map", &self.map)
-// 		 .field("bound_env", &self.bound_env)
-// 		 .finish()
-// 	}
-// }

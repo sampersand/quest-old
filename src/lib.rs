@@ -15,3 +15,5 @@ use self::{
 	object::Object,
 	env::Environment
 };
+
+pub type SharedObject = Shared<Object>;

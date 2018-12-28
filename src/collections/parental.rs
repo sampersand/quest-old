@@ -1,27 +1,27 @@
 use crate::collections::{Collection, Mapping};
-use crate::object::{Object, r#type::Map as ObjMap};
+use crate::SharedObject;
 
 #[derive(Debug, Clone)]
-pub struct ParentalMap<M: Mapping = ObjMap> {
-	parent: Object,
+pub struct ParentalMap<M: Mapping> {
+	parent: SharedObject,
 	map: M
 }
 
 impl<M: Mapping + Default> ParentalMap<M> {
-	pub fn new(parent: Object) -> ParentalMap<M> {
+	pub fn new(parent: SharedObject) -> ParentalMap<M> {
 		ParentalMap::new_mapped(parent, M::default())
 	}
 }
 
 impl<M: Mapping> ParentalMap<M> {
-	pub fn new_mapped(parent: Object, map: M) -> ParentalMap<M> {
+	pub fn new_mapped(parent: SharedObject, map: M) -> ParentalMap<M> {
 		ParentalMap { parent, map }
 	}
 
 }
 
 
-impl Collection for ParentalMap {
+impl<M: Mapping> Collection for ParentalMap<M> {
 	fn len(&self) -> usize {
 		// don't count parent in the size, as otherwise it's impossible to be empty
 		self.map.len()
@@ -33,23 +33,23 @@ impl Collection for ParentalMap {
 	}
 }
 
-impl Mapping for ParentalMap {
-	fn get(&self, key: &Object) -> Option<Object> {
+impl<M: Mapping> Mapping for ParentalMap<M> {
+	fn get(&self, key: &SharedObject) -> Option<SharedObject> {
 		self.map.get(key).clone().or_else(|| self.parent.read().get(key))
 	}
 
 	#[inline]
-	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
+	fn set(&mut self, key: SharedObject, val: SharedObject) -> Option<SharedObject> {
 		self.map.set(key, val)
 	}
 
 	#[inline]
-	fn del(&mut self, key: &Object) -> Option<Object> {
+	fn del(&mut self, key: &SharedObject) -> Option<SharedObject> {
 		self.map.del(key)
 	}
 
 	#[inline]
-	fn has(&self, key: &Object) -> bool {
+	fn has(&self, key: &SharedObject) -> bool {
 		self.map.has(key) || self.parent.read().has(key)
 	}
 }
