@@ -1,18 +1,32 @@
 mod ops;
 mod data;
+mod r#type;
 
 use self::data::Data;
 use self::ops::Ops;
+use self::r#type::Type;
 
 use crate::{Shared, Environment, Map};
 use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher};
 
+// Note:
+// because the user could edit how things are hashed whenever they want, i've decided to forgo hashing for now. Plus, how do you hash a hashmap
 pub struct Object {
 	data: Data,
 	ops: Ops,
 	map: Shared<Map>,
 	bound_env: Shared<Environment>
+}
+
+impl Object {
+	pub fn new<T: Type>(data: T, env: Shared<Environment>) -> Object {
+		Object {
+			data: Data::new(data),
+			ops: Ops::from::<T>(),
+			map: T::create_map(),
+			bound_env: env
+		}
+	}
 }
 
 impl Clone for Object {
@@ -51,19 +65,3 @@ impl Debug for Object {
 		 .finish()
 	}
 }
-
-impl Hash for Object {
-	fn hash<H: Hasher>(&self, h: &mut H) {
-		// todo: make this call `map.hash` for all but variables, adn self.ops.hash for variables
-		// or do i? i dont want hash conflicts
-		(self.ops.hash)(&self.data, h)
-	}
-}
-
-
-
-
-
-
-
-

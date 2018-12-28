@@ -33,3 +33,9 @@ impl Data {
 		}
 	}
 }
+
+impl Drop for Data {
+	fn drop(&mut self) {
+		(self._drop)(self.data as *mut (), self.typeid)
+	}
+}

@@ -1,33 +1,26 @@
-use std::collections::HashMap;
+mod map;
+mod list;
+
+
+pub use self::{map::Map, list::List};
 use crate::{Shared, Object};
+use std::fmt::Debug;
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct Map {
-	data: HashMap<Shared<Object>, Shared<Object>>
-}
-
-impl Map {
-	#[inline]
-	pub fn new(data: HashMap<Shared<Object>, Shared<Object>>) -> Map {
-		Map { data }
-	}
-
-	#[inline]
-	pub fn empty() -> Map {
-		Map::default()
-	}
-
-	pub fn len(&self) -> usize {
-		self.data.len()
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.data.is_empty()
+pub trait Collection : Debug {
+	fn len(&self) -> usize;
+	fn is_empty(&self) -> bool {
+		self.len() == 0
 	}
 }
 
+pub trait Mapping : Collection {
+	fn get(&self, key: &Shared<Object>) -> Option<&Shared<Object>>;
+	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>>;
+	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>>;
+	fn has(&self, key: &Shared<Object>) -> bool;
+}
 
-#[derive(Debug, Clone, PartialEq, Hash, Default)]
-pub struct List {
-	objs: Vec<Shared<Object>>
+pub trait Listing : Collection {
+	fn push(&mut self, obj: Shared<Object>);
+	fn pop(&mut self) -> Option<Shared<Object>>;
 }
