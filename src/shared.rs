@@ -3,8 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::{marker::Unsize, ops::CoerceUnsized};
 use std::thread;
 use std::ops::{Deref, DerefMut};
+use std::fmt::{self, Debug, Formatter};
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Shared<T: ?Sized> {
 	data: Arc<RwLock<T>>
 }
@@ -29,8 +30,8 @@ impl<T: ?Sized> Shared<T> {
 			if let Some(lock) = self.try_read() {
 				return lock
 			} else {
-				thread::yield_now();
 				trace!("Waiting for a read");
+				thread::yield_now();
 			}
 		}
 	}
@@ -50,8 +51,8 @@ impl<T: ?Sized> Shared<T> {
 			if let Some(lock) = self.try_write() {
 				return lock
 			} else {
-				thread::yield_now();
 				trace!("Waiting for a write");
+				thread::yield_now();
 			}
 		}
 	}
@@ -62,6 +63,16 @@ impl<T: ?Sized> Shared<T> {
 			Ok(lock) => Some(lock),
 			Err(TryLockError::Poisoned(err)) => panic!("Poisoned lock encountered when writing: {:?}", err),
 			Err(TryLockError::WouldBlock) => None
+		}
+	}
+}
+
+impl<T: Debug + ?Sized> Debug for Shared<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			write!(f, "Shared({:#?})", &*self.read())
+		} else {
+			write!(f, "Shared({:?})", &*self.read())
 		}
 	}
 }

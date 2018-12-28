@@ -25,12 +25,6 @@ pub trait IntoObject : Sized {
 	}
 }
 
-impl<T: Into<Object>> IntoObject for T {
-	fn into_object(self) -> Object {
-		self.into()
-	}
-}
-
 impl<T: Type + Sized> From<T> for Object {
 	fn from(data: T) -> Object {
 		Object::new(data)

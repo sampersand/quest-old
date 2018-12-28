@@ -10,8 +10,15 @@ pub struct ParentalMap<M: Mapping = ObjMap> {
 
 impl<M: Mapping + Default> ParentalMap<M> {
 	pub fn new(parent: Shared<dyn Mapping>) -> ParentalMap<M> {
-		ParentalMap { parent, map: M::default() }
+		ParentalMap::new_mapped(parent, M::default())
 	}
+}
+
+impl<M: Mapping> ParentalMap<M> {
+	pub fn new_mapped(parent: Shared<dyn Mapping>, map: M) -> ParentalMap<M> {
+		ParentalMap { parent, map }
+	}
+
 }
 
 
@@ -28,14 +35,8 @@ impl Collection for ParentalMap {
 }
 
 impl Mapping for ParentalMap {
-	fn get(&self, key: &Shared<Object>) -> Option<&Shared<Object>> {
-		if let Some(obj) = self.map.get(key) {
-			Some(obj)
-			// todo: make object a map
-		} else {
-			self.parent.read().get(key)
-		}
-		// self.iter().find_map(|(k, v)| if k == key { Some(v) } else { None })
+	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+		self.map.get(key).clone().or_else(|| self.parent.read().get(key))
 	}
 
 	#[inline]

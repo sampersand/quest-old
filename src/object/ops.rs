@@ -9,7 +9,7 @@ pub struct Ops {
 }
 
 impl Ops {
-	pub fn from<T: Type>() -> Ops {
+	pub fn from<T: Eq + Debug + Clone + Send + Sync + 'static>() -> Ops {
 		Ops {
 			eq: |this, other| 
 				if let Some(other) = other.try_as_ref::<T>() {

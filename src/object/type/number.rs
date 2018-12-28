@@ -30,6 +30,11 @@ impl_from_int!{
 	u8 u16 u32 u64 u128 usize
 }
 
+impl IntoObject for Number {
+	fn into_object(self) -> Object {
+		self.into()
+	}
+}
 
 impl Type for Number {
 	fn create_map() -> Shared<dyn Mapping> {
@@ -48,16 +53,3 @@ impl Type for Number {
 		}) as _
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

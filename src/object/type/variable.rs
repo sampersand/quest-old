@@ -23,11 +23,12 @@ impl From<&'static str> for Variable {
 	}
 }
 
-impl From<&'static str> for Object {
-	fn from(id: &'static str) -> Object {
-		Object::new(Variable::from(id))
+impl IntoObject for &'static str {
+	fn into_object(self) -> Object {
+		Variable::from(self).into()
 	}
 }
+
 
 impl Type for Variable {
 	fn create_map() -> Shared<dyn Mapping> {
