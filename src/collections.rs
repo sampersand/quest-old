@@ -8,7 +8,7 @@ pub use self::{
 	list::List
 };
 
-use crate::{Shared, Object};
+use crate::Object;
 use std::fmt::Debug;
 
 pub trait Collection : Debug + Send + Sync {
@@ -19,13 +19,13 @@ pub trait Collection : Debug + Send + Sync {
 }
 
 pub trait Mapping : Collection {
-	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>>;
-	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>>;
-	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>>;
-	fn has(&self, key: &Shared<Object>) -> bool;
+	fn get(&self, key: &Object) -> Option<Object>;
+	fn set(&mut self, key: Object, val: Object) -> Option<Object>;
+	fn del(&mut self, key: &Object) -> Option<Object>;
+	fn has(&self, key: &Object) -> bool;
 }
 
 pub trait Listing : Collection {
-	fn push(&mut self, obj: Shared<Object>);
-	fn pop(&mut self) -> Option<Shared<Object>>;
+	fn push(&mut self, obj: Object);
+	fn pop(&mut self) -> Option<Object>;
 }
