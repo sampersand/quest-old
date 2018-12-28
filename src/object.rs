@@ -1,12 +1,12 @@
 mod ops;
 mod data;
-mod r#type;
+pub mod r#type;
 
 use self::data::Data;
 use self::ops::Ops;
-use self::r#type::Type;
+use self::r#type::{Type, IntoObject};
 
-use crate::{Shared, Environment, Map};
+use crate::{Shared, Environment, Mapping};
 use std::fmt::{self, Debug, Formatter};
 
 // Note:
@@ -14,23 +14,29 @@ use std::fmt::{self, Debug, Formatter};
 pub struct Object {
 	data: Data,
 	ops: Ops,
-	map: Shared<Map>,
+	map: Shared<dyn Mapping>,
 	bound_env: Shared<Environment>
 }
 
 impl Object {
-	pub fn new<T: Type>(data: T, env: Shared<Environment>) -> Object {
+	pub fn new<T: Type>(data: T) -> Object {
+		trace!("Object being made for: {:?}", data);
 		Object {
 			data: Data::new(data),
 			ops: Ops::from::<T>(),
 			map: T::create_map(),
-			bound_env: env
+			bound_env: Environment::current()
 		}
+	}
+
+	pub fn shared(self) -> Shared<Object> {
+		Shared::new(self)
 	}
 }
 
 impl Clone for Object {
 	fn clone(&self) -> Object {
+		trace!("Object being cloned");
 		Object { 
 			data: (self.ops.clone)(&self.data),
 			ops: self.ops,

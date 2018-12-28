@@ -1,11 +1,13 @@
 use std::sync::{Arc, RwLock};
 use std::hash::{Hash, Hasher};
+use std::{marker::Unsize, ops::CoerceUnsized};
 
 #[derive(Debug, Default)]
 pub struct Shared<T: ?Sized> {
 	data: Arc<RwLock<T>>
 }
 
+impl<T: Unsize<U> + ?Sized, U: ?Sized> CoerceUnsized<Shared<U>> for Shared<T> {}
 
 impl<T> Shared<T> {
 	pub fn new(data: T) -> Shared<T> {
@@ -22,7 +24,7 @@ impl<T: ?Sized> Shared<T> {
 	}
 }
 
-impl<T> Clone for Shared<T> {
+impl<T: ?Sized> Clone for Shared<T> {
 	fn clone(&self) -> Shared<T> {
 		Shared { data: self.data.clone() }
 	}

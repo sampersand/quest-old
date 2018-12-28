@@ -1,5 +1,5 @@
 use std::fmt::{self, Debug, Formatter};
-use crate::object::Data;
+use crate::object::{Data, Type};
 
 #[derive(Clone, Copy)]
 pub struct Ops {
@@ -9,7 +9,7 @@ pub struct Ops {
 }
 
 impl Ops {
-	pub fn from<T: Eq + Debug + Clone + 'static>() -> Ops {
+	pub fn from<T: Type>() -> Ops {
 		Ops {
 			eq: |this, other| 
 				if let Some(other) = other.try_as_ref::<T>() {

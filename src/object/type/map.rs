@@ -1,10 +1,13 @@
-use crate::{Shared, Object};
+use crate::Shared;
 use crate::collections::{Collection, Mapping};
+use crate::object::{Object, Type, IntoObject};
+
+use lazy_static::lazy_static;
 use std::iter::FromIterator;
 
 type Pair = (Shared<Object>, Shared<Object>);
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Map {
 	data: Vec<Pair>
 }
@@ -33,12 +36,6 @@ impl Map {
 			}
 		}
 		KeyIter(self.data.iter())
-	}
-}
-
-impl FromIterator<Pair> for Map {
-	fn from_iter<T: IntoIterator<Item=Pair>>(iter: T) -> Map {
-		Map::new(Vec::from_iter(iter))
 	}
 }
 
@@ -82,4 +79,30 @@ impl Mapping for Map {
 		self.keys().any(|k| k == key)
 	}
 }
+
+impl FromIterator<Pair> for Map {
+	fn from_iter<T: IntoIterator<Item=Pair>>(iter: T) -> Map {
+		Map::new(Vec::from_iter(iter))
+	}
+}
+
+
+impl Type for Map {
+	fn create_map() -> Shared<dyn Mapping> {
+		lazy_static! {
+			static ref CLASS: Shared<Object> = Shared::new({
+				let mut m = Map::empty();
+				// m.set("+", unimplemented!())
+				m
+			}.into());
+		}
+
+		Shared::new({
+			let mut m = Map::empty();
+			m.set("@parent".into_shared(), CLASS.clone());
+			m
+		}) as _
+	}
+}
+
 

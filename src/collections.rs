@@ -1,12 +1,11 @@
-mod map;
-mod list;
+mod parental;
 
+pub use self::parental::ParentalMap;
 
-pub use self::{map::Map, list::List};
 use crate::{Shared, Object};
 use std::fmt::Debug;
 
-pub trait Collection : Debug {
+pub trait Collection : Debug + Send + Sync {
 	fn len(&self) -> usize;
 	fn is_empty(&self) -> bool {
 		self.len() == 0

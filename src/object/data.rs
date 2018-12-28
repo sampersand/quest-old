@@ -7,8 +7,11 @@ pub struct Data {
 	_drop: fn(*mut (), TypeId)
 }
 
+unsafe impl Send for Data {}
+unsafe impl Sync for Data {}
+
 impl Data {
-	pub fn new<T: 'static>(data: T) -> Data {
+	pub fn new<T: Send + Sync + 'static>(data: T) -> Data {
 		Data {
 			typeid: TypeId::of::<T>(),
 			data: Box::into_raw(Box::new(data)) as *const (),
