@@ -10,7 +10,7 @@ pub struct ParentalMap<M: Mapping = ObjMap> {
 
 impl<M: Mapping + Default> ParentalMap<M> {
 	pub fn new(parent: Shared<dyn Mapping>) -> ParentalMap<M> {
-		unimplemented!()
+		ParentalMap { parent, map: M::default() }
 	}
 }
 
