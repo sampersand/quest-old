@@ -1,6 +1,8 @@
 use std::sync::{Arc, RwLock};
 use std::hash::{Hash, Hasher};
 use std::{marker::Unsize, ops::CoerceUnsized};
+use std::thread;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Default)]
 pub struct Shared<T: ?Sized> {
@@ -18,9 +20,49 @@ impl<T> Shared<T> {
 }
 
 impl<T: ?Sized> Shared<T> {
-
 	pub fn ptr_eq(&self, other: &Shared<T>) -> bool {
 		Arc::ptr_eq(&self.data, &other.data)
+	}
+
+	pub fn read<'a>(&'a self) -> impl Deref<Target=T> + 'a {
+		loop {
+			if let Some(lock) = self.try_read() {
+				return lock
+			} else {
+				thread::yield_now();
+				trace!("Waiting for a read");
+			}
+		}
+	}
+
+	pub fn try_read<'a>(&'a self) -> Option<impl Deref<Target=T> + 'a> {
+		use std::sync::TryLockError;
+		match self.data.try_read() {
+			Ok(lock) => Some(lock),
+			Err(TryLockError::Poisoned(err)) => panic!("Poisoned lock encountered when reading: {:?}", err),
+			Err(TryLockError::WouldBlock) => None
+		}
+	}
+
+
+	pub fn write<'a>(&'a self) -> impl DerefMut<Target=T> + 'a {
+		loop {
+			if let Some(lock) = self.try_write() {
+				return lock
+			} else {
+				thread::yield_now();
+				trace!("Waiting for a write");
+			}
+		}
+	}
+
+	pub fn try_write<'a>(&'a self) -> Option<impl DerefMut<Target=T> + 'a> {
+		use std::sync::TryLockError;
+		match self.data.try_write() {
+			Ok(lock) => Some(lock),
+			Err(TryLockError::Poisoned(err)) => panic!("Poisoned lock encountered when writing: {:?}", err),
+			Err(TryLockError::WouldBlock) => None
+		}
 	}
 }
 

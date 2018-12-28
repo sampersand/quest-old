@@ -31,6 +31,7 @@ impl Mapping for ParentalMap {
 	fn get(&self, key: &Shared<Object>) -> Option<&Shared<Object>> {
 		if let Some(obj) = self.map.get(key) {
 			Some(obj)
+			// todo: make object a map
 		} else {
 			self.parent.read().a
 		}
