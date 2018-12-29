@@ -13,7 +13,7 @@ impl Type for Var {
 		// 		Object::new(crate::collections::Map::default())
 		// 	});
 		// }
-		// Shared::new(ParentalMap::new_default(PARENT.clone()))
+		// Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 
 		lazy_static! {
 			static ref PARENT: Shared<Object> = Shared::new(Object::new({
@@ -33,7 +33,7 @@ impl Type for Var {
 				map
 			}));
 		}
-		Shared::new(ParentalMap::new_default(PARENT.clone()))
+		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 	}
 }
 

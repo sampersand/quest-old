@@ -83,7 +83,7 @@ macro_rules! impl_type {
 					}));
 				}
 				$crate::Shared::new(
-					$crate::collections::ParentalMap::new_default(PARENT.clone())
+					$crate::collections::ParentalMap::new_default(|| PARENT.clone())
 				)
 			}
 		}

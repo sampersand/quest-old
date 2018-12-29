@@ -52,7 +52,7 @@ impl Type for RustFn {
 				Object::new(crate::collections::Map::default())
 			});
 		}
-		Shared::new(ParentalMap::new_default(PARENT.clone()))
+		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 	}
 }
 

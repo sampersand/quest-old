@@ -49,6 +49,6 @@ impl_type! { for Num;
 // 				map
 // 			}));
 // 		}
-// 		Shared::new(ParentalMap::new_default(PARENT.clone()))
+// 		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 // 	}
 // }

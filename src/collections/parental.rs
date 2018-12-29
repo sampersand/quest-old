@@ -1,35 +1,31 @@
 use crate::collections::{Collection, Mapping, Map};
 use crate::{Shared, Object};
-use std::sync::Once;
+use std::sync::{Mutex, Once};
 
-#[derive(Debug)]
-struct ParentalObject {
-	inner: Shared<Object>,
-	init: Once,
-	func: fn() -> Shared<Object>
-}
+mod parental_object;
+use self::parental_object::{ParentalObject, InitFunc};
 
 #[derive(Debug, Clone)]
 pub struct ParentalMap<M: Mapping = Map> {
-	parent: Shared<Object>,
+	parent: ParentalObject,
 	map: M
 }
 
 impl<M: Mapping + Default> ParentalMap<M> {
-	pub fn new(parent: Shared<Object>) -> ParentalMap<M> {
+	pub fn new(parent: InitFunc) -> ParentalMap<M> {
 		ParentalMap::new_mapped(parent, M::default())
 	}
 }
 
 impl ParentalMap {
-	pub fn new_default(parent: Shared<Object>) -> ParentalMap {
+	pub fn new_default(parent: InitFunc) -> ParentalMap {
 		ParentalMap::new_mapped(parent, Map::default())
 	}
 }
 
 impl<M: Mapping> ParentalMap<M> {
-	pub fn new_mapped(parent: Shared<Object>, map: M) -> ParentalMap<M> {
-		ParentalMap { parent, map }
+	pub fn new_mapped(parent: InitFunc, map: M) -> ParentalMap<M> {
+		ParentalMap { parent: ParentalObject::new(parent), map }
 	}
 
 }

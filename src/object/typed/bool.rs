@@ -13,7 +13,7 @@ impl Type for Bool {
 				unimplemented!();
 			});
 		}
-		Shared::new(ParentalMap::new_default(PARENT.clone()))
+		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 	}
 }
 
