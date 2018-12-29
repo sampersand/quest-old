@@ -3,19 +3,22 @@ mod null;
 mod num;
 mod text;
 mod var;
+mod rustfn;
 
+pub(super) use self::{rustfn::RustFn, var::Var};
 
 use crate::shared::Shared;
 use crate::object::Object;
 use crate::collections::{Collection, Mapping};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Types {
 	Null,
 	Bool(bool::Bool),
 	Num(num::Num),
 	Text(text::Text),
-	Var(var::Var)
+	Var(var::Var),
+	RustFn(rustfn::RustFn)
 }
 
 trait Type : Into<Types> {
@@ -44,32 +47,32 @@ impl TypedObject {
 
 impl Collection for TypedObject {
 	fn len(&self) -> usize {
-		self.map.read().len()
+		self.map.len()
 	}
 
 	fn is_empty(&self) -> bool {
-		self.map.read().is_empty()
+		self.map.is_empty()
 	}
 }
 
 impl Mapping for TypedObject {
 	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
-		self.map.read().get(key)
+		self.map.get(key)
 	}
 
 	#[inline]
 	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
-		self.map.write().set(key, val)
+		self.map.set(key, val)
 	}
 
 	#[inline]
 	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
-		self.map.write().del(key)
+		self.map.del(key)
 	}
 
 	#[inline]
 	fn has(&self, key: &Shared<Object>) -> bool {
-		self.map.read().has(key)
+		self.map.has(key)
 	}
 }
 

@@ -17,6 +17,12 @@ impl Type for Bool {
 	}
 }
 
+impl From<Bool> for bool {
+	fn from(bool: Bool) -> bool {
+		bool.0
+	}
+}
+
 impl From<bool> for Bool {
 	fn from(bool: bool) -> Bool {
 		Bool(bool)
@@ -30,8 +36,32 @@ impl From<Bool> for Types {
 }
 
 
+
 impl TypedObject {
 	pub fn new_bool<T: Into<Bool>>(val: T) -> Self {
 		TypedObject::new(val.into())
+	}
+
+	pub fn downcast_bool(&self) -> Option<&Bool> {
+		if let Types::Bool(ref bool) = self.data {
+			Some(bool)
+		} else {
+			None
+		}
+	}
+
+}
+
+impl Shared<Object> {
+	/// note: this clones the object
+	pub fn downcast_bool(&self) -> Option<Bool> {
+		self.read().map.read()
+		    .downcast_ref::<TypedObject>()
+		    .and_then(TypedObject::downcast_bool)
+		    .cloned()
+	}
+
+	pub fn into_bool(self) -> Option<bool> {
+		self.downcast_bool().map(Into::into)
 	}
 }

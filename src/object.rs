@@ -3,6 +3,7 @@ mod typed;
 pub use self::typed::TypedObject;
 
 use crate::{Shared, Environment};
+use crate::err::{Error, Result};
 use crate::collections::{Collection, Mapping};
 
 use std::any::TypeId;
@@ -31,12 +32,22 @@ impl Object {
 	}
 }
 
-impl Eq for Object {}
-impl PartialEq for Object {
-	fn eq(&self, other: &Object) -> bool {
-		unimplemented!()
-		// let eq = self.map.read().eq();
-		// (eq)(self, other)
+
+impl Eq for Shared<Object> {}
+impl PartialEq for Shared<Object> {
+	fn eq(&self, other: &Shared<Object>) -> bool {
+		if self.read().map.ptr_eq(&other.read().map) {
+			return true;
+		}
+
+		if let (Some(var1), Some(var2)) = (self.downcast_var(), other.downcast_var()) {
+			var1 == var2
+		} else {
+			self.call(&TypedObject::new_var("==").objectify(), &[other])
+			    .ok()
+			    .and_then(Shared::<Object>::into_bool)
+			    .unwrap_or(false)
+		}
 	}
 }
 
@@ -56,34 +67,51 @@ impl Debug for Object {
 	}
 }
 
+impl Shared<Object> {
+	pub fn call(&self, attr: &Shared<Object>, args: &[&Shared<Object>]) -> Result {
+		let value = self.get(attr).ok_or_else(|| Error::MissingKey(attr.clone()))?;
+		let mut new_args = args.to_vec();
+		new_args.insert(0, self);
+		value.call_unbound(&new_args)
+	}
+
+	fn call_unbound(self, args: &[&Shared<Object>]) -> Result {
+		if let Some(rustfn) = self.downcast_rustfn() {
+			rustfn.call(args)
+		} else {
+			self.call(&TypedObject::new_var("()").objectify(), args)
+		}
+	}
+}
+
 impl Collection for Object {
 	fn len(&self) -> usize {
-		self.map.read().len()
+		self.map.len()
 	}
 
 	fn is_empty(&self) -> bool {
-		self.map.read().is_empty()
+		self.map.is_empty()
 	}
 }
 
 impl Mapping for Object {
 	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
-		self.map.read().get(key)
+		self.map.get(key)
 	}
 
 	#[inline]
 	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
-		self.map.write().set(key, val)
+		self.map.set(key, val)
 	}
 
 	#[inline]
 	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
-		self.map.write().del(key)
+		self.map.del(key)
 	}
 
 	#[inline]
 	fn has(&self, key: &Shared<Object>) -> bool {
-		self.map.read().has(key)
+		self.map.has(key)
 	}
 }
 

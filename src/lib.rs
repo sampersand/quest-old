@@ -8,12 +8,14 @@ pub mod object;
 pub mod shared;
 pub mod env;
 pub mod collections;
+pub mod err;
 
 use self::{
 	shared::Shared,
 	collections::Mapping,
 	object::Object,
-	env::Environment
+	env::Environment,
+	err::{Error, Result}
 };
 
 pub type SharedObject = Shared<Object>;

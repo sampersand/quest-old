@@ -41,7 +41,7 @@ impl<M: Mapping> Collection for ParentalMap<M> {
 
 impl<M: Mapping> Mapping for ParentalMap<M> {
 	fn get(&self, key: &SharedObject) -> Option<SharedObject> {
-		self.map.get(key).clone().or_else(|| self.parent.read().get(key))
+		self.map.get(key).clone().or_else(|| self.parent.get(key))
 	}
 
 	#[inline]
@@ -56,6 +56,6 @@ impl<M: Mapping> Mapping for ParentalMap<M> {
 
 	#[inline]
 	fn has(&self, key: &SharedObject) -> bool {
-		self.map.has(key) || self.parent.read().has(key)
+		self.map.has(key) || self.parent.has(key)
 	}
 }
