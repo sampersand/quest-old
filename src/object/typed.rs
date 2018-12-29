@@ -44,7 +44,7 @@ impl TypedObject {
 	}
 
 	pub fn objectify(self) -> Object {
-		Shared::new(crate::object::ObjectInner::new(self))
+		Object::new(self)
 	}
 }
 

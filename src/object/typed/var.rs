@@ -62,8 +62,3 @@ impl_type! { for Var, downcast_fn=downcast_var;
 		this.0.to_string().into_object()
 	}
 }
-
-
-
-
-

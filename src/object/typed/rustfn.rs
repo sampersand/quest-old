@@ -48,9 +48,7 @@ impl Hash for RustFn {
 impl Type for RustFn {
 	fn create_mapping() -> Shared<dyn Mapping> {
 		lazy_static! {
-			static ref PARENT: Object = Shared::new({
-				crate::object::ObjectInner::new(crate::collections::Map::default())
-			});
+			static ref PARENT: Object = crate::Object::new(crate::collections::Map::default());
 		}
 		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
 	}

@@ -34,7 +34,7 @@ macro_rules! impl_typed_object {
 		impl $crate::Object {
 			/// note: this clones the object
 			pub fn $downcast(&self) -> Option<$ty> {
-				self.read().map.read()
+				self.map().read()
 				    .downcast_ref::<$crate::object::TypedObject>()
 				    .and_then($crate::object::TypedObject::$downcast)
 				    .cloned()
@@ -82,10 +82,16 @@ macro_rules! _assign_args {
 // !($name, 0, $self [$($req)*] [$($opt $val),*]);
 
 macro_rules! _create_rustfn {
-	(($self:ident: Object, $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
-		_assign_args!(args $name, 0, [$self $($req)*] [$($opt $val,)*]);
-		$body
+	((_ $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
+		_assign_args!(args $name, 0, [$($req)*] [$($opt $val,)*]);
+		Ok($body)
 	});
+
+	((@noread; $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
+		_assign_args!(args $name, 0, [$($req)*] [$($opt $val,)*]);
+		Ok($body)
+	});
+
 	(($self:ident $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
 		_assign_args!(args $name, 0, [$self $($req)*] [$($opt $val,)*]);
 		let $self = $self.$downcast()
@@ -109,7 +115,7 @@ macro_rules! impl_type {
 				use $crate::{Shared, Object, object::IntoObject};
 				use $crate::object::typed::*;
 				lazy_static::lazy_static! {
-					static ref PARENT: $crate::Object = $crate::Shared::new($crate::object::ObjectInner::new({
+					static ref PARENT: $crate::Object = $crate::Object::new({
 						let mut map = $crate::collections::Map::default();
 						$({
 							map.set(
@@ -127,7 +133,7 @@ macro_rules! impl_type {
 							);
 						})*
 						map
-					}));
+					});
 				}
 				$crate::Shared::new(
 					$crate::collections::ParentalMap::new_default(|| PARENT.clone())

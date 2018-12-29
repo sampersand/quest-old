@@ -6,17 +6,6 @@ use lazy_static::lazy_static;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Bool(bool);
 
-impl Type for Bool {
-	fn create_mapping() -> Shared<dyn Mapping> {
-		lazy_static! {
-			static ref PARENT: Object = Shared::new({
-				unimplemented!();
-			});
-		}
-		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
-	}
-}
-
 impl From<Bool> for bool {
 	fn from(bool: Bool) -> bool {
 		bool.0
@@ -36,3 +25,13 @@ impl Object {
 		self.downcast_bool().map(Into::into)
 	}
 }
+
+impl_type! { for Bool, downcast_fn=downcast_bool;
+	fn "@text" (this) {
+		this.0.to_string().into_object()
+	}
+}
+
+
+
+
