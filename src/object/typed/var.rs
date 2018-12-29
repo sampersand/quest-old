@@ -34,7 +34,6 @@ impl Type for Var {
 			}));
 		}
 		Shared::new(ParentalMap::new_default(PARENT.clone()))
-
 	}
 }
 
@@ -44,34 +43,4 @@ impl From<&'static str> for Var {
 	}
 }
 
-impl From<Var> for Types {
-	fn from(id: Var) -> Types {
-		Types::Var(id)
-	}
-}
-
-
-impl TypedObject {
-	pub fn new_var<T: Into<Var>>(val: T) -> Self {
-		TypedObject::new(val.into())
-	}
-
-	pub fn downcast_var(&self) -> Option<&Var> {
-		if let Types::Var(ref var) = self.data {
-			Some(var)
-		} else {
-			None
-		}
-	}
-
-}
-
-impl Shared<Object> {
-	/// note: this clones the object
-	pub fn downcast_var(&self) -> Option<Var> {
-		self.read().map.read()
-		    .downcast_ref::<TypedObject>()
-		    .and_then(TypedObject::downcast_var)
-		    .cloned()
-	}
-}
+impl_typed_object!(Var, new_var, downcast_var);

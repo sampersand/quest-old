@@ -23,34 +23,4 @@ impl From<String> for Text {
 	}
 }
 
-impl From<Text> for Types {
-	fn from(text: Text) -> Types {
-		Types::Text(text)
-	}
-}
-
-
-impl TypedObject {
-	pub fn new_text<T: Into<Text>>(val: T) -> Self {
-		TypedObject::new(val.into())
-	}
-
-	pub fn downcast_text(&self) -> Option<&Text> {
-		if let Types::Text(ref text) = self.data {
-			Some(text)
-		} else {
-			None
-		}
-	}
-
-}
-
-impl Shared<Object> {
-	/// note: this clones the object
-	pub fn downcast_text(&self) -> Option<Text> {
-		self.read().map.read()
-		    .downcast_ref::<TypedObject>()
-		    .and_then(TypedObject::downcast_text)
-		    .cloned()
-	}
-}
+impl_typed_object!(Text, new_text, downcast_text);

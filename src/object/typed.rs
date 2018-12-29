@@ -1,3 +1,6 @@
+#[macro_use]
+mod macros;
+
 mod bool;
 mod null;
 mod num;

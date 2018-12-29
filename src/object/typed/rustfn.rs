@@ -56,34 +56,11 @@ impl Type for RustFn {
 	}
 }
 
-impl From<RustFn> for Types {
-	fn from(rustfn: RustFn) -> Types {
-		Types::RustFn(rustfn)
-	}
-}
-
 
 impl TypedObject {
 	pub fn new_rustfn(name: &'static str, func: Inner) -> Self {
 		TypedObject::new(RustFn::new(name, func))
 	}
-
-	pub fn downcast_rustfn(&self) -> Option<&RustFn> {
-		if let Types::RustFn(ref rustfn) = self.data {
-			Some(rustfn)
-		} else {
-			None
-		}
-	}
-
 }
 
-impl Shared<Object> {
-	/// note: this clones the object
-	pub fn downcast_rustfn(&self) -> Option<RustFn> {
-		self.read().map.read()
-		    .downcast_ref::<TypedObject>()
-		    .and_then(TypedObject::downcast_rustfn)
-		    .cloned()
-	}
-}
+impl_typed_object!(RustFn, _ , downcast_rustfn);
