@@ -1,15 +1,54 @@
-macro_rules! impl_typed_object {
-	($ty:ident, $new:ident, $downcast:ident) => { impl_typed_object!(@; $ty, $new, $downcast); };
-	($ty:ident, _, $downcast:ident) => { impl_typed_object!(@; $ty,, $downcast); };
-	(@; $ty:ident, $($new:ident)?, $downcast:ident) => {
-		impl From<$ty> for $crate::object::typed::Types {
-			fn from(val: $ty) -> Self {
-				$crate::object::typed::Types::$ty(val)
+macro_rules! impl_quest_conversion {
+	($as_fn:ident -> $inner:ty, $func:literal $downcast_fn:ident) => {
+		impl $crate::Object {
+			/// note: this clones the object
+			pub fn $as_fn(&self) -> ::std::result::Result<$inner, $crate::Error> {
+				use $crate::object::IntoObject;
+				self.call(&$func.into_object(), &[])?
+					.$downcast_fn()
+					.ok_or_else(|| $crate::Error::ConversionFailure {
+						func: $func,
+						obj: self.clone()
+					})
+
+			}
+		}
+	}
+}
+macro_rules! impl_typed_conversion {
+	($obj:ty, $inner:ty) => {
+		impl $crate::object::IntoObject for $inner {
+			fn into_object(self) -> $crate::Object {
+				<$obj>::from(self).into_object()
 			}
 		}
 
-		impl From<$ty> for $crate::object::TypedObject {
-			fn from(obj: $ty) -> Self {
+		impl From<$inner> for $obj {
+			fn from(inner: $inner) -> Self {
+				<$obj>::new(inner)
+			}
+		}
+
+		impl From<$obj> for $inner {
+			fn from(obj: $obj) -> $inner {
+				obj.into_inner()
+			}
+		}
+
+	}
+}
+macro_rules! impl_typed_object {
+	($obj:ident, $new:ident, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj, $new, $downcast, $is); };
+	($obj:ident, _, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj,, $downcast, $is); };
+	(@; $obj:ident, $($new:ident)?, $downcast:ident, $is:ident) => {
+		impl From<$obj> for $crate::object::typed::Types {
+			fn from(val: $obj) -> Self {
+				$crate::object::typed::Types::$obj(val)
+			}
+		}
+
+		impl From<$obj> for $crate::object::TypedObject {
+			fn from(obj: $obj) -> Self {
 				$crate::object::TypedObject::new(obj)
 			}
 		}
@@ -17,31 +56,39 @@ macro_rules! impl_typed_object {
 
 		impl $crate::object::TypedObject {
 			$(
-				pub fn $new<T: Into<$ty>>(val: T) -> Self {
+				pub fn $new<T: Into<$obj>>(val: T) -> Self {
 					$crate::object::TypedObject::new(val.into())
 				}
 			)?
 
-			pub fn $downcast(&self) -> Option<&$ty> {
-				if let $crate::object::typed::Types::$ty(ref val) = self.data {
+			pub fn $downcast(&self) -> Option<&$obj> {
+				if let $crate::object::typed::Types::$obj(ref val) = self.data {
 					Some(val)
 				} else {
 					None
 				}
 			}
+
+			pub fn $is(&self) -> bool {
+				self.$downcast().is_some()
+			}
 		}
 
 		impl $crate::Object {
 			/// note: this clones the object
-			pub fn $downcast(&self) -> Option<$ty> {
+			pub fn $downcast(&self) -> Option<$obj> {
 				self.map().read()
 				    .downcast_ref::<$crate::object::TypedObject>()
 				    .and_then($crate::object::TypedObject::$downcast)
 				    .cloned()
 			}
+			
+			pub fn $is(&self) -> bool {
+				self.$downcast().is_some()
+			}
 		}
 
-		impl $crate::object::IntoObject for $ty {
+		impl $crate::object::IntoObject for $obj {
 			fn into_object(self) -> $crate::Object {
 				$crate::object::TypedObject::from(self).objectify()
 			}
@@ -67,10 +114,8 @@ macro_rules! _assign_args {
 	($_args:ident $_name:expr, $_pos:expr, [] []) => {};
 
 	($args:ident $name:expr, $pos:expr, [$req:ident $($oreq:ident)*] $opt:tt) => {
-		let $req: &$crate::Object = *$args.get($pos).ok_or_else(|| $crate::Error::MissingArgument {
-			func: $name,
-			pos: $pos
-		})?;
+		let $req: &$crate::Object = *$args.get($pos).ok_or_else(||
+			$crate::Error::MissingArgument { func: $name, pos: $pos })?;
 		_assign_args!($args $name, $pos + 1, [$($oreq)*] $opt)
 	};
 
@@ -87,7 +132,7 @@ macro_rules! _create_rustfn {
 		Ok($body)
 	});
 
-	((@noread; $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
+	((@ $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
 		_assign_args!(args $name, 0, [$($req)*] [$($opt $val,)*]);
 		Ok($body)
 	});
@@ -99,7 +144,7 @@ macro_rules! _create_rustfn {
 				func: $name,
 				msg: concat!($name, " called with bad `self` argument"),
 				position: 0,
-				arg: $self.clone()
+				obj: $self.clone()
 			})?;
 		Ok($body)
 	});
@@ -109,8 +154,8 @@ macro_rules! _create_rustfn {
 	}
 }
 macro_rules! impl_type {
-	(for $ty:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $body:block)* ) => {
-		impl $crate::object::typed::Type for $ty {
+	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $body:block)* ) => {
+		impl $crate::object::typed::Type for $obj {
 			fn create_mapping() -> $crate::Shared<dyn $crate::Mapping> {
 				use $crate::{Shared, Object, object::IntoObject};
 				use $crate::object::typed::*;
@@ -121,13 +166,13 @@ macro_rules! impl_type {
 							map.set(
 								_name_to_object!($name),
 								{
-									macro_rules! internal_name {
-										() => (concat!(stringify!($ty), "::", stringify!($name) ));
+									macro_rules! function {
+										() => (concat!(stringify!($obj), "::", $name));
 									}
-
+									use $crate::err::{Error::*, Result};
 									TypedObject::new_rustfn(
-										internal_name!(),
-										_create_rustfn!($args $body $downcast internal_name!())
+										function!(),
+										_create_rustfn!($args $body $downcast function!())
 									).objectify()
 								}
 							);

@@ -10,11 +10,15 @@ pub enum Error {
 		func: &'static str,
 		pos: usize
 	},
+	ConversionFailure {
+		func: &'static str,
+		obj: Object
+	},
 	BadArgument {
 		func: &'static str,
 		msg: &'static str,
 		position: usize,
-		arg: Object
+		obj: Object
 	}
 }
 

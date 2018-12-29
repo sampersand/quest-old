@@ -2,36 +2,32 @@ use super::{TypedObject, Type, Types};
 use crate::Shared;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
+use std::fmt::{self, Display, Formatter};
 use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Text(String);
 
-// impl Type for Text {
-// 	fn create_mapping() -> Shared<dyn Mapping> {
-// 		lazy_static! {
-// 			static ref PARENT: Object = Shared::new({
-// 				ObjectInner::new(crate::collections::Map::default())
-// 			});
-// 		}
-// 		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
-// 	}
-// }
+impl Text {
+	pub fn new(data: String) -> Text {
+		Text(data)
+	}
 
-impl IntoObject for String {
-	fn into_object(self) -> Object {
-		TypedObject::new_text(self).objectify()
+	pub fn into_inner(self) -> String {
+		self.0
 	}
 }
 
-impl From<String> for Text {
-	fn from(text: String) -> Text {
-		Text(text)
+impl Display for Text {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		Display::fmt(&self.0, f)
 	}
 }
 
-impl_typed_object!(Text, new_text, downcast_text);
 
+impl_typed_conversion!(Text, String);
+impl_typed_object!(Text, new_text, downcast_text, is_text);
+impl_quest_conversion!(as_text -> Text, "@text" downcast_text);
 
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@var" (this) {

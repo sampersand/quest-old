@@ -1,10 +1,11 @@
 use crate::Object;
 use crate::collections::{Collection, Mapping};
 use std::iter::FromIterator;
+use std::fmt::{self, Debug, Display, Formatter};
 
 type Pair = (Object, Object);
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct Map {
 	data: Vec<Pair>
 }
@@ -33,6 +34,18 @@ impl Map {
 			}
 		}
 		KeyIter(self.data.iter())
+	}
+}
+
+impl Debug for Map {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		f.debug_map().entries(self.data.iter().map(Clone::clone)).finish()
+	}
+}
+
+impl Display for Map {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		Debug::fmt(self, f)
 	}
 }
 

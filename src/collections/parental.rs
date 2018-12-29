@@ -1,11 +1,12 @@
 use crate::Object;
 use crate::collections::{Collection, Mapping, Map};
 use std::sync::{Mutex, Once};
+use std::fmt::{self, Debug, Display, Formatter};
 
 mod parental_object;
 use self::parental_object::{ParentalObject, InitFunc};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ParentalMap<M: Mapping = Map> {
 	parent: ParentalObject,
 	map: M
@@ -28,6 +29,27 @@ impl<M: Mapping> ParentalMap<M> {
 		ParentalMap { parent: ParentalObject::new(parent), map }
 	}
 
+}
+
+impl<M: Mapping> Debug for ParentalMap<M> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			f.debug_struct("ParentalMap")
+			 .field("parent", &self.parent)
+			 .field("map", &self.map)
+			 .finish()
+		} else {
+			write!(f, "P")?;
+			Debug::fmt(&self.map, f)
+		}
+	}
+}
+
+impl<M: Mapping> Display for ParentalMap<M> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		// maybe do something with `parent` here?
+		Display::fmt(&self.map, f)
+	}
 }
 
 

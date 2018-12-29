@@ -4,7 +4,7 @@ use crate::collections::{Collection, Mapping};
 use super::IntoObject;
 
 use std::any::TypeId;
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::sync::Arc;
 use lazy_static::lazy_static;
 // -------------------
@@ -21,6 +21,7 @@ struct InnerObject {
 	map: Shared<dyn Mapping>,
 	env: Shared<Environment>
 }
+
 
 impl Object {
 	pub fn new<M: Mapping + 'static>(map: M) -> Self {
@@ -42,6 +43,12 @@ impl Object {
 	}
 }
 
+impl IntoObject for Object {
+	fn into_object(self) -> Object {
+		self
+	}
+}
+
 impl Eq for Object {}
 impl PartialEq for Object {
 	fn eq(&self, other: &Object) -> bool {
@@ -53,8 +60,8 @@ impl PartialEq for Object {
 			var1 == var2
 		} else {
 			self.call(&"==".into_object(), &[other])
-			    .ok()
-			    .and_then(Object::into_bool)
+			    .and_then(|obj| obj.as_bool())
+			    .map(|x| x.into_inner())
 			    .unwrap_or(false)
 		}
 	}
@@ -75,7 +82,17 @@ impl Object {
 		if let Some(rustfn) = self.downcast_rustfn() {
 			rustfn.call(args)
 		} else {
-			self.call(&"()".into_object()	, args)
+			self.call(&"()".into_object(), args)
+		}
+	}
+}
+
+impl Display for Object {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			write!(f, "Object({})", &*self.0.map.read())
+		} else {
+			write!(f, "{}", &*self.0.map.read())
 		}
 	}
 }
@@ -89,7 +106,7 @@ impl Debug for Object {
 			 .field("env", &self.0.env)
 			 .finish()
 		} else {
-			write!(f, "Object({:?})", self.0.map)
+			write!(f, "Object({:?})", &*self.0.map.read())
 		}
 	}
 }

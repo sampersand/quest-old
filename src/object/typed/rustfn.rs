@@ -3,7 +3,7 @@ use crate::{Shared, Object, Result};
 use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
 type Inner = fn(&[&Object]) -> Result;
 
@@ -29,6 +29,13 @@ impl Debug for RustFn {
 		write!(f, "RustFn {{ name: {}, func: {:p} }}", self.name, self.func as *const ())
 	}
 }
+
+impl Display for RustFn {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "<rustfn {}>", self.name)
+	}
+}
+
 
 impl Eq for RustFn {}
 impl PartialEq for RustFn {
@@ -61,4 +68,4 @@ impl TypedObject {
 	}
 }
 
-impl_typed_object!(RustFn, _ , downcast_rustfn);
+impl_typed_object!(RustFn, _ , downcast_rustfn, is_rustfn);

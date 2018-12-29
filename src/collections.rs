@@ -9,10 +9,10 @@ pub use self::{
 };
 
 use crate::{Shared, Object};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use mopa::mopafy;
 
-pub trait Collection : mopa::Any + Debug + Send + Sync {
+pub trait Collection : mopa::Any + Debug + Display + Send + Sync {
 	fn len(&self) -> usize;
 	fn is_empty(&self) -> bool {
 		self.len() == 0

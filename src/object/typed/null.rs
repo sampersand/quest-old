@@ -1,6 +1,7 @@
 use super::{TypedObject, Type, Types};
 use crate::{Shared, Object};
 use crate::collections::{Mapping, ParentalMap};
+use std::fmt::{self, Display, Formatter};
 use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -9,6 +10,12 @@ pub struct Null;
 impl From<Null> for Types {
 	fn from(_: Null) -> Types {
 		Types::Null
+	}
+}
+
+impl Display for Null {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "null")
 	}
 }
 

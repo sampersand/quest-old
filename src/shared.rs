@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use std::{marker::Unsize, ops::CoerceUnsized};
 use std::thread;
 use std::ops::{Deref, DerefMut};
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Default)]
 pub struct Shared<T: ?Sized> {
@@ -64,6 +64,12 @@ impl<T: ?Sized> Shared<T> {
 			Err(TryLockError::Poisoned(err)) => panic!("Poisoned lock encountered when writing: {:?}", err),
 			Err(TryLockError::WouldBlock) => None
 		}
+	}
+}
+
+impl<T: Display + ?Sized> Display for Shared<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		Display::fmt(&*self.read(), f)
 	}
 }
 

@@ -2,6 +2,7 @@ use crate::collections::{Collection, Listing};
 
 use crate::Object;
 use std::iter::FromIterator;
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct List(Vec<Object>);
@@ -19,6 +20,12 @@ impl List {
 
 	pub fn iter(&self) -> impl Iterator<Item=&Object> {
 		self.0.iter()
+	}
+}
+
+impl Display for List {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		f.debug_list().entries(self.iter()).finish()
 	}
 }
 

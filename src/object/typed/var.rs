@@ -3,6 +3,7 @@ use crate::Shared;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
+use std::fmt::{self, Display, Formatter};
 use std::sync::RwLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -34,27 +35,22 @@ impl Var {
 				Var(id_strings[id_strings.len() - 1])
 			}
 		}
-		// if id_strings.contains(string.as_str()) {
+	}
 
-		// 	Var::new(id_strings.index(string.as_str()))
-		// }
-		// unimplemented!()
+	pub fn into_inner(self) -> &'static str {
+		self.0
 	}
 }
 
-impl IntoObject for &'static str {
-	fn into_object(self) -> Object {
-		TypedObject::new_var(self).objectify()
+impl Display for Var {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		Display::fmt(&self.0, f)
 	}
 }
 
-impl From<&'static str> for Var {
-	fn from(id: &'static str) -> Var {
-		Var(id)
-	}
-}
-
-impl_typed_object!(Var, new_var, downcast_var);
+impl_typed_conversion!(Var, &'static str);
+impl_typed_object!(Var, new_var, downcast_var, is_var);
+impl_quest_conversion!(as_var -> Var, "@var" downcast_var);
 
 
 impl_type! { for Var, downcast_fn=downcast_var;
