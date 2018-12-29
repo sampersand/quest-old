@@ -1,10 +1,11 @@
 #![allow(unused)]
-use quest::object::TypedObject;
+use quest::object::{TypedObject, IntoObject};
 use quest::*;
 
 fn main() {
     simple_logger::init().unwrap();
-	let o = TypedObject::new_num(123);
-	let o = o.objectify();
-	println!("{:#?}", o.call(&TypedObject::new_var("@text").objectify(), &[]));
+	let o = 123_i32.into_shared();
+	let t = o.call(&"@text".into_shared(), &[]);
+	println!("{:?}", t);
+	println!("{:#?}", t.unwrap().call(&"@var".into_shared(), &[]));
 }

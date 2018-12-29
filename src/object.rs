@@ -9,6 +9,10 @@ use crate::collections::{Collection, Mapping};
 use std::any::TypeId;
 use std::fmt::{self, Debug, Formatter};
 
+pub trait IntoObject {
+	fn into_shared(self) -> Shared<Object>;
+}
+
 pub struct Object {
 	id: usize,
 	mapid: TypeId,
@@ -69,7 +73,10 @@ impl Debug for Object {
 
 impl Shared<Object> {
 	pub fn call(&self, attr: &Shared<Object>, args: &[&Shared<Object>]) -> Result {
-		let value = self.get(attr).ok_or_else(|| Error::MissingKey(attr.clone()))?;
+		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
+			key: attr.clone(),
+			obj: self.clone()
+		})?;
 		let mut new_args = args.to_vec();
 		new_args.insert(0, self);
 		value.call_unbound(&new_args)
