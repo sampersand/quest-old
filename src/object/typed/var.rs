@@ -43,7 +43,7 @@ impl Var {
 }
 
 impl IntoObject for &'static str {
-	fn into_shared(self) -> Shared<Object> {
+	fn into_object(self) -> Object {
 		TypedObject::new_var(self).objectify()
 	}
 }
@@ -59,7 +59,7 @@ impl_typed_object!(Var, new_var, downcast_var);
 
 impl_type! { for Var, downcast_fn=downcast_var;
 	fn "@text" (this) {
-		this.0.to_string().into_shared()
+		this.0.to_string().into_object()
 	}
 }
 

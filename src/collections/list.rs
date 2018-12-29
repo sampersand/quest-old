@@ -1,14 +1,14 @@
 use crate::collections::{Collection, Listing};
 
-use crate::SharedObject;
+use crate::Object;
 use std::iter::FromIterator;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct List(Vec<SharedObject>);
+pub struct List(Vec<Object>);
 
 impl List {
 	#[inline]
-	pub fn new(data: Vec<SharedObject>) -> List {
+	pub fn new(data: Vec<Object>) -> List {
 		List(data)
 	}
 
@@ -17,7 +17,7 @@ impl List {
 		List::default()
 	}
 
-	pub fn iter(&self) -> impl Iterator<Item=&SharedObject> {
+	pub fn iter(&self) -> impl Iterator<Item=&Object> {
 		self.0.iter()
 	}
 }
@@ -33,17 +33,17 @@ impl Collection for List {
 }
 
 impl Listing for List {
-	fn push(&mut self, obj: SharedObject) {
+	fn push(&mut self, obj: Object) {
 		self.0.push(obj)
 	}
 
-	fn pop(&mut self) -> Option<SharedObject> {
+	fn pop(&mut self) -> Option<Object> {
 		self.0.pop()
 	}
 }
 
-impl FromIterator<SharedObject> for List {
-	fn from_iter<T: IntoIterator<Item=SharedObject>>(iter: T) -> List {
+impl FromIterator<Object> for List {
+	fn from_iter<T: IntoIterator<Item=Object>>(iter: T) -> List {
 		List::new(Vec::from_iter(iter))
 	}
 }

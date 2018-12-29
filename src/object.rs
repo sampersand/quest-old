@@ -9,25 +9,28 @@ use crate::collections::{Collection, Mapping};
 use std::any::TypeId;
 use std::fmt::{self, Debug, Formatter};
 
+
+pub type Object = Shared<ObjectInner>;
+
 pub trait IntoObject {
-	fn into_shared(self) -> Shared<Object>;
+	fn into_object(self) -> Object;
 }
 
-pub struct Object {
+pub struct ObjectInner {
 	id: usize,
 	mapid: TypeId,
 	map: Shared<dyn Mapping>,
 	env: Shared<Environment>
 }
 
-impl Object {
+impl ObjectInner {
 	pub fn new<M: Mapping + 'static>(map: M) -> Self {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 		lazy_static::lazy_static! {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 		}
 
-		Object {
+		ObjectInner {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 			mapid: TypeId::of::<M>(),
 			map: Shared::new(map) as _,
@@ -37,9 +40,9 @@ impl Object {
 }
 
 
-impl Eq for Shared<Object> {}
-impl PartialEq for Shared<Object> {
-	fn eq(&self, other: &Shared<Object>) -> bool {
+impl Eq for Object {}
+impl PartialEq for Object {
+	fn eq(&self, other: &Object) -> bool {
 		if self.read().map.ptr_eq(&other.read().map) {
 			return true;
 		}
@@ -49,21 +52,21 @@ impl PartialEq for Shared<Object> {
 		} else {
 			self.call(&TypedObject::new_var("==").objectify(), &[other])
 			    .ok()
-			    .and_then(Shared::<Object>::into_bool)
+			    .and_then(Shared::<ObjectInner>::into_bool)
 			    .unwrap_or(false)
 		}
 	}
 }
 
-impl Clone for Object {
+impl Clone for ObjectInner {
 	fn clone(&self) -> Self {
 		unimplemented!()
 	}
 }
 
-impl Debug for Object {
+impl Debug for ObjectInner {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		f.debug_struct("Object")
+		f.debug_struct("ObjectInner")
 		 .field("id", &self.id)
 		 .field("map", &self.map)
 		 .field("env", &self.env)
@@ -71,8 +74,8 @@ impl Debug for Object {
 	}
 }
 
-impl Shared<Object> {
-	pub fn call(&self, attr: &Shared<Object>, args: &[&Shared<Object>]) -> Result {
+impl Object {
+	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
 		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
 			key: attr.clone(),
 			obj: self.clone()
@@ -82,7 +85,7 @@ impl Shared<Object> {
 		value.call_unbound(&new_args)
 	}
 
-	fn call_unbound(self, args: &[&Shared<Object>]) -> Result {
+	fn call_unbound(self, args: &[&Object]) -> Result {
 		if let Some(rustfn) = self.downcast_rustfn() {
 			rustfn.call(args)
 		} else {
@@ -91,7 +94,7 @@ impl Shared<Object> {
 	}
 }
 
-impl Collection for Object {
+impl Collection for ObjectInner {
 	fn len(&self) -> usize {
 		self.map.len()
 	}
@@ -101,24 +104,23 @@ impl Collection for Object {
 	}
 }
 
-impl Mapping for Object {
-	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+impl Mapping for ObjectInner {
+	fn get(&self, key: &Object) -> Option<Object> {
 		self.map.get(key)
 	}
 
 	#[inline]
-	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
+	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
 		self.map.set(key, val)
 	}
 
 	#[inline]
-	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	fn del(&mut self, key: &Object) -> Option<Object> {
 		self.map.del(key)
 	}
 
 	#[inline]
-	fn has(&self, key: &Shared<Object>) -> bool {
+	fn has(&self, key: &Object) -> bool {
 		self.map.has(key)
 	}
 }
-

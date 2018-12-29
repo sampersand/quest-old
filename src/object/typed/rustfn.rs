@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 
-type Inner = fn(&[&Shared<Object>]) -> Result;
+type Inner = fn(&[&Object]) -> Result;
 
 #[derive(Clone, Copy)]
 pub struct RustFn {
@@ -19,7 +19,7 @@ impl RustFn {
 		RustFn { name, func }
 	}
 
-	pub fn call(&self, args: &[&Shared<Object>]) -> Result {
+	pub fn call(&self, args: &[&Object]) -> Result {
 		(self.func)(args)
 	}
 }
@@ -48,8 +48,8 @@ impl Hash for RustFn {
 impl Type for RustFn {
 	fn create_mapping() -> Shared<dyn Mapping> {
 		lazy_static! {
-			static ref PARENT: Shared<Object> = Shared::new({
-				Object::new(crate::collections::Map::default())
+			static ref PARENT: Object = Shared::new({
+				crate::object::ObjectInner::new(crate::collections::Map::default())
 			});
 		}
 		Shared::new(ParentalMap::new_default(|| PARENT.clone()))

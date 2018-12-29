@@ -9,7 +9,7 @@ pub struct Bool(bool);
 impl Type for Bool {
 	fn create_mapping() -> Shared<dyn Mapping> {
 		lazy_static! {
-			static ref PARENT: Shared<Object> = Shared::new({
+			static ref PARENT: Object = Shared::new({
 				unimplemented!();
 			});
 		}
@@ -31,7 +31,7 @@ impl From<bool> for Bool {
 
 impl_typed_object!(Bool, new_bool, downcast_bool);
 
-impl Shared<Object> {
+impl Object {
 	pub fn into_bool(self) -> Option<bool> {
 		self.downcast_bool().map(Into::into)
 	}

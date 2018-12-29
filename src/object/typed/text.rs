@@ -10,8 +10,8 @@ pub struct Text(String);
 // impl Type for Text {
 // 	fn create_mapping() -> Shared<dyn Mapping> {
 // 		lazy_static! {
-// 			static ref PARENT: Shared<Object> = Shared::new({
-// 				Object::new(crate::collections::Map::default())
+// 			static ref PARENT: Object = Shared::new({
+// 				ObjectInner::new(crate::collections::Map::default())
 // 			});
 // 		}
 // 		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
@@ -19,7 +19,7 @@ pub struct Text(String);
 // }
 
 impl IntoObject for String {
-	fn into_shared(self) -> Shared<Object> {
+	fn into_object(self) -> Object {
 		TypedObject::new_text(self).objectify()
 	}
 }
@@ -35,7 +35,7 @@ impl_typed_object!(Text, new_text, downcast_text);
 
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@var" (this) {
-		Var::from_string(this.0).into_shared()
+		Var::from_string(this.0).into_object()
 	}
 }
 

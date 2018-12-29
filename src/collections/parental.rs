@@ -1,5 +1,5 @@
+use crate::Object;
 use crate::collections::{Collection, Mapping, Map};
-use crate::{Shared, Object};
 use std::sync::{Mutex, Once};
 
 mod parental_object;
@@ -44,22 +44,22 @@ impl<M: Mapping> Collection for ParentalMap<M> {
 }
 
 impl<M: Mapping> Mapping for ParentalMap<M> {
-	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	fn get(&self, key: &Object) -> Option<Object> {
 		self.map.get(key).clone().or_else(|| self.parent.get(key))
 	}
 
 	#[inline]
-	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
+	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
 		self.map.set(key, val)
 	}
 
 	#[inline]
-	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	fn del(&mut self, key: &Object) -> Option<Object> {
 		self.map.del(key)
 	}
 
 	#[inline]
-	fn has(&self, key: &Shared<Object>) -> bool {
+	fn has(&self, key: &Object) -> bool {
 		self.map.has(key) || self.parent.has(key)
 	}
 }

@@ -18,4 +18,4 @@ use self::{
 	err::{Error, Result}
 };
 
-pub type SharedObject = Shared<Object>;
+pub type SharedObject = Object;

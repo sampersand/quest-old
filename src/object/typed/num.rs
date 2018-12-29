@@ -17,7 +17,7 @@ macro_rules! impl_from {
 			}
 
 			impl IntoObject for $ty {
-				fn into_shared(self) -> Shared<Object> {
+				fn into_object(self) -> Object {
 					TypedObject::new_num(self).objectify()
 				}
 			}
@@ -31,6 +31,6 @@ impl_typed_object!(Num, new_num, downcast_num);
 
 impl_type! { for Num, downcast_fn=downcast_num;
 	fn "@text" (this) {
-		this.0.to_string().into_shared()
+		this.0.to_string().into_object()
 	}
 }

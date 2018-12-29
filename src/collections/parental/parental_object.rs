@@ -3,11 +3,11 @@ use crate::collections::Mapping;
 use std::sync::RwLock;
 use std::fmt::{self, Debug, Formatter};
 
-pub type InitFunc = fn() -> Shared<Object>;
+pub type InitFunc = fn() -> Object;
 
 pub struct ParentalObject {
 	// this rwlock can be replaced later for efficiency
-	inner: RwLock<Option<Shared<Object>>>,
+	inner: RwLock<Option<Object>>,
 	func: InitFunc
 }
 
@@ -28,7 +28,7 @@ impl ParentalObject {
 		}
 	}
 
-	pub fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	pub fn get(&self, key: &Object) -> Option<Object> {
 		let inner = self.inner.read().expect("poisoned parental object read");
 		if let Some(ref map) = *inner {
 			map.get(key)
@@ -42,7 +42,7 @@ impl ParentalObject {
 		}
 	}
 
-	pub fn has(&self, key: &Shared<Object>) -> bool {
+	pub fn has(&self, key: &Object) -> bool {
 		let inner = self.inner.read().expect("poisoned parental object read");
 		if let Some(ref map) = *inner {
 			map.has(key)

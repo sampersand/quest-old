@@ -9,7 +9,7 @@ pub struct Null;
 impl Type for Null {
 	fn create_mapping() -> Shared<dyn Mapping> {
 		lazy_static! {
-			static ref PARENT: Shared<Object> = Shared::new({
+			static ref PARENT: Object = Shared::new({
 				unimplemented!();
 			});
 		}
@@ -35,7 +35,7 @@ impl TypedObject {
 
 }
 
-impl Shared<Object> {
+impl Object {
 	/// note: this clones the object
 	pub fn is_null(&self) -> bool {
 		self.read().map.read()

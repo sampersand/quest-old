@@ -31,7 +31,7 @@ macro_rules! impl_typed_object {
 			}
 		}
 
-		impl $crate::Shared<Object> {
+		impl $crate::Object {
 			/// note: this clones the object
 			pub fn $downcast(&self) -> Option<$ty> {
 				self.read().map.read()
@@ -42,7 +42,7 @@ macro_rules! impl_typed_object {
 		}
 
 		impl $crate::object::IntoObject for $ty {
-			fn into_shared(self) -> $crate::Shared<$crate::Object> {
+			fn into_object(self) -> $crate::Object {
 				$crate::object::TypedObject::from(self).objectify()
 			}
 		}
@@ -67,7 +67,7 @@ macro_rules! _assign_args {
 	($_args:ident $_name:expr, $_pos:expr, [] []) => {};
 
 	($args:ident $name:expr, $pos:expr, [$req:ident $($oreq:ident)*] $opt:tt) => {
-		let $req: &$crate::Shared<$crate::Object> = *$args.get($pos).ok_or_else(|| $crate::Error::MissingArgument {
+		let $req: &$crate::Object = *$args.get($pos).ok_or_else(|| $crate::Error::MissingArgument {
 			func: $name,
 			pos: $pos
 		})?;
@@ -75,14 +75,14 @@ macro_rules! _assign_args {
 	};
 
 	($args:ident $name:expr, $pos:expr, [] [$opt:ident=$val:expr, $($other:tt)*]) => {
-		let $opt: &$crate::Shared<$crate::Object> = *$args.get($pos).unwrap_or_else(|| $val);
+		let $opt: &$crate::Object = *$args.get($pos).unwrap_or_else(|| $val);
 		_assign_args!($args $name, $pos + 1, [] [$($other)*])
 	}
 }
 // !($name, 0, $self [$($req)*] [$($opt $val),*]);
 
 macro_rules! _create_rustfn {
-	(($self:ident: Shared<Object>, $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
+	(($self:ident: Object, $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
 		_assign_args!(args $name, 0, [$self $($req)*] [$($opt $val,)*]);
 		$body
 	});
@@ -109,7 +109,7 @@ macro_rules! impl_type {
 				use $crate::{Shared, Object, object::IntoObject};
 				use $crate::object::typed::*;
 				lazy_static::lazy_static! {
-					static ref PARENT: $crate::Shared<$crate::Object> = $crate::Shared::new($crate::Object::new({
+					static ref PARENT: $crate::Object = $crate::Shared::new($crate::object::ObjectInner::new({
 						let mut map = $crate::collections::Map::default();
 						$({
 							map.set(

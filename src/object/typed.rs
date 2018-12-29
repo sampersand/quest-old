@@ -43,8 +43,8 @@ impl TypedObject {
 		}
 	}
 
-	pub fn objectify(self) -> Shared<Object> {
-		Shared::new(Object::new(self))
+	pub fn objectify(self) -> Object {
+		Shared::new(crate::object::ObjectInner::new(self))
 	}
 }
 
@@ -59,22 +59,22 @@ impl Collection for TypedObject {
 }
 
 impl Mapping for TypedObject {
-	fn get(&self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	fn get(&self, key: &Object) -> Option<Object> {
 		self.map.get(key)
 	}
 
 	#[inline]
-	fn set(&mut self, key: Shared<Object>, val: Shared<Object>) -> Option<Shared<Object>> {
+	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
 		self.map.set(key, val)
 	}
 
 	#[inline]
-	fn del(&mut self, key: &Shared<Object>) -> Option<Shared<Object>> {
+	fn del(&mut self, key: &Object) -> Option<Object> {
 		self.map.del(key)
 	}
 
 	#[inline]
-	fn has(&self, key: &Shared<Object>) -> bool {
+	fn has(&self, key: &Object) -> bool {
 		self.map.has(key)
 	}
 }

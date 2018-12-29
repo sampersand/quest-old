@@ -1,8 +1,8 @@
-use crate::SharedObject;
+use crate::Object;
 use crate::collections::{Collection, Mapping};
 use std::iter::FromIterator;
 
-type Pair = (SharedObject, SharedObject);
+type Pair = (Object, Object);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Map {
@@ -24,11 +24,11 @@ impl Map {
 		self.data.iter()
 	}
 
-	pub fn keys(&self) -> impl Iterator<Item=&SharedObject> {
+	pub fn keys(&self) -> impl Iterator<Item=&Object> {
 		struct KeyIter<'a>(std::slice::Iter<'a, Pair>);
 		impl<'a> Iterator for KeyIter<'a> {
-			type Item = &'a SharedObject;
-			fn next(&mut self) -> Option<&'a SharedObject> {
+			type Item = &'a Object;
+			fn next(&mut self) -> Option<&'a Object> {
 				self.0.next().map(|(k, _)| k)
 			}
 		}
@@ -47,11 +47,11 @@ impl Collection for Map {
 }
 
 impl Mapping for Map {
-	fn get(&self, key: &SharedObject) -> Option<SharedObject> {
+	fn get(&self, key: &Object) -> Option<Object> {
 		self.iter().find_map(|(k, v)| if k == key { Some(v) } else { None }).cloned()
 	}
 
-	fn set(&mut self, key: SharedObject, val: SharedObject) -> Option<SharedObject> {
+	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
 		for i in 0..self.data.len() {
 			if self.data[i].0 == key {
 				let v = self.data[i].1.clone();
@@ -63,7 +63,7 @@ impl Mapping for Map {
 		None
 	}
 
-	fn del(&mut self, key: &SharedObject) -> Option<SharedObject> {
+	fn del(&mut self, key: &Object) -> Option<Object> {
 		for i in 0..self.data.len() {
 			if &self.data[i].0 == key {
 				return Some(self.data.swap_remove(i).1)
@@ -72,7 +72,7 @@ impl Mapping for Map {
 		None
 	}
 
-	fn has(&self, key: &SharedObject) -> bool {
+	fn has(&self, key: &Object) -> bool {
 		self.keys().any(|k| k == key)
 	}
 }
