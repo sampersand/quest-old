@@ -26,7 +26,11 @@ impl RustFn {
 
 impl Debug for RustFn {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "RustFn {{ name: {}, func: {:p} }}", self.name, self.func as *const ())
+		if f.alternate() {
+			write!(f, "RustFn({:?}, {:p})", self.name, self.func as *const ())
+		} else {
+			write!(f, "RustFn({:?})", self.name)
+		}
 	}
 }
 
@@ -52,16 +56,6 @@ impl Hash for RustFn {
 	}
 }
 
-impl Type for RustFn {
-	fn create_mapping() -> Shared<dyn Mapping> {
-		lazy_static! {
-			static ref PARENT: Object = crate::Object::new(crate::collections::Map::default());
-		}
-		Shared::new(ParentalMap::new_default(|| PARENT.clone()))
-	}
-}
-
-
 impl TypedObject {
 	pub fn new_rustfn(name: &'static str, func: Inner) -> Self {
 		TypedObject::new(RustFn::new(name, func))
@@ -69,3 +63,14 @@ impl TypedObject {
 }
 
 impl_typed_object!(RustFn, _ , downcast_rustfn, is_rustfn);
+
+
+impl_type! { for RustFn, downcast_fn=downcast_rustfn;
+	fn "()" (this) args {
+		this.call(args)?
+	}
+}
+
+
+
+

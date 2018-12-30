@@ -29,6 +29,12 @@ macro_rules! impl_typed_conversion {
 			}
 		}
 
+		impl AsRef<$inner> for $obj {
+			fn as_ref(&self) -> &$inner {
+				&self.0
+			}
+		}
+
 		impl From<$obj> for $inner {
 			fn from(obj: $obj) -> $inner {
 				obj.into_inner()
@@ -127,37 +133,50 @@ macro_rules! _assign_args {
 // !($name, 0, $self [$($req)*] [$($opt $val),*]);
 
 macro_rules! _create_rustfn {
-	((_ $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
-		_assign_args!(args $name, 0, [$($req)*] [$($opt $val,)*]);
-		Ok($body)
-	});
+	(, $($others:tt)*) => { _create_rustfn!(args, $($others)*); };
 
-	((@ $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
-		_assign_args!(args $name, 0, [$($req)*] [$($opt $val,)*]);
-		Ok($body)
-	});
+	($args_ident:ident, (_ $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
+		|$args_ident| {
+			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val,)*]);
+			Ok($body)
+		}
+	);
 
-	(($self:ident $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (|args| {
-		_assign_args!(args $name, 0, [$self $($req)*] [$($opt $val,)*]);
-		let $self = $self.$downcast()
-			.ok_or_else(|| $crate::Error::BadArgument {
-				func: $name,
-				msg: concat!($name, " called with bad `self` argument"),
-				position: 0,
-				obj: $self.clone()
-			})?;
-		Ok($body)
-	});
+	($args_ident:ident, (@ $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
+		|$args_ident| {
+			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val,)*]);
+			Ok($body)
+		}
+	);
 
-	($bad_args:tt $body:block $downcast:ident $name:expr) => {
+	($args_ident:ident, ($self:ident $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
+		|$args_ident| {
+			_assign_args!($args_ident $name, 0, [$self $($req)*] [$($opt $val,)*]);
+			let $self = $self.$downcast()
+				.ok_or_else(|| $crate::Error::BadArgument {
+					func: $name,
+					msg: concat!($name, " called with bad `self` argument"),
+					position: 0,
+					obj: $self.clone()
+				})?;
+			Ok($body)
+		}
+	);
+
+	($args_ident:ident, $bad_args:tt $body:block $downcast:ident $name:expr) => {
 		compile_error!(concat!("Bad args for `", $name, "`: ", stringify!($bad_args)))
 	}
 }
 macro_rules! impl_type {
-	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $body:block)* ) => {
-		impl_type!(for $obj, downcast_fn = $downcast, parent=$crate::object::typed::basic::BASIC_MAP; $(fn $name $args $body)*);
+	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
+		impl_type!{
+			for $obj,
+			downcast_fn = $downcast,
+			parent=$crate::object::typed::basic::BASIC_MAP;
+			$(fn $name $args $($args_ident)?$body)*
+		}
 	};
-	(for $obj:ty, downcast_fn = $downcast:ident, parent=$parent:expr; $(fn $name:tt $args:tt $body:block)* ) => {
+	(for $obj:ty, downcast_fn = $downcast:ident, parent=$parent:expr; $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
 		impl $crate::object::typed::Type for $obj {
 			fn create_mapping() -> $crate::Shared<dyn $crate::Mapping> {
 				use lazy_static::lazy_static;
@@ -169,7 +188,7 @@ macro_rules! impl_type {
 							function_map!(
 								prefix = stringify!($obj),
 								downcast_fn = $downcast,
-								$(fn $name $args $body)*
+								$(fn $name $args $($args_ident)? $body)*
 							)
 						));
 				}
@@ -183,7 +202,7 @@ macro_rules! impl_type {
 
 macro_rules! function_map {
 	(prefix=$prefix:expr, downcast_fn = $downcast:ident,
-	 $(fn $name:tt $args:tt $body:block)* ) => {
+	 $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
 		$crate::Object::new({
 			let mut map = $crate::collections::Map::default();
 			use $crate::err::{Error::*, Result};
@@ -196,7 +215,7 @@ macro_rules! function_map {
 				}
 				TypedObject::new_rustfn(
 					function!(),
-					_create_rustfn!($args $body $downcast function!())
+					_create_rustfn!($($args_ident)?, $args $body $downcast function!())
 				).objectify()
 			}); )*
 			map

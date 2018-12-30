@@ -67,21 +67,45 @@ impl<M: Mapping> Collection for ParentalMap<M> {
 
 impl<M: Mapping> Mapping for ParentalMap<M> {
 	fn get(&self, key: &Object) -> Option<Object> {
+		if let Some(var) = key.downcast_var() {
+			if *var.as_ref() == "@parent" {
+				return Some(self.parent.inner())
+			}
+		}
 		self.map.get(key).clone().or_else(|| self.parent.get(key))
 	}
 
 	#[inline]
 	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
+		if let Some(var) = key.downcast_var() {
+			if *var.as_ref() == "@parent" {
+				let old_parent = self.parent.inner();
+				self.parent = ParentalObject::new_initialized(val);
+				return Some(old_parent)
+			}
+		}
 		self.map.set(key, val)
 	}
 
 	#[inline]
 	fn del(&mut self, key: &Object) -> Option<Object> {
+		if let Some(var) = key.downcast_var() {
+			if *var.as_ref() == "@parent" {
+				warn!("Cannot delete @parent off of ParentalMap");
+				return None;
+			}
+		}
 		self.map.del(key)
 	}
 
 	#[inline]
 	fn has(&self, key: &Object) -> bool {
+		if let Some(var) = key.downcast_var() {
+			if *var.as_ref() == "@parent" {
+				return true;
+			}
+		}
+
 		self.map.has(key) || self.parent.has(key)
 	}
 }

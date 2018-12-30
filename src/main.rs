@@ -8,6 +8,13 @@ fn main() {
     let twenty = 20i32.into_object();
     let fifteen = 15i32.into_object();
 
-    println!("{:?}", twenty.call_attr("+", &[&fifteen]));
-    println!("{:?}", twenty.call_attr("@bool", &[]));
+    let mut parent = twenty.get_attr("@parent").unwrap();
+    parent.set_attr("()", parent.get_attr("*").unwrap());
+
+    println!("{:?}", twenty.call_attr("()", &[&fifteen]));
+    println!("{:?}", fifteen.call_attr("()", &[&twenty]));
+    println!("{:?}", twenty.get_attr("()"));
+    println!("{:?}", true.into_object().get_attr("()"));
+    // println!("{:?}", twenty.call_attr("+", &[&fifteen]));
+    // println!("{:?}", twenty.call_attr("@bool", &[]));
 }

@@ -28,6 +28,13 @@ impl ParentalObject {
 		}
 	}
 
+	pub fn new_initialized(parent: Object) -> ParentalObject {
+		ParentalObject {
+			inner: RwLock::new(Some(parent)),
+			func: || unreachable!("Attempted to create a parent that already exists")
+		}
+	}
+
 	pub fn get(&self, key: &Object) -> Option<Object> {
 		let inner = self.inner.read().expect("poisoned parental object read");
 		if let Some(ref map) = *inner {
@@ -54,6 +61,21 @@ impl ParentalObject {
 			}
 			inner.as_ref().unwrap().has(key)
 		}
+	}
+
+	pub fn inner(&self) -> Object {
+		let inner = self.inner.read().expect("poisoned parental object read");
+		if let Some(ref map) = *inner {
+			map.clone()
+		} else {
+			drop(inner);
+			let mut inner = self.inner.write().expect("poisoned parental object write");
+			if inner.is_none() { // in case it was created after we reacquired
+				*inner = Some((self.func)());
+			}
+			inner.clone().unwrap()
+		}
+
 	}
 }
 

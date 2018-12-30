@@ -41,8 +41,46 @@ impl Object {
 	pub fn map(&self) -> &Shared<dyn Mapping> {
 		&self.0.map
 	}
+
+	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
+		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
+			key: attr.clone(),
+			obj: self.clone()
+		})?;
+		let mut new_args = args.to_vec();
+		new_args.insert(0, self);
+		value.call_unbound(&new_args)
+	}
+
+	fn call_unbound(self, args: &[&Object]) -> Result {
+		if let Some(rustfn) = self.downcast_rustfn() {
+			rustfn.call(args)
+		} else {
+			self.call_attr("()", args)
+		}
+	}
 }
 
+impl Object {
+	pub fn get_attr(&self, attr: &'static str) -> Option<Object> {
+		self.get(&attr.into_object())
+	}
+	pub fn set_attr(&mut self, attr: &'static str, val: Object) -> Option<Object> {
+		self.set(attr.into_object(), val)
+	}
+	pub fn del_attr(&mut self, attr: &'static str) -> Option<Object> {
+		self.del(&attr.into_object())
+	}
+	pub fn has_attr(&self, attr: &'static str) -> bool {
+		self.has(&attr.into_object())
+	}
+
+
+
+	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
+		self.call(&attr.into_object(), args)
+	}
+}
 impl IntoObject for Object {
 	fn into_object(self) -> Object {
 		self
@@ -63,29 +101,6 @@ impl PartialEq for Object {
 			    .and_then(|obj| obj.as_bool())
 			    .map(|x| x.into_inner())
 			    .unwrap_or(false)
-		}
-	}
-}
-
-impl Object {
-	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
-		self.call(&attr.into_object(), args)
-	}
-	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
-		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
-			key: attr.clone(),
-			obj: self.clone()
-		})?;
-		let mut new_args = args.to_vec();
-		new_args.insert(0, self);
-		value.call_unbound(&new_args)
-	}
-
-	fn call_unbound(self, args: &[&Object]) -> Result {
-		if let Some(rustfn) = self.downcast_rustfn() {
-			rustfn.call(args)
-		} else {
-			self.call_attr("()", args)
 		}
 	}
 }
