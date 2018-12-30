@@ -57,10 +57,19 @@ impl_type! { for Num, downcast_fn=downcast_num;
 		this.0.to_string().into_object()
 	}
 
-	fn "+" (this, rhs) {
-		let rhs = rhs.as_num()?;
-		(this.0 + rhs.0).into_object()
+	fn "+" (this, rhs) { (this.0 + rhs.as_num()?.0).into_object() }
+	fn "-" (this, rhs) { (this.0 - rhs.as_num()?.0).into_object() }
+	fn "*" (this, rhs) { (this.0 * rhs.as_num()?.0).into_object() }
+	fn "/" (this, rhs) { (this.0 / rhs.as_num()?.0).into_object() }
+	fn "%" (this, rhs) { (this.0 % rhs.as_num()?.0).into_object() }
+	fn "^" (@this, rhs) { this.call_attr("**", &[rhs])? }
+	fn "**" (this, rhs) {
+		let rhs = rhs.as_num()?.0;
+		debug!("TODO: change `**` to be able to accept fractions");
+		this.0.pow(rhs as u32).into_object()
 	}
+
+
 }
 
 

@@ -8,5 +8,6 @@ fn main() {
     let twenty = 20i32.into_object();
     let fifteen = 15i32.into_object();
 
-    println!("{:?}", twenty.call(&"+".into_object(), &[&fifteen]));
+    println!("{:?}", twenty.call_attr("+", &[&fifteen]));
+    println!("{:?}", twenty.call_attr("@bool", &[]));
 }

@@ -155,35 +155,56 @@ macro_rules! _create_rustfn {
 }
 macro_rules! impl_type {
 	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $body:block)* ) => {
+		impl_type!(for $obj, downcast_fn = $downcast, parent=$crate::object::typed::basic::BASIC_MAP; $(fn $name $args $body)*);
+	};
+	(for $obj:ty, downcast_fn = $downcast:ident, parent=$parent:expr; $(fn $name:tt $args:tt $body:block)* ) => {
 		impl $crate::object::typed::Type for $obj {
 			fn create_mapping() -> $crate::Shared<dyn $crate::Mapping> {
-				use $crate::{Shared, Object, object::IntoObject};
-				use $crate::object::typed::*;
-				lazy_static::lazy_static! {
-					static ref PARENT: $crate::Object = $crate::Object::new({
-						let mut map = $crate::collections::Map::default();
-						$({
-							map.set(
-								_name_to_object!($name),
-								{
-									macro_rules! function {
-										() => (concat!(stringify!($obj), "::", $name));
-									}
-									use $crate::err::{Error::*, Result};
-									TypedObject::new_rustfn(
-										function!(),
-										_create_rustfn!($args $body $downcast function!())
-									).objectify()
-								}
-							);
-						})*
-						map
-					});
+				use lazy_static::lazy_static;
+				use crate::{Shared, Object, collections::ParentalMap};
+				lazy_static! {
+					static ref PARENT: Object = 
+						Object::new(ParentalMap::new_mapped(
+							|| $parent.clone(),
+							function_map!(
+								prefix = stringify!($obj),
+								downcast_fn = $downcast,
+								$(fn $name $args $body)*
+							)
+						));
 				}
-				$crate::Shared::new(
-					$crate::collections::ParentalMap::new_default(|| PARENT.clone())
+				Shared::new(
+					ParentalMap::new_default(|| PARENT.clone())
 				)
 			}
 		}
 	}
 }
+
+macro_rules! function_map {
+	(prefix=$prefix:expr, downcast_fn = $downcast:ident,
+	 $(fn $name:tt $args:tt $body:block)* ) => {
+		$crate::Object::new({
+			let mut map = $crate::collections::Map::default();
+			use $crate::err::{Error::*, Result};
+			use $crate::{Shared, Object, object::IntoObject};
+			use $crate::object::typed::*;
+
+			$(map.set(_name_to_object!($name), {
+				macro_rules! function {
+					() => (concat!($prefix, "::", $name));
+				}
+				TypedObject::new_rustfn(
+					function!(),
+					_create_rustfn!($args $body $downcast function!())
+				).objectify()
+			}); )*
+			map
+		});
+	}
+}
+
+
+
+
+

@@ -59,7 +59,7 @@ impl PartialEq for Object {
 		if let (Some(var1), Some(var2)) = (self.downcast_var(), other.downcast_var()) {
 			var1 == var2
 		} else {
-			self.call(&"==".into_object(), &[other])
+			self.call_attr("==", &[other])
 			    .and_then(|obj| obj.as_bool())
 			    .map(|x| x.into_inner())
 			    .unwrap_or(false)
@@ -68,6 +68,9 @@ impl PartialEq for Object {
 }
 
 impl Object {
+	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
+		self.call(&attr.into_object(), args)
+	}
 	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
 		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
 			key: attr.clone(),
@@ -82,7 +85,7 @@ impl Object {
 		if let Some(rustfn) = self.downcast_rustfn() {
 			rustfn.call(args)
 		} else {
-			self.call(&"()".into_object(), args)
+			self.call_attr("()", args)
 		}
 	}
 }
