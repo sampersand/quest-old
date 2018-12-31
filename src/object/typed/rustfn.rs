@@ -62,6 +62,12 @@ impl TypedObject {
 	}
 }
 
+impl Object {
+	pub fn new_rustfn(name: &'static str, func: Inner) -> Self {
+		Object::new(TypedObject::new_rustfn(name, func))
+	}
+}
+
 impl_typed_object!(RustFn, _ , downcast_rustfn, is_rustfn);
 
 

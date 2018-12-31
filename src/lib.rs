@@ -4,18 +4,21 @@
 #[macro_use]
 extern crate log;
 
-pub mod object;
-pub mod shared;
-pub mod env;
-pub mod collections;
-pub mod err;
+#[macro_use]
+mod macros;
 
-use self::{
+mod object;
+mod shared;
+mod env;
+mod collections;
+mod err;
+
+pub use self::env::builtins::BUILTINS_MAP as __BUILTINS_MAP;
+
+pub use self::{
 	shared::Shared,
 	collections::Mapping,
-	object::Object,
+	object::{Object, IntoObject},
 	env::Environment,
 	err::{Error, Result}
 };
-
-pub type SharedObject = Object;

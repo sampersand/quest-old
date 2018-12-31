@@ -59,6 +59,15 @@ impl_typed_conversion!(Var, &'static str);
 impl_typed_object!(Var, new_var, downcast_var, is_var);
 impl_quest_conversion!("@var" (as_var_obj is_var) (into_var downcast_var) -> Var);
 
+impl Object {
+	pub fn is_variable(&self, var: &'static str) -> bool {
+		if let Some(varobj) = self.downcast_var() {
+			varobj.0 == var
+		} else {
+			false
+		}
+	}
+}
 
 fn env() -> Shared<Environment> {
 	Environment::current()

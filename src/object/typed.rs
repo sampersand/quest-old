@@ -1,6 +1,3 @@
-#[macro_use]
-mod macros;
-
 mod basic;
 mod pristine;
 
@@ -11,6 +8,7 @@ mod text;
 mod var;
 mod rustfn;
 
+pub(crate) use self::pristine::PRISTINE_MAP;
 pub(super) use self::{rustfn::RustFn, var::Var};
 
 use crate::shared::Shared;

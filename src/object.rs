@@ -1,6 +1,5 @@
-mod typed;
+pub(crate) mod typed;
 mod object;
-
 pub use self::typed::TypedObject;
 pub use self::object::Object;
 

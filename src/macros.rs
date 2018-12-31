@@ -111,12 +111,12 @@ macro_rules! impl_typed_object {
 
 macro_rules! _name_to_object {
 	($name:literal) => {
-		TypedObject::new_var(
+		$crate::object::TypedObject::new_var(
 			$name // NOTE: this will crash if `$name` is a number
 		).objectify()
 	};
-	((var $($rest:tt)+)) => { TypedObject::new_var( stringify!($($rest)*) ) };
-	((num $num:expr)) => { TypedObject::new_num( $num ) };
+	((var $($rest:tt)+)) => { $crate::object::TypedObject::new_var( stringify!($($rest)*) ) };
+	((num $num:expr)) => { $crate::object::TypedObject::new_num( $num ) };
 	($other:tt) => {
 		compiler_error!(concat!("Invalid name specified: '", stringify!($other), "'"));
 	};
@@ -128,12 +128,12 @@ macro_rules! _assign_args {
 	($args:ident $name:expr, $pos:expr, [$req:ident $($oreq:ident)*] $opt:tt) => {
 		let $req: &$crate::Object = *$args.get($pos).ok_or_else(||
 			$crate::Error::MissingArgument { func: $name, pos: $pos })?;
-		_assign_args!($args $name, $pos + 1, [$($oreq)*] $opt)
+		_assign_args!($args $name, $pos + 1, [$($oreq)*] $opt);
 	};
 
-	($args:ident $name:expr, $pos:expr, [] [$opt:ident=$val:expr, $($other:tt)*]) => {
-		let $opt: &$crate::Object = *$args.get($pos).unwrap_or_else(|| $val);
-		_assign_args!($args $name, $pos + 1, [] [$($other)*])
+	($args:ident $name:expr, $pos:expr, [] [$opt:ident $val:expr; $($other:tt)*]) => {
+		let $opt: $crate::Object = $args.get($pos).map(|x| (*x).clone()).unwrap_or_else(|| $val);
+		_assign_args!($args $name, $pos + 1, [] [$($other)*]);
 	}
 }
 // !($name, 0, $self [$($req)*] [$($opt $val),*]);
@@ -143,21 +143,21 @@ macro_rules! _create_rustfn {
 
 	($args_ident:ident, (_ $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
 		|$args_ident| {
-			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val,)*]);
+			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val;)*]);
 			Ok($body)
 		}
 	);
 
 	($args_ident:ident, (@ $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
 		|$args_ident| {
-			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val,)*]);
+			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val;)*]);
 			Ok($body)
 		}
 	);
 
 	($args_ident:ident, ($self:ident $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
 		|$args_ident| {
-			_assign_args!($args_ident $name, 0, [$self $($req)*] [$($opt $val,)*]);
+			_assign_args!($args_ident $name, 0, [$self $($req)*] [$($opt $val;)*]);
 			let $self = $self.$downcast()
 				.ok_or_else(|| $crate::Error::BadArgument {
 					func: $name,
@@ -171,7 +171,8 @@ macro_rules! _create_rustfn {
 
 	($args_ident:ident, $bad_args:tt $body:block $downcast:ident $name:expr) => {
 		compile_error!(concat!("Bad args for `", $name, "`: ", stringify!($bad_args)))
-	}
+	};
+	($($other:tt)*) => { compile_error!(stringify!($other)); }
 }
 macro_rules! impl_type {
 	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
@@ -211,8 +212,7 @@ macro_rules! function_map {
 	 $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
 		$crate::Object::new({
 			let mut map = $crate::collections::Map::default();
-			use $crate::err::{Error::*, Result};
-			use $crate::{Shared, Object, object::IntoObject};
+			use $crate::{Shared, Object, IntoObject, Mapping, Error::*, Result};
 			use $crate::object::typed::*;
 
 			$(map.set(_name_to_object!($name), {

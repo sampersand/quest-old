@@ -1,3 +1,5 @@
+pub mod builtins;
+
 use crate::{Shared, Object};
 use crate::collections::{Collection, Mapping, Listing};
 use std::fmt::{self, Display, Formatter};

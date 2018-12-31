@@ -59,6 +59,10 @@ impl Object {
 	}
 
 	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
+		if self.is_rustfn() && attr.is_variable("()") {
+			return self.call_unbound(args);
+		}
+
 		let value = self.get(attr).ok_or_else(|| Error::MissingKey {
 			key: attr.clone(),
 			obj: self.clone()
@@ -68,7 +72,7 @@ impl Object {
 		value.call_unbound(&new_args)
 	}
 
-	fn call_unbound(self, args: &[&Object]) -> Result {
+	fn call_unbound(&self, args: &[&Object]) -> Result {
 		if let Some(rustfn) = self.downcast_rustfn() {
 			rustfn.call(args)
 		} else {
