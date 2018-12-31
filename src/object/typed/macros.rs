@@ -1,8 +1,8 @@
 macro_rules! impl_quest_conversion {
-	($func:literal ($as_fn_obj:ident $is:ident) ($as_fn:ident $downcast_fn:ident) -> $inner:ty) => {
+	($func:literal ($as_fn_obj:ident $is:ident) ($into_fn:ident $downcast_fn:ident) -> $inner:ty) => {
 		impl $crate::Object {
 			/// note: this clones the object
-			pub fn $as_fn(&self) -> ::std::result::Result<$inner, $crate::Error> {
+			pub fn $into_fn(&self) -> ::std::result::Result<$inner, $crate::Error> {
 				use $crate::object::IntoObject;
 				self.$as_fn_obj()?
 					.$downcast_fn()
@@ -218,6 +218,9 @@ macro_rules! function_map {
 			$(map.set(_name_to_object!($name), {
 				macro_rules! function {
 					() => (concat!($prefix, "::", $name));
+				}
+				macro_rules! todo {
+					() => (unimplemented!(concat!("TODO: ", function!())))
 				}
 				TypedObject::new_rustfn(
 					function!(),

@@ -56,11 +56,13 @@ impl Object {
 
 
 impl_type! { for Null, downcast_fn=downcast_null;
-
 	fn "@text" (_) {
 		"null".to_string().into_object()
 	}
-	
+
+	fn "@bool" (_) {
+		false.into_object()
+	}
 }
 
 

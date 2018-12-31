@@ -66,6 +66,14 @@ impl_typed_object!(RustFn, _ , downcast_rustfn, is_rustfn);
 
 
 impl_type! { for RustFn, downcast_fn=downcast_rustfn;
+	fn "name" (this) {
+		this.name.to_string().into_object()
+	}
+
+	fn "@text" (this) {
+		format!("{}", this).into_object()
+	}
+
 	fn "()" (this) args {
 		this.call(args)?
 	}

@@ -1,5 +1,6 @@
 use super::{TypedObject, Type, Types};
 use crate::Shared;
+use crate::env::Environment;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
@@ -56,11 +57,36 @@ impl Display for Var {
 
 impl_typed_conversion!(Var, &'static str);
 impl_typed_object!(Var, new_var, downcast_var, is_var);
-impl_quest_conversion!("@var" (as_var_obj is_var) (as_var downcast_var) -> Var);
+impl_quest_conversion!("@var" (as_var_obj is_var) (into_var downcast_var) -> Var);
 
 
+fn env() -> Shared<Environment> {
+	Environment::current()
+}
 impl_type! { for Var, downcast_fn=downcast_var;
 	fn "@text" (this) {
 		this.0.to_string().into_object()
 	}
+
+	fn "@bool" (this) { todo!() }
+	
+	fn "()" (@this) { env().get(this).unwrap_or_else(Object::new_null) }
+	fn "=" (@this, rhs) { env().set(this.clone(), rhs.clone()); rhs.clone() }
+	fn "~" (@this) { env().del(this).unwrap_or_else(Object::new_null) }
+	fn "?" (@this) { env().has(this).into_object() }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

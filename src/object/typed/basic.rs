@@ -48,7 +48,7 @@ basic_map! {
 	}
 
 	fn "and" (@lhs, rhs) {
-		if *lhs.as_bool()?.as_ref() {
+		if *lhs.into_bool()?.as_ref() {
 			rhs.clone()
 		} else {
 			lhs.clone()
@@ -56,7 +56,7 @@ basic_map! {
 	}
 
 	fn "or" (@lhs, rhs) {
-		if *lhs.as_bool()?.as_ref() {
+		if *lhs.into_bool()?.as_ref() {
 			lhs.clone()
 		} else {
 			rhs.clone()

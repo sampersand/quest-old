@@ -30,14 +30,24 @@ impl Debug for Num {
 	}
 }
 
+impl AsRef<i64> for Num {
+	fn as_ref(&self) -> &i64 {
+		&self.0
+	}
+}
 
-
-macro_rules! impl_from {
+macro_rules! impl_conversion {
 	($($ty:ty)*) => {
 		$(
 			impl From<$ty> for Num {
 				fn from(num: $ty) -> Num {
 					Num(num as i64)
+				}
+			}
+
+			impl From<Num> for $ty {
+				fn from(num: Num) -> $ty {
+					num.0 as $ty
 				}
 			}
 
@@ -50,15 +60,18 @@ macro_rules! impl_from {
 	}
 }
 
-impl_from!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
+impl_conversion!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 impl_typed_object!(Num, new_num, downcast_num, is_num);
-impl_quest_conversion!("@num" (as_num_obj is_num) (as_num downcast_num) -> Num);
+impl_quest_conversion!("@num" (as_num_obj is_num) (into_num downcast_num) -> Num);
+
+macro_rules! binary_oper {
+	($this:ident $oper:tt $rhs:ident) => (($this.0 $oper $rhs.into_num()?.0).into_object())
+}
 
 impl_type! { for Num, downcast_fn=downcast_num;
-	fn "@num" (@this) {
-		assert!(this.is_num(), "called @num without a num");
-		this.clone()
+	fn "@num" (this) {
+		this.into_object()
 	}
 
 	fn "@bool" (this) {
@@ -69,35 +82,36 @@ impl_type! { for Num, downcast_fn=downcast_num;
 		this.0.to_string().into_object()
 	}
 
-	fn "+" (this, rhs) { (this.0 + rhs.as_num()?.0).into_object() }
-	fn "-" (this, rhs) { (this.0 - rhs.as_num()?.0).into_object() }
-	fn "*" (this, rhs) { (this.0 * rhs.as_num()?.0).into_object() }
-	fn "/" (this, rhs) { (this.0 / rhs.as_num()?.0).into_object() }
-	fn "%" (this, rhs) { (this.0 % rhs.as_num()?.0).into_object() }
+	fn "+" (this, rhs) { binary_oper!(this + rhs) }
+	fn "-" (this, rhs) { binary_oper!(this - rhs) }
+	fn "*" (this, rhs) { binary_oper!(this * rhs) }
+	fn "/" (this, rhs) { binary_oper!(this / rhs) }
+	fn "%" (this, rhs) { binary_oper!(this % rhs) }
 	fn "^" (@this, rhs) { this.call_attr("**", &[rhs])? }
 	fn "**" (this, rhs) {
-		let rhs = rhs.as_num()?.0;
+		let rhs = rhs.into_num()?.0;
 		debug!("TODO: change `**` to be able to accept fractions");
 		this.0.pow(rhs as u32).into_object()
 	}
 
-	fn "==" (this, rhs) { (this.0 == rhs.as_num()?.0).into_object() }
+	fn "==" (this, rhs) { binary_oper!(this == rhs) }
+	fn "<" (this, rhs) { binary_oper!(this < rhs) }
+	fn "<=" (this, rhs) { binary_oper!(this <= rhs) }
+	fn ">" (this, rhs) { binary_oper!(this > rhs) }
+	fn ">=" (this, rhs) { binary_oper!(this >= rhs) }
 
 	fn "<=>" (this, rhs) {
-		let (this, rhs) = (this.0, rhs.as_num()?.0);
-		// yes i can match a cmp, but that's a pain
-		if this < rhs {
-			(-1).into_object()
-		} else if this == rhs {
-			0.into_object()
-		} else {
-			1.into_object()
-		}
+		let (this, rhs) = (this.0, rhs.into_num()?.0);
+		if this < rhs { (-1).into_object() } // yes i can match with `cmp`, but that's a pain
+		else if this == rhs { 0.into_object() }
+		else { 1.into_object() }
 	}
 
-
-
-
+	fn "bitand" (this, rhs) { binary_oper!(this & rhs) }
+	fn "bitor" (this, rhs) { binary_oper!(this | rhs) }
+	fn "bitxor" (this, rhs) { binary_oper!(this ^ rhs) }
+	fn "bitshl" (this, rhs) { binary_oper!(this << rhs) }
+	fn "bitshr" (this, rhs) { binary_oper!(this >> rhs) }
 }
 
 

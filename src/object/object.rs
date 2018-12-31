@@ -116,7 +116,7 @@ impl PartialEq for Object {
 			var1 == var2
 		} else {
 			self.call_attr("==", &[other])
-			    .and_then(|obj| obj.as_bool())
+			    .and_then(|obj| obj.into_bool())
 			    .map(|x| x.into_inner())
 			    .unwrap_or(false)
 		}

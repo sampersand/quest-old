@@ -32,26 +32,29 @@ impl Debug for Bool {
 
 impl_typed_conversion!(Bool, bool);
 impl_typed_object!(Bool, new_bool, downcast_bool, is_bool);
-impl_quest_conversion!("@bool" (as_bool_obj is_bool) (as_bool downcast_bool) -> Bool);
+impl_quest_conversion!("@bool" (as_bool_obj is_bool) (into_bool downcast_bool) -> Bool);
 
 impl_type! { for Bool, downcast_fn=downcast_bool;
 	fn "@text" (this) {
 		this.0.to_string().into_object()
 	}
 
-	fn "@bool" (@this) {
-		this.clone()
+	fn "@bool" (this) {
+		this.into_object()
+	}
+
+	fn "@num" (this) {
+		(this.0 as u8).into_object()
 	}
 
 	fn "!" (this) {
 		(!this.0).into_object()
 	}
+
+	fn "xor" (this, rhs) {
+		(this.0 != rhs.into_bool()?.0).into_object()
+	}
 }
-
-
-
-
-
 
 
 
