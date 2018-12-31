@@ -34,7 +34,7 @@ impl Debug for Text {
 
 impl_typed_conversion!(Text, String);
 impl_typed_object!(Text, new_text, downcast_text, is_text);
-impl_quest_conversion!(as_text -> Text, "@text" downcast_text);
+impl_quest_conversion!("@text" (as_text_obj is_text) (as_text downcast_text) -> Text);
 
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@var" (this) {

@@ -17,6 +17,10 @@ macro_rules! basic_map {
 }
 
 basic_map! {
+	fn "clone" (@this) {
+		this.duplicate()
+	}
+
 	fn "@bool" (_) {
 		true.into_object()
 	}
@@ -39,9 +43,8 @@ basic_map! {
 		   .call_attr("!", &[])?
 	}
 
-
 	fn "!" (@this) {
-		(!this.as_bool()?.as_ref()).into_object()
+		this.as_bool_obj()?.call_attr("!", &[])?
 	}
 
 	fn "and" (@lhs, rhs) {

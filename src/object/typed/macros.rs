@@ -1,16 +1,22 @@
 macro_rules! impl_quest_conversion {
-	($as_fn:ident -> $inner:ty, $func:literal $downcast_fn:ident) => {
+	($func:literal ($as_fn_obj:ident $is:ident) ($as_fn:ident $downcast_fn:ident) -> $inner:ty) => {
 		impl $crate::Object {
 			/// note: this clones the object
 			pub fn $as_fn(&self) -> ::std::result::Result<$inner, $crate::Error> {
 				use $crate::object::IntoObject;
-				self.call(&$func.into_object(), &[])?
+				self.$as_fn_obj()?
 					.$downcast_fn()
-					.ok_or_else(|| $crate::Error::ConversionFailure {
-						func: $func,
-						obj: self.clone()
-					})
+					.ok_or_else(|| $crate::Error::ConversionFailure { func: $func, obj: self.clone() })
+			}
 
+			pub fn $as_fn_obj(&self) -> $crate::Result {
+				use $crate::object::IntoObject;
+				let obj = self.call_attr($func, &[])?;
+				if obj.$is() {
+					Ok(obj)
+				} else {
+					Err($crate::Error::ConversionFailure { func: $func, obj: self.clone()})
+				}
 			}
 		}
 	}

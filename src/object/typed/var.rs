@@ -56,7 +56,7 @@ impl Display for Var {
 
 impl_typed_conversion!(Var, &'static str);
 impl_typed_object!(Var, new_var, downcast_var, is_var);
-impl_quest_conversion!(as_var -> Var, "@var" downcast_var);
+impl_quest_conversion!("@var" (as_var_obj is_var) (as_var downcast_var) -> Var);
 
 
 impl_type! { for Var, downcast_fn=downcast_var;

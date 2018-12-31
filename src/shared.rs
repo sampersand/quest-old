@@ -20,6 +20,12 @@ impl<T> Shared<T> {
 	}
 }
 
+impl<T: Clone> Shared<T> {
+	pub fn duplicate(&self) -> Self {
+		Shared::new(self.read().clone())
+	}
+}
+
 impl<T: ?Sized> Shared<T> {
 	pub fn ptr_eq(&self, other: &Shared<T>) -> bool {
 		Arc::ptr_eq(&self.data, &other.data)

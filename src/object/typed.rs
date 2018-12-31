@@ -122,6 +122,10 @@ impl Collection for TypedObject {
 }
 
 impl Mapping for TypedObject {
+	fn duplicate(&self) -> Shared<dyn Mapping> {
+		Shared::new(TypedObject{ data: self.data.clone(), map: self.map.duplicate() })
+	}
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		self.map.get(key)
 	}

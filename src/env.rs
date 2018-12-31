@@ -43,6 +43,10 @@ impl Collection for Environment {
 }
 
 impl Mapping for Environment {
+	fn duplicate(&self) -> Shared<dyn Mapping> {
+		unimplemented!("duplicate")
+	}
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		self.map.get(key)
 	}

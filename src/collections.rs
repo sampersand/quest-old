@@ -21,6 +21,7 @@ pub trait Collection : mopa::Any + Debug + Display + Send + Sync {
 
 
 pub trait Mapping : Collection {
+	fn duplicate(&self) -> Shared<dyn Mapping>;
 	fn get(&self, key: &Object) -> Option<Object>;
 	fn set(&mut self, key: Object, val: Object) -> Option<Object>;
 	fn del(&mut self, key: &Object) -> Option<Object>;
@@ -46,6 +47,11 @@ impl<T: Collection + ?Sized> Collection for Shared<T> {
 }
 
 impl<T: Mapping + ?Sized> Mapping for Shared<T> {
+	fn duplicate(&self) -> crate::Shared<dyn Mapping> {
+		self.read().duplicate()
+	}
+
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		self.read().get(key)
 	}

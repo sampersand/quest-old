@@ -53,7 +53,7 @@ macro_rules! impl_from {
 impl_from!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 impl_typed_object!(Num, new_num, downcast_num, is_num);
-impl_quest_conversion!(as_num -> Num, "@num" downcast_num);
+impl_quest_conversion!("@num" (as_num_obj is_num) (as_num downcast_num) -> Num);
 
 impl_type! { for Num, downcast_fn=downcast_num;
 	fn "@num" (@this) {

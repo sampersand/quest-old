@@ -25,6 +25,10 @@ struct InnerObject {
 
 impl Object {
 	pub fn new<M: Mapping + 'static>(map: M) -> Self {
+		Object::new_with_env(map, Environment::current())
+	}
+
+	pub fn new_with_env<M: Mapping + 'static>(map: M, env: Shared<Environment>) -> Self {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 		lazy_static! {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -34,7 +38,7 @@ impl Object {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 			mapid: TypeId::of::<M>(),
 			map: Shared::new(map) as _,
-			env: Environment::current()
+			env
 		}))
 	}
 
@@ -71,6 +75,10 @@ impl Object {
 			self.call_attr("()", args)
 		}
 	}
+	
+	pub fn duplicate(&self) -> Object {
+		Object::new_with_env(self.0.map.duplicate(), self.0.env.clone())
+	}
 }
 
 impl Object {
@@ -90,6 +98,7 @@ impl Object {
 		self.call(&attr.into_object(), args)
 	}
 }
+
 impl IntoObject for Object {
 	fn into_object(self) -> Object {
 		self
@@ -150,6 +159,10 @@ impl Collection for Object {
 }
 
 impl Mapping for Object {
+	fn duplicate(&self) -> Shared<dyn Mapping> {
+		Shared::new(<Object>::duplicate(self)) as _
+	}
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		self.0.map.read().get(key)
 	}

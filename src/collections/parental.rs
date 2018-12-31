@@ -66,6 +66,10 @@ impl<M: Mapping> Collection for ParentalMap<M> {
 }
 
 impl<M: Mapping> Mapping for ParentalMap<M> {
+	fn duplicate(&self) -> crate::Shared<dyn Mapping> {
+		unimplemented!("duplicate")
+	}
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		if let Some(var) = key.downcast_var() {
 			if *var.as_ref() == "@parent" {

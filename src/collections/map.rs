@@ -60,6 +60,11 @@ impl Collection for Map {
 }
 
 impl Mapping for Map {
+	fn duplicate(&self) -> crate::Shared<dyn Mapping> {
+		crate::Shared::new(self.clone()) as _
+	}
+
+
 	fn get(&self, key: &Object) -> Option<Object> {
 		self.iter().find_map(|(k, v)| if k == key { Some(v) } else { None }).cloned()
 	}
