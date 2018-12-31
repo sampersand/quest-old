@@ -38,8 +38,20 @@ impl Object {
 		}))
 	}
 
+	pub fn ptr_eq(&self, rhs: &Object) -> bool {
+		Arc::ptr_eq(&self.0, &rhs.0)
+	}
+
+	pub fn id(&self) -> usize  {
+		self.0.id
+	}
+
 	pub fn map(&self) -> &Shared<dyn Mapping> {
 		&self.0.map
+	}
+
+	pub fn env(&self) -> &Shared<Environment> {
+		&self.0.env
 	}
 
 	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
@@ -74,9 +86,6 @@ impl Object {
 	pub fn has_attr(&self, attr: &'static str) -> bool {
 		self.has(&attr.into_object())
 	}
-
-
-
 	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
 		self.call(&attr.into_object(), args)
 	}

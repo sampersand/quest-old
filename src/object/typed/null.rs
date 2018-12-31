@@ -32,6 +32,10 @@ impl TypedObject {
 }
 
 impl Object {
+	pub fn new_null() -> Self {
+		Object::new(TypedObject::new_null())
+	}
+
 	/// note: this clones the object
 	pub fn is_null(&self) -> bool {
 		self.map().read()

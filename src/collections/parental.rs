@@ -69,6 +69,7 @@ impl<M: Mapping> Mapping for ParentalMap<M> {
 	fn get(&self, key: &Object) -> Option<Object> {
 		if let Some(var) = key.downcast_var() {
 			if *var.as_ref() == "@parent" {
+				// todo: make this work as a function and not as a flat return value
 				return Some(self.parent.inner())
 			}
 		}

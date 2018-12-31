@@ -42,7 +42,7 @@ macro_rules! impl_from {
 	}
 }
 
-impl_from!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128);
+impl_from!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 impl_typed_object!(Num, new_num, downcast_num, is_num);
 impl_quest_conversion!(as_num -> Num, "@num" downcast_num);
@@ -51,6 +51,10 @@ impl_type! { for Num, downcast_fn=downcast_num;
 	fn "@num" (@this) {
 		assert!(this.is_num(), "called @num without a num");
 		this.clone()
+	}
+
+	fn "@bool" (this) {
+		(this.0 != 0).into_object()
 	}
 
 	fn "@text" (this) {
@@ -68,6 +72,22 @@ impl_type! { for Num, downcast_fn=downcast_num;
 		debug!("TODO: change `**` to be able to accept fractions");
 		this.0.pow(rhs as u32).into_object()
 	}
+
+	fn "==" (this, rhs) { (this.0 == rhs.as_num()?.0).into_object() }
+
+	fn "<=>" (this, rhs) {
+		let (this, rhs) = (this.0, rhs.as_num()?.0);
+		// yes i can match a cmp, but that's a pain
+		if this < rhs {
+			(-1).into_object()
+		} else if this == rhs {
+			0.into_object()
+		} else {
+			1.into_object()
+		}
+	}
+
+
 
 
 }
