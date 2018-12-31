@@ -5,12 +5,13 @@ use quest::*;
 fn main() {
     simple_logger::init().unwrap();
 
-    let twenty = 20i32.into_object();
-    let fifteen = 15i32.into_object();
-    let truth = true.into_object();
+    let ref twenty = 20i32.into_object();
+    let ref fifteen = 15i32.into_object();
+    let ref truth = true.into_object();
+    let ref plus = "+".into_object();
 
     println!("{:#?}", 
-        truth.get_attr
+        truth.call(plus, &[fifteen])
     );
 
     // println!("{:#?}", parent.get_attr("@parent"));
