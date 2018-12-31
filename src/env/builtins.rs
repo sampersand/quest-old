@@ -73,7 +73,22 @@ builtins! {
 		buffer.into_object()
 	}
 	
-	fn "rand" (_) { todo!(); }
+	fn "rand" (_) args {
+		use rand::prelude::*;
+		match args.len() {
+			0 => rand::random::<f64>().into_object()
+		}
+
+		// let num = rand::random::<f64>();
+		// todo!();
+	}
 }
+
+
+
+
+
+
+
 
 
