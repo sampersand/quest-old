@@ -8,7 +8,7 @@ pub use self::{
 	list::List
 };
 
-use crate::{Shared, Object};
+use crate::{Shared, Object, IntoObject};
 use std::fmt::{Debug, Display};
 use mopa::mopafy;
 
@@ -26,6 +26,19 @@ pub trait Mapping : Collection {
 	fn set(&mut self, key: Object, val: Object) -> Option<Object>;
 	fn del(&mut self, key: &Object) -> Option<Object>;
 	fn has(&self, key: &Object) -> bool;
+
+	fn get_attr(&self, attr: &'static str) -> Option<Object> {
+		self.get(&attr.into_object())
+	}
+	fn set_attr(&mut self, attr: &'static str, val: Object) -> Option<Object> {
+		self.set(attr.into_object(), val)
+	}
+	fn del_attr(&mut self, attr: &'static str) -> Option<Object> {
+		self.del(&attr.into_object())
+	}
+	fn has_attr(&self, attr: &'static str) -> bool {
+		self.has(&attr.into_object())
+	}
 }
 
 mopafy!(Mapping);

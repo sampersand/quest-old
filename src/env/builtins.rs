@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
-use crate::{Object, Result, Error};
+use crate::{Object, Result, Error, Environment};
+use std::io::{self, Write, Read};
 
 // to make it easier on my eyes
 macro_rules! builtins {
@@ -21,15 +22,56 @@ builtins! {
 			if_false
 		}
 	}
-	fn "while" (@cond, body) { todo!(); }
-	fn "loop" (@body) { loop {body.call_attr("()", &[])?; } }
+
+	fn "while" (@cond, body) {
+		while *cond.into_bool()?.as_ref() {
+			body.call_attr("()", &[])?;
+		}
+		Object::new_null()
+	}
+
+	fn "loop" (@body) {
+		loop {
+			body.call_attr("()", &[])?;
+		}
+	}
+
 	fn "switch" (@case) args { todo!(); }
 	fn "return" (_) { todo!(); } // exit === return
 
 	fn "import" (@file) { todo!(); }
 
-	fn "disp" (_) args { todo!(); }
-	fn "input" (_) /* what to do for args? */ { todo!() }
+	fn "disp" (_) args {
+		let sep = Environment::current()
+			.get_attr("sep")
+			.and_then(|x| x.into_text().ok())
+			.map(|x| x.as_ref().clone())
+			.unwrap_or_else(|| String::from(" "));
+
+		let end = Environment::current()
+			.get_attr("end")
+			.and_then(|x| x.into_text().ok())
+			.map(|x| x.as_ref().clone())
+			.unwrap_or_else(|| String::from("\n"));
+
+		let v  = args
+			.iter()
+			.map(|x| x.into_text().map(|x| x.into()))
+			.collect::<::std::result::Result<Vec<String>, Error>>()?;
+		io::stdout().write(v.join(&sep).as_ref()).map_err(Error::IoError)?;
+		unimplemented!("TODO: Vec<String> into things");
+	}
+
+	fn "input" (@;prompt=Object::new_null()) {
+		if !prompt.is_null() {
+			io::stdout()
+				.write(prompt.into_text()?.as_ref().as_ref())
+				.map_err(Error::IoError)?;
+		}
+		let mut buffer = String::new();
+		io::stdin().read_to_string(&mut buffer).map_err(Error::IoError)?;
+		buffer.into_object()
+	}
 	
 	fn "rand" (_) { todo!(); }
 }

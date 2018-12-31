@@ -86,18 +86,6 @@ impl Object {
 }
 
 impl Object {
-	pub fn get_attr(&self, attr: &'static str) -> Option<Object> {
-		self.get(&attr.into_object())
-	}
-	pub fn set_attr(&mut self, attr: &'static str, val: Object) -> Option<Object> {
-		self.set(attr.into_object(), val)
-	}
-	pub fn del_attr(&mut self, attr: &'static str) -> Option<Object> {
-		self.del(&attr.into_object())
-	}
-	pub fn has_attr(&self, attr: &'static str) -> bool {
-		self.has(&attr.into_object())
-	}
 	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
 		self.call(&attr.into_object(), args)
 	}

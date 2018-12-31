@@ -1,6 +1,7 @@
 use crate::{Shared, Object};
+use std::io;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug/*, Clone, PartialEq, Eq*/)]
 pub enum Error {
 	MissingKey { 
 		key: Object,
@@ -19,7 +20,8 @@ pub enum Error {
 		msg: &'static str,
 		position: usize,
 		obj: Object
-	}
+	},
+	IoError(io::Error)
 }
 
 pub type Result = ::std::result::Result<Object, Error>;
