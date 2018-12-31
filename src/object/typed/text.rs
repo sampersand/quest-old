@@ -45,9 +45,10 @@ impl_type! { for Text, downcast_fn=downcast_text;
 		(!this.0.is_empty()).into_object()
 	}
 
-	fn "@num" (this) {
-		unimplemented!("TODO: from text for num")
-	}
+	fn "@num" (this) { todo!() }
+
+	fn "()" (this) { todo!("this will be a shell command"); }
+	fn "eval" (this) { todo!("this will be evaluate, possibly with new env"); }
 
 	fn "+" (this, rhs) {
 		let mut this = this;
@@ -80,11 +81,4 @@ impl_type! { for Text, downcast_fn=downcast_text;
 
 
 }
-
-
-
-
-
-
-
 

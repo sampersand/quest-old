@@ -21,42 +21,17 @@ builtins! {
 			if_false
 		}
 	}
-	// fn "__map__" (@this) { Object::new(this.map().clone()) }
-	// fn "__env__" (@this) { Object::new(this.env().clone()) }
+	fn "while" (@cond, body) { todo!(); }
+	fn "loop" (@body) { loop {body.call_attr("()", &[])?; } }
+	fn "switch" (@case) args { todo!(); }
+	fn "return" (_) { todo!(); } // exit === return
 
-	// fn "::" (@this, key) {
-	// 	this.get(key).ok_or_else(|| MissingKey {
-	// 		key: key.clone(), obj: this.clone()
-	// 	})?
-	// }
+	fn "import" (@file) { todo!(); }
 
-	// fn "." (@this, key) {
-	// 	// how is this different than `::` ?
-	// 	unimplemented!()
-	// }
-
-	// fn ".=" (@this, key, val) {
-	// 	this.map().write()
-	// 	    .set(key.clone(), val.clone())
-	// 	    .unwrap_or_else(Object::new_null)
-	// }
-
-	// fn ".~" (@this, key) {
-	// 	this.map().write()
-	// 	    .del(key)
-	// 	    .unwrap_or_else(Object::new_null)
-	// }
-
-	// fn ".?" (@this, key) {
-	// 	this.has(key).into_object()
-	// }
+	fn "disp" (_) args { todo!(); }
+	fn "input" (_) /* what to do for args? */ { todo!() }
+	
+	fn "rand" (_) { todo!(); }
 }
-
-
-
-
-
-
-
 
 

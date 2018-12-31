@@ -26,7 +26,7 @@ basic_map! {
 
 	fn "." (@this, key) {
 		// how is this different than `::` ?
-		unimplemented!()
+		todo!()
 	}
 
 	fn ".=" (@this, key, val) {

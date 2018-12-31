@@ -72,6 +72,7 @@ impl Object {
 fn env() -> Shared<Environment> {
 	Environment::current()
 }
+
 impl_type! { for Var, downcast_fn=downcast_var;
 	fn "@text" (this) {
 		this.0.to_string().into_object()
@@ -84,16 +85,6 @@ impl_type! { for Var, downcast_fn=downcast_var;
 	fn "~" (@this) { env().del(this).unwrap_or_else(Object::new_null) }
 	fn "?" (@this) { env().has(this).into_object() }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -220,7 +220,8 @@ macro_rules! function_map {
 					() => (concat!($prefix, "::", $name));
 				}
 				macro_rules! todo {
-					() => (unimplemented!(concat!("TODO: ", function!())))
+					() => (unimplemented!(concat!("TODO: ", function!())));
+					($msg:expr) => (unimplemented!(concat!("TODO: ", function!(), ": {}"), $msg))
 				}
 				TypedObject::new_rustfn(
 					function!(),
