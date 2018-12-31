@@ -2,10 +2,10 @@ use super::{TypedObject, Type, Types};
 use crate::Shared;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Text(String);
 
 impl Text {
@@ -23,6 +23,13 @@ impl Display for Text {
 		Display::fmt(&self.0, f)
 	}
 }
+
+impl Debug for Text {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "Text({:?})", self.0)
+	}
+}
+
 
 
 impl_typed_conversion!(Text, String);

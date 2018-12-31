@@ -7,21 +7,21 @@ use std::any::TypeId;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::sync::Arc;
 use lazy_static::lazy_static;
-// -------------------
 
-#[derive(Clone)]
 // note how there isn't a RwLock on the InnerObject
 // that's because it doesn't need one--map and env can change on their own,
 // and id / mapid aren't going to ever change
+#[derive(Clone)]
+#[cfg_attr(feature = "fine-debug", derive(Debug))]
 pub struct Object(Arc<InnerObject>);
 
+#[cfg_attr(feature = "fine-debug", derive(Debug))]
 struct InnerObject {
 	id: usize,
 	mapid: TypeId,
 	map: Shared<dyn Mapping>,
 	env: Shared<Environment>
 }
-
 
 impl Object {
 	pub fn new<M: Mapping + 'static>(map: M) -> Self {
@@ -124,13 +124,13 @@ impl Display for Object {
 	}
 }
 
+#[cfg(not(feature = "fine-debug"))]
 impl Debug for Object {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		if f.alternate() {
 			f.debug_struct("Object")
 			 .field("id", &self.0.id)
 			 .field("map", &self.0.map)
-			 .field("env", &self.0.env)
 			 .finish()
 		} else {
 			write!(f, "Object({:?})", &*self.0.map.read())

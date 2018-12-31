@@ -18,7 +18,12 @@ use crate::object::Object;
 use crate::collections::{Collection, Mapping};
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg(not(feature = "fine-debug"))]
+use std::fmt::Debug;
+
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "fine-debug", derive(Debug))]
 enum Types {
 	Null,
 	Bool(bool::Bool),
@@ -33,7 +38,8 @@ trait Type : Into<Types> {
 }
 
 
-#[derive(Debug, Clone)]//, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone)]//, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "fine-debug", derive(Debug))]
 pub struct TypedObject {
 	data: Types,
 	map: Shared<dyn Mapping>
@@ -52,9 +58,9 @@ impl TypedObject {
 	}
 }
 
-impl Display for TypedObject {
+impl Display for Types {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		match self.data {
+		match self {
 			Types::Null => Display::fmt(&self::null::Null, f),
 			Types::Bool(ref bool) => Display::fmt(bool, f),
 			Types::Num(ref num) => Display::fmt(num, f),
@@ -65,6 +71,45 @@ impl Display for TypedObject {
 	}
 }
 
+#[cfg(not(feature = "fine-debug"))]
+impl Debug for Types {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		match self {
+			Types::Null => Debug::fmt(&self::null::Null, f),
+			Types::Bool(ref bool) => Debug::fmt(bool, f),
+			Types::Num(ref num) => Debug::fmt(num, f),
+			Types::Text(ref text) => Debug::fmt(text, f),
+			Types::Var(ref var) => Debug::fmt(var, f),
+			Types::RustFn(ref rustfn) => Debug::fmt(rustfn, f),
+		}
+	}
+}
+
+impl Display for TypedObject {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		Display::fmt(&self.data, f)
+	}
+}
+
+#[cfg(not(feature = "fine-debug"))]
+impl Debug for TypedObject {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			let mut ds = f.debug_struct("TypedObject");
+			ds.field("data", &self.data);
+			if !self.map.is_empty() {
+				ds.field("map", &self.map);
+			}
+			return ds.finish();
+		}
+
+		if self.map.is_empty() {
+			Debug::fmt(&self.data, f)
+		} else {
+			write!(f, "T{{ data: {:?}, map: {:?} }}", self.data, self.map)
+		}
+	}
+}
 
 impl Collection for TypedObject {
 	fn len(&self) -> usize {

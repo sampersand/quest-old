@@ -2,9 +2,9 @@ use super::{TypedObject, Type, Types};
 use crate::{Shared, Object};
 use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Bool(bool);
 
 impl Bool {
@@ -22,6 +22,13 @@ impl Display for Bool {
 		Display::fmt(&self.0, f)
 	}
 }
+
+impl Debug for Bool {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "Bool({:?})", self.0)
+	}
+}
+
 
 impl_typed_conversion!(Bool, bool);
 impl_typed_object!(Bool, new_bool, downcast_bool, is_bool);

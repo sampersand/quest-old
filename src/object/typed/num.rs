@@ -2,16 +2,17 @@ use super::{TypedObject, Type, Types};
 use crate::Shared;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Num(i64);
 
 impl Num {
 	pub fn new(num: i64) -> Num {
 		Num(num)
 	}
+
 	pub fn into_inner(self) -> i64 {
 		self.0
 	}
@@ -22,6 +23,13 @@ impl Display for Num {
 		Display::fmt(&self.0, f)
 	}
 }
+
+impl Debug for Num {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "Num({:?})", self.0)
+	}
+}
+
 
 
 macro_rules! impl_from {

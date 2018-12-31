@@ -10,9 +10,8 @@ fn main() {
     let ref truth = true.into_object();
     let ref plus = "+".into_object();
 
-    println!("{:#?}", 
-        truth.call(plus, &[fifteen])
-    );
+    println!("{:#?}", truth.call(plus, &[fifteen]));
+    println!("{:?}", truth.call(plus, &[fifteen]));
 
     // println!("{:#?}", parent.get_attr("@parent"));
     // basic.set_attr("()", parent.get_attr("*").unwrap());

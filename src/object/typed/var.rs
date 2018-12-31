@@ -3,10 +3,10 @@ use crate::Shared;
 use crate::object::{Object, IntoObject};
 use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::sync::RwLock;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Var(&'static str);
 
 lazy_static! {
@@ -39,6 +39,12 @@ impl Var {
 
 	pub fn into_inner(self) -> &'static str {
 		self.0
+	}
+}
+
+impl Debug for Var {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		write!(f, "Var({:?})", self.0)
 	}
 }
 
