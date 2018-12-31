@@ -87,6 +87,3 @@ impl_type! { for Var, downcast_fn=downcast_var;
 }
 
 
-
-
-
