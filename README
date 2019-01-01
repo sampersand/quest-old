@@ -1,0 +1,22 @@
+# Quest Roadmap:
+
+0.1.X: Core Object Setup
+	0.1.8: Core Logging
+	0.1.9: Core Testing
+	0.1.10: Documentation
+	0.1.11: Cleanup
+0.2.X: Parser Setup
+	0.2.0: Parser framework setup, `Text::eval` to route to `parse`
+	0.2.1: Basic parsers finished (whitespace, comments, etc.)
+	0.2.2: More complicated parsers (Number, Text, etc)
+	0.2.3: Operator parsers (`+`, `-`, etc)
+	0.2.4: Block Parsers
+	0.2.5: Custom Parser Support (including runtime)
+	0.2.6: Logging
+	0.2.7: Testing
+	0.2.8: Documentation
+	0.2.9: Cleanup
+0.3.X: Blocks, Environment, and Stack
+0.4.X: Additional Builtins
+0.5.X: Testing
+0.6.X: Documentation
