@@ -106,7 +106,7 @@ impl_type! { for Number, downcast_fn=downcast_num;
 	}
 
 	fn "@text" (this) {
-		this.0.to_string().into_object()
+		this.to_string().into_object()
 	}
 
 	fn "+" (this, rhs) { binary_oper!(this + rhs) }
@@ -136,11 +136,3 @@ impl_type! { for Number, downcast_fn=downcast_num;
 	fn "bitshl" (this, rhs) { binary_oper!(bitwise; this << rhs) }
 	fn "bitshr" (this, rhs) { binary_oper!(bitwise; this >> rhs) }
 }
-
-
-
-
-
-
-
-
