@@ -7,6 +7,8 @@ mod num;
 mod text;
 mod var;
 mod rustfn;
+mod list;
+mod map;
 
 pub(crate) use self::pristine::PRISTINE_MAP;
 
@@ -27,7 +29,9 @@ enum Types {
 	Number(num::Number),
 	Text(text::Text),
 	Variable(var::Variable),
-	RustFn(rustfn::RustFn)
+	RustFn(rustfn::RustFn),
+	List(list::List),
+	Map(map::Map)
 }
 
 trait Type : Into<Types> {
@@ -64,6 +68,8 @@ impl Display for Types {
 			Types::Text(ref text) => Display::fmt(text, f),
 			Types::Variable(ref var) => Display::fmt(var, f),
 			Types::RustFn(ref rustfn) => Display::fmt(rustfn, f),
+			Types::List(ref list) => Display::fmt(list, f),
+			Types::Map(ref map) => Display::fmt(map, f),
 		}
 	}
 }
@@ -78,6 +84,9 @@ impl Debug for Types {
 			Types::Text(ref text) => Debug::fmt(text, f),
 			Types::Variable(ref var) => Debug::fmt(var, f),
 			Types::RustFn(ref rustfn) => Debug::fmt(rustfn, f),
+			Types::List(ref list) => Debug::fmt(list, f),
+			Types::Map(ref map) => Debug::fmt(map, f),
+
 		}
 	}
 }
