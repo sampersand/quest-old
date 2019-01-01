@@ -12,6 +12,8 @@ fn main() {
     let ref r#false = false.into_object();
     let ref plus = "+".into_object();
     let ref foo = "foo".into_object();
+    let ref samp = "samp".to_string().into_object();
+
     let ref r#if = quest::__BUILTINS_MAP.get(&"if".into_object()).unwrap();
     
     foo.call_attr("=", &[r#false]).unwrap();
@@ -22,6 +24,8 @@ fn main() {
             .unwrap();
 
     println!("{:?}", bar);
+
+    println!("{:?}", samp.call_attr("*", &[three]));
 
     // println!("{:?}", r#if.call_attr("()", &[truth, twenty, fifteen]));
 

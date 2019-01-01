@@ -75,9 +75,10 @@ builtins! {
 	
 	fn "rand" (_) args {
 		use rand::prelude::*;
-		match args.len() {
-			0 => rand::random::<f64>().into_object()
-		}
+		// match args.len() {
+			// 0 => rand::random::<f64>().into_object()
+		// }
+		todo!();
 
 		// let num = rand::random::<f64>();
 		// todo!();

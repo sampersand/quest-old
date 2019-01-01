@@ -38,7 +38,7 @@ impl_quest_conversion!("@text" (as_text_obj is_text) (into_text downcast_text) -
 
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@var" (this) {
-		Var::from_string(this.0).into_object()
+		Variable::from_string(this.0).into_object()
 	}
 
 	fn "@bool" (this) {
@@ -57,7 +57,7 @@ impl_type! { for Text, downcast_fn=downcast_text;
 	}
 
 	fn "*" (this, rhs) {
-		let lim = (*rhs.into_num()?.as_ref());
+		let lim = *rhs.into_num()?.into_integer().as_ref() as isize;
 		if lim < 0 {
 			return Ok("".to_string().into_object());
 		}

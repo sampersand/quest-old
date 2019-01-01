@@ -9,7 +9,7 @@ mod var;
 mod rustfn;
 
 pub(crate) use self::pristine::PRISTINE_MAP;
-pub(super) use self::{rustfn::RustFn, var::Var};
+pub(super) use self::{rustfn::RustFn, var::Variable};
 
 use crate::shared::Shared;
 use crate::object::Object;
@@ -20,14 +20,14 @@ use std::fmt::{self, Display, Formatter};
 use std::fmt::Debug;
 
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
 enum Types {
 	Null,
-	Bool(bool::Bool),
-	Num(num::Num),
+	Boolean(bool::Boolean),
+	Number(num::Number),
 	Text(text::Text),
-	Var(var::Var),
+	Variable(var::Variable),
 	RustFn(rustfn::RustFn)
 }
 
@@ -60,10 +60,10 @@ impl Display for Types {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		match self {
 			Types::Null => Display::fmt(&self::null::Null, f),
-			Types::Bool(ref bool) => Display::fmt(bool, f),
-			Types::Num(ref num) => Display::fmt(num, f),
+			Types::Boolean(ref bool) => Display::fmt(bool, f),
+			Types::Number(ref num) => Display::fmt(num, f),
 			Types::Text(ref text) => Display::fmt(text, f),
-			Types::Var(ref var) => Display::fmt(var, f),
+			Types::Variable(ref var) => Display::fmt(var, f),
 			Types::RustFn(ref rustfn) => Display::fmt(rustfn, f),
 		}
 	}
@@ -74,10 +74,10 @@ impl Debug for Types {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		match self {
 			Types::Null => Debug::fmt(&self::null::Null, f),
-			Types::Bool(ref bool) => Debug::fmt(bool, f),
-			Types::Num(ref num) => Debug::fmt(num, f),
+			Types::Boolean(ref bool) => Debug::fmt(bool, f),
+			Types::Number(ref num) => Debug::fmt(num, f),
 			Types::Text(ref text) => Debug::fmt(text, f),
-			Types::Var(ref var) => Debug::fmt(var, f),
+			Types::Variable(ref var) => Debug::fmt(var, f),
 			Types::RustFn(ref rustfn) => Debug::fmt(rustfn, f),
 		}
 	}

@@ -5,11 +5,11 @@ use lazy_static::lazy_static;
 use std::fmt::{self, Debug, Display, Formatter};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct Bool(bool);
+pub struct Boolean(bool);
 
-impl Bool {
-	pub fn new(bool: bool) -> Bool {
-		Bool(bool)
+impl Boolean {
+	pub fn new(bool: bool) -> Boolean {
+		Boolean(bool)
 	}
 
 	pub fn into_inner(self) -> bool {
@@ -17,24 +17,24 @@ impl Bool {
 	}
 }
 
-impl Display for Bool {
+impl Display for Boolean {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		Display::fmt(&self.0, f)
 	}
 }
 
-impl Debug for Bool {
+impl Debug for Boolean {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "Bool({:?})", self.0)
+		write!(f, "Boolean({:?})", self.0)
 	}
 }
 
 
-impl_typed_conversion!(Bool, bool);
-impl_typed_object!(Bool, new_bool, downcast_bool, is_bool);
-impl_quest_conversion!("@bool" (as_bool_obj is_bool) (into_bool downcast_bool) -> Bool);
+impl_typed_conversion!(Boolean, bool);
+impl_typed_object!(Boolean, new_bool, downcast_bool, is_bool);
+impl_quest_conversion!("@bool" (as_bool_obj is_bool) (into_bool downcast_bool) -> Boolean);
 
-impl_type! { for Bool, downcast_fn=downcast_bool;
+impl_type! { for Boolean, downcast_fn=downcast_bool;
 	fn "@text" (this) {
 		this.0.to_string().into_object()
 	}
