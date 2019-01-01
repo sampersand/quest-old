@@ -78,10 +78,10 @@ impl_type! { for List, downcast_fn=downcast_list;
 		this.0.len().into_object()
 	}
 
-	fn "get" (_this, _index) { todo!() }
-	fn "set" (_this, _index, _val) { todo!() }
-	fn "has" (_this, _index) { todo!() }
-	fn "del" (_this, _index) { todo!() }
+	fn "[]" (_this, _index) { todo!() }
+	fn "[]=" (_this, _index, _val) { todo!() }
+	fn "[]~" (_this, _index) { todo!() }
+	fn "[]?" (_this, _index) { todo!() }
 
 	// since `this` is actually a clone, this works
 	fn "union" (this, rhs) {

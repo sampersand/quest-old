@@ -57,11 +57,16 @@ impl_type! { for Map, downcast_fn=downcast_map;
 		(!this.0.is_empty()).into_object()
 	}
 
-	fn "+" (_this, _rhs) { todo!() }
-
 	fn "len" (this) {
 		this.0.len().into_object()
 	}
+
+
+	fn "+" (_this, _rhs) { todo!("iterable for mapping is needed") }
+	fn "-" (_this, _rhs) { todo!("iterable for mapping is needed") }
+	fn "union" (_this, _rhs) { todo!("iterable for mapping is needed") }
+	fn "intersect" (_this, _rhs) { todo!("iterable for mapping is needed") }
+	fn "symmetric_difference" (_this, _rhs) { todo!("iterable for mapping is needed") }
 
 	fn "fetch" (@this, key) {
 		this.into_map()?.0.get(key).ok_or_else(|| MissingKey {
@@ -70,25 +75,25 @@ impl_type! { for Map, downcast_fn=downcast_map;
 		})?
 	}
 
-	fn "get" (this, key) {
+	fn "[]" (this, key) {
 		this.0.get(key).unwrap_or_else(Object::new_null)
 	}
 
-	fn "set" (this, key, val) {
+	fn "[]=" (this, key, val) {
 		let inner = this.0;
 		let res = inner.write().set(key.clone(), val.clone()).unwrap_or_else(Object::new_null);
 		drop(inner);
 		res
 	}
 
-	fn "del" (this, key) {
+	fn "[]~" (this, key) {
 		let inner = this.0;
 		let res = inner.write().del(key).unwrap_or_else(Object::new_null);
 		drop(inner);
 		res
 	}
 
-	fn "has" (this, key) {
+	fn "[]?" (this, key) {
 		this.0.has(key).into_object()
 	}
 }
