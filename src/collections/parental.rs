@@ -1,6 +1,5 @@
 use crate::Object;
 use crate::collections::{Collection, Mapping, Map};
-use std::sync::{Mutex, Once};
 use std::fmt::{self, Debug, Display, Formatter};
 
 mod parental_object;
@@ -12,11 +11,12 @@ pub struct ParentalMap<M: Mapping = Map> {
 	map: M
 }
 
+/*
 impl<M: Mapping + Default> ParentalMap<M> {
 	pub fn new(parent: InitFunc) -> ParentalMap<M> {
 		ParentalMap::new_mapped(parent, M::default())
 	}
-}
+}*/
 
 impl ParentalMap {
 	pub fn new_default(parent: InitFunc) -> ParentalMap {

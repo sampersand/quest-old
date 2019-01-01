@@ -1,7 +1,3 @@
-use super::{TypedObject, Type, Types};
-use crate::Shared;
-use crate::object::{Object, IntoObject};
-use crate::collections::{Mapping, ParentalMap};
 use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
 
@@ -38,17 +34,17 @@ impl_quest_conversion!("@text" (as_text_obj is_text) (into_text downcast_text) -
 
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@var" (this) {
-		Variable::from_string(this.0).into_object()
+		super::var::Variable::from_string(this.0).into_object()
 	}
 
 	fn "@bool" (this) {
 		(!this.0.is_empty()).into_object()
 	}
 
-	fn "@num" (this) { todo!() }
+	fn "@num" (_this) { todo!() }
 
-	fn "()" (this) { todo!("this will be a shell command"); }
-	fn "eval" (this) { todo!("this will be evaluate, possibly with new env"); }
+	fn "()" (_this) { todo!("this will be a shell command"); }
+	fn "eval" (_this) { todo!("this will be evaluate, possibly with new env"); }
 
 	fn "+" (this, rhs) {
 		let mut this = this;
@@ -63,7 +59,7 @@ impl_type! { for Text, downcast_fn=downcast_text;
 		}
 
 		let mut new = String::with_capacity(this.0.len() * (lim as usize));
-		for i in 0..lim {
+		for _ in 0..lim {
 			new.push_str(&this.0);
 		}
 
@@ -74,11 +70,8 @@ impl_type! { for Text, downcast_fn=downcast_text;
 		this.0.len().into_object()
 	}
 
-	fn "get" (this, index) { todo!() }
-	fn "set" (this, index) { todo!() }
-	fn "has" (this, index) { todo!() }
-	fn "del" (this, index) { todo!() }
-
-
+	fn "get" (_this, _index) { todo!() }
+	fn "set" (_this, _index, _val) { todo!() }
+	fn "has" (_this, _index) { todo!() }
+	fn "del" (_this, _index) { todo!() }
 }
-

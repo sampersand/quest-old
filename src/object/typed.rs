@@ -9,7 +9,6 @@ mod var;
 mod rustfn;
 
 pub(crate) use self::pristine::PRISTINE_MAP;
-pub(super) use self::{rustfn::RustFn, var::Variable};
 
 use crate::shared::Shared;
 use crate::object::Object;
@@ -143,5 +142,3 @@ impl Mapping for TypedObject {
 		self.map.has(key)
 	}
 }
-
-

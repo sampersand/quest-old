@@ -1,8 +1,6 @@
-use super::{TypedObject, Type, Types};
 use crate::Shared;
 use crate::env::Environment;
-use crate::object::{Object, IntoObject};
-use crate::collections::{Mapping, ParentalMap};
+use crate::object::Object;
 use lazy_static::lazy_static;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::sync::RwLock;
@@ -78,12 +76,10 @@ impl_type! { for Variable, downcast_fn=downcast_var;
 		this.0.to_string().into_object()
 	}
 
-	fn "@bool" (this) { todo!() }
+	fn "@bool" (_this) { todo!() }
 	
 	fn "()" (@this) { env().get(this).unwrap_or_else(Object::new_null) }
 	fn "=" (@this, rhs) { env().set(this.clone(), rhs.clone()); rhs.clone() }
 	fn "~" (@this) { env().del(this).unwrap_or_else(Object::new_null) }
 	fn "?" (@this) { env().has(this).into_object() }
 }
-
-

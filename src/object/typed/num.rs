@@ -1,7 +1,4 @@
-use super::{TypedObject, Type, Types};
-use crate::Shared;
 use crate::object::{Object, IntoObject};
-use crate::collections::{Mapping, ParentalMap};
 use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
 
@@ -57,7 +54,7 @@ macro_rules! impl_conversion {
 
 			impl IntoObject for $ty {
 				fn into_object(self) -> Object {
-					TypedObject::new_num(self).objectify()
+					super::TypedObject::new_num(self).objectify()
 				}
 			}
 		)*

@@ -1,6 +1,5 @@
-use super::{TypedObject, Type, Types};
-use crate::{Shared, Object};
-use crate::collections::{Mapping, ParentalMap};
+use super::{TypedObject, Types};
+use crate::{Object};
 use std::fmt::{self, Display, Formatter};
 use lazy_static::lazy_static;
 
@@ -53,8 +52,6 @@ impl Object {
 	}
 }
 
-
-
 impl_type! { for Null, downcast_fn=downcast_null;
 	fn "@text" (_) {
 		"null".to_string().into_object()
@@ -64,8 +61,3 @@ impl_type! { for Null, downcast_fn=downcast_null;
 		false.into_object()
 	}
 }
-
-
-
-
-

@@ -84,4 +84,3 @@ impl<T: Mapping + ?Sized> Mapping for Shared<T> {
 		self.read().has(key)
 	}
 }
-

@@ -1,4 +1,4 @@
-use crate::{Shared, Object};
+use crate::Object;
 use std::io;
 
 #[derive(Debug/*, Clone, PartialEq, Eq*/)]

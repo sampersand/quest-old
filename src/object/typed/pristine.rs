@@ -1,7 +1,4 @@
-use super::{TypedObject, Type, Types};
-use crate::{Shared, Object};
-use crate::collections::{Mapping, ParentalMap};
-use std::fmt::{self, Display, Formatter};
+use crate::Object;
 use lazy_static::lazy_static;
 
 // to make it easier on my eyes
@@ -24,7 +21,7 @@ basic_map! {
 		})?
 	}
 
-	fn "." (@this, key) {
+	fn "." (@_this, _key) {
 		// how is this different than `::` ?
 		todo!()
 	}
@@ -45,12 +42,3 @@ basic_map! {
 		this.has(key).into_object()
 	}
 }
-
-
-
-
-
-
-
-
-

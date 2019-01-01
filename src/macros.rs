@@ -3,14 +3,12 @@ macro_rules! impl_quest_conversion {
 		impl $crate::Object {
 			/// note: this clones the object
 			pub fn $into_fn(&self) -> ::std::result::Result<$inner, $crate::Error> {
-				use $crate::object::IntoObject;
 				self.$as_fn_obj()?
 					.$downcast_fn()
 					.ok_or_else(|| $crate::Error::ConversionFailure { func: $func, obj: self.clone() })
 			}
 
 			pub fn $as_fn_obj(&self) -> $crate::Result {
-				use $crate::object::IntoObject;
 				let obj = self.call_attr($func, &[])?;
 				if obj.$is() {
 					Ok(obj)
@@ -68,6 +66,7 @@ macro_rules! impl_typed_object {
 
 		impl $crate::object::TypedObject {
 			$(
+				#[allow(dead_code)]
 				pub fn $new<T: Into<$obj>>(val: T) -> Self {
 					$crate::object::TypedObject::new(val.into())
 				}
@@ -81,6 +80,7 @@ macro_rules! impl_typed_object {
 				}
 			}
 
+			#[allow(dead_code)]
 			pub fn $is(&self) -> bool {
 				self.$downcast().is_some()
 			}
@@ -139,11 +139,15 @@ macro_rules! _assign_args {
 // !($name, 0, $self [$($req)*] [$($opt $val),*]);
 
 macro_rules! _create_rustfn {
-	(, $($others:tt)*) => { _create_rustfn!(args, $($others)*); };
+	(, $($others:tt)*) => {
+		#[allow(unused_variables)]
+		_create_rustfn!(_args, $($others)*);
+	};
 
 	($args_ident:ident, (_ $(,$req:ident)* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
 		|$args_ident| {
 			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val;)*]);
+			#[allow(unreachable_code)]
 			Ok($body)
 		}
 	);
@@ -151,6 +155,7 @@ macro_rules! _create_rustfn {
 	($args_ident:ident, (@ $($req:ident),* $(;$opt:ident=$val:expr)*) $body:block $downcast:ident $name:expr) => (
 		|$args_ident| {
 			_assign_args!($args_ident $name, 0, [$($req)*] [$($opt $val;)*]);
+			#[allow(unreachable_code)]
 			Ok($body)
 		}
 	);
@@ -165,6 +170,7 @@ macro_rules! _create_rustfn {
 					position: 0,
 					obj: $self.clone()
 				})?;
+			#[allow(unreachable_code)]
 			Ok($body)
 		}
 	);
@@ -212,13 +218,18 @@ macro_rules! function_map {
 	 $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
 		$crate::Object::new({
 			let mut map = $crate::collections::Map::default();
+			#[allow(unused_imports)]
 			use $crate::{Shared, Object, IntoObject, Mapping, Error::*, Result};
+			#[allow(unused_imports)]
 			use $crate::object::typed::*;
 
 			$(map.set(_name_to_object!($name), {
+				#[allow(unused_macros)]
 				macro_rules! function {
 					() => (concat!($prefix, "::", $name));
 				}
+
+				#[allow(unused_macros)]
 				macro_rules! todo {
 					() => (unimplemented!(concat!("TODO: ", function!())));
 					($msg:expr) => (unimplemented!(concat!("TODO: ", function!(), ": {}"), $msg))
@@ -232,9 +243,3 @@ macro_rules! function_map {
 		});
 	}
 }
-
-
-
-
-
-

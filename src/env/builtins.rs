@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use crate::{Object, Result, Error, Environment};
+use crate::{Object, Error, Environment};
 use std::io::{self, Write, Read};
 
 // to make it easier on my eyes
@@ -36,10 +36,10 @@ builtins! {
 		}
 	}
 
-	fn "switch" (@case) args { todo!(); }
+	fn "switch" (@_case) args { todo!(); }
 	fn "return" (_) { todo!(); } // exit === return
 
-	fn "import" (@file) { todo!(); }
+	fn "import" (@_file) { todo!(); }
 
 	fn "disp" (_) args {
 		let sep = Environment::current()
@@ -59,6 +59,7 @@ builtins! {
 			.map(|x| x.into_text().map(|x| x.into()))
 			.collect::<::std::result::Result<Vec<String>, Error>>()?;
 		io::stdout().write(v.join(&sep).as_ref()).map_err(Error::IoError)?;
+		io::stdout().write(end.as_ref()).map_err(Error::IoError)?;
 		unimplemented!("TODO: Vec<String> into things");
 	}
 
@@ -74,14 +75,10 @@ builtins! {
 	}
 	
 	fn "rand" (_) args {
-		use rand::prelude::*;
-		// match args.len() {
-			// 0 => rand::random::<f64>().into_object()
-		// }
-		todo!();
-
-		// let num = rand::random::<f64>();
-		// todo!();
+		if args.len() == 0 {
+			return Ok(rand::random::<f64>().into_object())
+		}
+		todo!()
 	}
 }
 

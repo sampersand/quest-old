@@ -3,7 +3,6 @@ use crate::err::{Error, Result};
 use crate::collections::{Collection, Mapping};
 use super::IntoObject;
 
-use std::any::TypeId;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::sync::Arc;
 use lazy_static::lazy_static;
@@ -18,7 +17,6 @@ pub struct Object(Arc<InnerObject>);
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
 struct InnerObject {
 	id: usize,
-	mapid: TypeId,
 	map: Shared<dyn Mapping>,
 	env: Shared<Environment>
 }
@@ -36,7 +34,6 @@ impl Object {
 
 		Object(Arc::new(InnerObject {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
-			mapid: TypeId::of::<M>(),
 			map: Shared::new(map) as _,
 			env
 		}))

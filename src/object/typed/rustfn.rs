@@ -1,6 +1,5 @@
-use super::{TypedObject, Type, Types};
-use crate::{Shared, Object, Result};
-use crate::collections::{Mapping, ParentalMap};
+use super::TypedObject;
+use crate::{Object, Result};
 use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Display, Formatter};
@@ -84,7 +83,3 @@ impl_type! { for RustFn, downcast_fn=downcast_rustfn;
 		this.call(args)?
 	}
 }
-
-
-
-

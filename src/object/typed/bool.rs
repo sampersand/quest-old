@@ -1,6 +1,3 @@
-use super::{TypedObject, Type, Types};
-use crate::{Shared, Object};
-use crate::collections::{Mapping, ParentalMap};
 use lazy_static::lazy_static;
 use std::fmt::{self, Debug, Display, Formatter};
 
@@ -55,10 +52,3 @@ impl_type! { for Boolean, downcast_fn=downcast_bool;
 		(this.0 != rhs.into_bool()?.0).into_object()
 	}
 }
-
-
-
-
-
-
-
