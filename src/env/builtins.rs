@@ -54,13 +54,18 @@ builtins! {
 			.map(|x| x.as_ref().clone())
 			.unwrap_or_else(|| String::from("\n"));
 
-		let v  = args
+		let v = args
 			.iter()
 			.map(|x| x.into_text().map(|x| x.into()))
 			.collect::<::std::result::Result<Vec<String>, Error>>()?;
 		io::stdout().write(v.join(&sep).as_ref()).map_err(Error::IoError)?;
 		io::stdout().write(end.as_ref()).map_err(Error::IoError)?;
-		unimplemented!("TODO: Vec<String> into things");
+
+		if args.len() == 1 {
+			(*args[0]).clone()
+		} else {
+			args.iter().map(|x| (*x).clone()).collect::<Vec<_>>().into_object()
+		}
 	}
 
 	fn "input" (@;prompt=Object::new_null()) {
