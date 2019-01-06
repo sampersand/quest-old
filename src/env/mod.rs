@@ -37,7 +37,7 @@ impl Environment {
 		trace!(target: "execute", "Starting to execute");
 		let mut parser = env.read().parser.clone();
 
-		while let Some(object) = Parser::next_object(parser)? {
+		while let Some(object) = Parser::next_object(parser).transpose()? {
 			trace!(target: "execute", "received next object");
 			env.read().stack.write().push(object);
 			parser = env.read().parser.clone(); // in case it was updated somehow

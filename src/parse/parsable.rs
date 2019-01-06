@@ -1,33 +1,29 @@
+mod r#struct;
+mod whitespace;
+mod forced_eof;
+
+use crate::{Shared, Object, Error};
 use crate::parse::Parser;
-use crate::{Shared, Result};
-use std::fmt::{self, Debug, Formatter};
 use lazy_static::lazy_static;
- 
-pub struct ParsableStruct(&'static str, fn(&Shared<Parser>) -> Option<Result>);
 
 pub trait Parsable {
 	const NAME: &'static str;
-	fn try_parse(parser: &Shared<Parser>) -> Option<Result>;
+	fn try_parse(parser: &Shared<Parser>) -> ParseResult;
 }
+
+pub enum ParseResult {
+	Restart, // for things like whitespace and comments
+	Ok(Object),
+	Err(Error),
+	Eof, // for things like __END__
+	None
+}
+
+pub use self::r#struct::ParsableStruct;
 
 lazy_static! {
 	pub static ref BUILTIN_PARSERS: Shared<Vec<ParsableStruct>> = Shared::new(vec!{
-		
+		ParsableStruct::new::<whitespace::Whitespace>(),
+		ParsableStruct::new::<forced_eof::ForcedEof>(),
 	});
-}
-
-impl Debug for ParsableStruct {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if f.alternate() {
-			write!(f, "ParsableStruct({:?}, {:p})", self.0, self.1 as *const ())
-		} else {
-			write!(f, "ParsableStruct({:?})", self.0)
-		}
-	}
-}
-
-impl ParsableStruct {
-	pub fn call(&self, parser: &Shared<Parser>) -> Option<Result> {
-		(self.1)(parser)
-	}
 }

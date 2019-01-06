@@ -1,7 +1,8 @@
 use crate::{Object, Shared, Result};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use super::parsable::{Parsable, ParsableStruct, BUILTIN_PARSERS};
+use super::parsable::{BUILTIN_PARSERS, ParsableStruct};
+use crate::parse::{Parsable, ParseResult};
 
 #[derive(Debug, Default)]
 pub struct Parser {
@@ -36,19 +37,42 @@ impl Parser {
 			parsers: BUILTIN_PARSERS.clone()
 		}
 	}
+
+	pub fn advance(&mut self, amount: usize) -> String {
+		self.data.drain(..=amount).collect()
+	}
+
+	pub fn beginning(&self) -> String {
+		if self.data.len() < 15 {
+			self.data.clone()
+		} else {
+			format!("{}…", &self.data[..14])
+		}
+	}
+}
+
+impl AsRef<str> for Parser {
+	fn as_ref(&self) -> &str {
+		self.data.as_ref()
+	}
 }
 
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
-	pub fn next_object(parser: Shared<Parser>) -> ::std::result::Result<Option<Object>, crate::Error> {
+	pub fn next_object(parser: Shared<Parser>) -> Option<Result> {
+		trace!(target: "parse", "Starting to parse {:?}", parser.read().as_ref());
 		let parsers = parser.read().parsers.clone();
 		for parsablefn in parsers.read().iter() {
-			if let Some(obj) = parsablefn.call(&parser).transpose()? {
-				return Ok(Some(obj))
+			match parsablefn.call(&parser) {
+				ParseResult::Restart => return Parser::next_object(parser),
+				ParseResult::Ok(object) => return Some(Ok(object)),
+				ParseResult::Err(err) => return Some(Err(err)),
+				ParseResult::Eof => return None,
+				ParseResult::None => { /* do nothing */ }
 			}
 		}
 
-		Err(crate::Error::NothingParsableFound(parser))
+		Some(Err(crate::Error::NothingParsableFound(parser)))
 	}
 }
 

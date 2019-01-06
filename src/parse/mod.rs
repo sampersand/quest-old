@@ -1,15 +1,15 @@
 mod parser;
 mod parsable;
 
-pub(crate) use self::parser::Parser;
+pub use self::parser::Parser;
+pub use self::parsable::{Parsable, ParseResult};
 
-use crate::{Shared, Environment, Result};
+use crate::{Result, Error};
 use std::{io, path::Path};
-pub use self::parsable::Parsable;
 
 
-pub fn parse_file<P: AsRef<Path>>(path: P) -> io::Result<Result> {
-	Parser::from_file(path.as_ref()).map(parse)
+pub fn parse_file<P: AsRef<Path>>(path: P) -> Result {
+	parse(Parser::from_file(path.as_ref()).map_err(Error::IoError)?)
 }
 
 pub fn parse_str<T: Into<String>>(text: T) -> Result {
@@ -17,5 +17,6 @@ pub fn parse_str<T: Into<String>>(text: T) -> Result {
 }
 
 fn parse(parser: Parser) -> Result {
+	use crate::{Environment, Shared};
 	Environment::execute(Environment::_new_default_with_stream(Shared::new(parser)))
 }
