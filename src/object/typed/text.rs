@@ -118,7 +118,7 @@ mod rust_tests {
 
 
 #[cfg(test)]
-#[allow(unsued)]
+#[allow(unused)]
 mod quest_tests {
 	use super::Text;
 	use crate::object::{IntoObject};

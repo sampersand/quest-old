@@ -1,28 +1,57 @@
 pub mod builtins;
 
-use crate::{Shared, Object};
+use crate::{Shared, Object, parse::Parser};
 use crate::collections::{Collection, Mapping, Listing};
 use std::fmt::{self, Display, Formatter};
+use std::{mem, sync::RwLock};
 use lazy_static::lazy_static;
 
 #[derive(Debug)]
 pub struct Environment {
 	parent: Option<Shared<Environment>>,
+	parser: Shared<Parser>,
 	map: Shared<dyn Mapping>,
 	stack: Shared<dyn Listing>
 }
 
+impl Environment {
+	// im not sure how i want initialization to work, that's why this is lower case
+	pub fn _new_default_with_stream(parser: Shared<Parser>) -> Shared<Environment> {
+		Shared::new(Environment {
+			parent: None,
+			parser,
+			map: Shared::new(crate::collections::Map::empty()),
+			stack: Shared::new(crate::collections::List::empty())
+		})
+	}
+
+	pub fn execute(env: Shared<Environment>) -> crate::Result {
+		let mut parser = env.read().parser.clone();
+
+		while let Some(object) = Parser::next_object(parser) {
+			env.read().stack.write().push(object);
+			parser = env.read().parser.clone(); // in case it was updated somehow
+		}
+
+		// todo: return an error
+		Ok(env.read().stack.write().pop().unwrap_or_else(Object::new_null))
+	}
+}
+
+/** CURRENT for env **/
 lazy_static! {
-	static ref CURRENT: Shared<Environment> = Shared::new(Environment {
-		parent: None,
-		map: Shared::new(crate::collections::Map::empty()),
-		stack: Shared::new(crate::collections::List::empty())
-	});
+	static ref CURRENT: RwLock<Shared<Environment>> = RwLock::new(Environment::_new_default_with_stream(Shared::new(Parser::default())));
 }
 
 impl Environment {
 	pub fn current() -> Shared<Environment> {
-		CURRENT.clone()
+		CURRENT.read().expect("current environment unreadable").clone()
+	}
+
+	pub fn set_current(mut env: Shared<Environment>) -> Shared<Environment> {
+		mem::swap(&mut env, &mut *CURRENT.write().expect("current environment unwritable"));
+		// `env` is now the old CURRENT and can be used as such.
+		env
 	}
 	// pub fn push_env(env: Shared<Environment>) ->
 }
