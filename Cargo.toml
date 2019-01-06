@@ -1,6 +1,6 @@
 [package]
 name = "quest"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["sam <westerhack@gmail.com>"]
 edition = "2018"
 
@@ -12,7 +12,7 @@ fine-debug = []
 [dependencies]
 lazy_static = "1.1.0"
 mopa = "0.2"
-regex = { version = "1.0", features = ["pattern"] }
+#regex = { version = "1.0", features = ["pattern"] }
 log = "0.4"
 simple_logger = "0.5"
 rand = "=0.6.0"

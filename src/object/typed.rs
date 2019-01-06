@@ -9,6 +9,7 @@ mod variable;
 mod rustfn;
 mod list;
 mod map;
+mod oper;
 
 pub use self::{
 	boolean::Boolean,
@@ -18,7 +19,8 @@ pub use self::{
 	variable::Variable,
 	rustfn::RustFn,
 	list::List,
-	map::Map
+	map::Map,
+	oper::Oper
 };
 
 pub(crate) use self::pristine::PRISTINE_MAP;
@@ -42,7 +44,8 @@ enum Types {
 	Variable(Variable),
 	RustFn(RustFn),
 	List(List),
-	Map(Map)
+	Map(Map),
+	Oper(Oper)
 }
 
 trait Type : Into<Types> {
@@ -81,6 +84,7 @@ impl Display for Types {
 			Types::RustFn(ref rustfn) => Display::fmt(rustfn, f),
 			Types::List(ref list) => Display::fmt(list, f),
 			Types::Map(ref map) => Display::fmt(map, f),
+			Types::Oper(ref oper) => Display::fmt(oper, f),
 		}
 	}
 }
@@ -97,7 +101,7 @@ impl Debug for Types {
 			Types::RustFn(ref rustfn) => Debug::fmt(rustfn, f),
 			Types::List(ref list) => Debug::fmt(list, f),
 			Types::Map(ref map) => Debug::fmt(map, f),
-
+			Types::Oper(ref oper) => Debug::fmt(oper, f),
 		}
 	}
 }

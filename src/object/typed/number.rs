@@ -131,7 +131,7 @@ impl_type! { for Number, downcast_fn=downcast_num;
 	fn "*" (this, rhs) { binary_oper!(this * rhs) }
 	fn "/" (this, rhs) { binary_oper!(this / rhs) }
 	fn "%" (this, rhs) { binary_oper!(this % rhs) }
-	fn "^" (@this, rhs) { this.call_attr("**", &[rhs])? }
+	// fn "^" (@this, rhs) { this.call_attr("**", &[rhs])? }
 	fn "**" (this, rhs) { this.0.powf(rhs.into_num()?.0).into_object() }
 
 	fn "==" (this, rhs) { binary_oper!(this == rhs) }
@@ -147,9 +147,9 @@ impl_type! { for Number, downcast_fn=downcast_num;
 		else { 1.into_object() }
 	}
 
-	fn "bitand" (this, rhs) { binary_oper!(bitwise; this & rhs) }
-	fn "bitor" (this, rhs) { binary_oper!(bitwise; this | rhs) }
-	fn "bitxor" (this, rhs) { binary_oper!(bitwise; this ^ rhs) }
-	fn "bitshl" (this, rhs) { binary_oper!(bitwise; this << rhs) }
-	fn "bitshr" (this, rhs) { binary_oper!(bitwise; this >> rhs) }
+	fn "&" (this, rhs) { binary_oper!(bitwise; this & rhs) }
+	fn "|" (this, rhs) { binary_oper!(bitwise; this | rhs) }
+	fn "^" (this, rhs) { binary_oper!(bitwise; this ^ rhs) }
+	fn "<<" (this, rhs) { binary_oper!(bitwise; this << rhs) }
+	fn ">>" (this, rhs) { binary_oper!(bitwise; this >> rhs) }
 }
