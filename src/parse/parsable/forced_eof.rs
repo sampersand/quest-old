@@ -16,7 +16,7 @@ impl Parsable for ForcedEof {
 		drop(data);
 
 		if is_eof {
-			debug!(target: "parser", "Forced eof found. chars={:?}", parser.read().beginning());
+			debug!(target: "parser", "Forced eof parsed. chars={:?}", parser.read().beginning());
 			ParseResult::Eof
 		} else {
 			trace!(target: "parser", "No forced eof found. stream={:?}", parser.read().beginning());

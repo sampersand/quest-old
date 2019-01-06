@@ -1,14 +1,25 @@
 mod basic;
 mod pristine;
 
-mod bool;
+mod boolean;
 mod null;
-mod num;
+mod number;
 mod text;
-mod var;
+mod variable;
 mod rustfn;
 mod list;
 mod map;
+
+pub use self::{
+	boolean::Boolean,
+	null::Null,
+	number::Number,
+	text::Text,
+	variable::Variable,
+	rustfn::RustFn,
+	list::List,
+	map::Map
+};
 
 pub(crate) use self::pristine::PRISTINE_MAP;
 
@@ -25,13 +36,13 @@ use std::fmt::Debug;
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
 enum Types {
 	Null,
-	Boolean(bool::Boolean),
-	Number(num::Number),
-	Text(text::Text),
-	Variable(var::Variable),
-	RustFn(rustfn::RustFn),
-	List(list::List),
-	Map(map::Map)
+	Boolean(Boolean),
+	Number(Number),
+	Text(Text),
+	Variable(Variable),
+	RustFn(RustFn),
+	List(List),
+	Map(Map)
 }
 
 trait Type : Into<Types> {
@@ -62,7 +73,7 @@ impl TypedObject {
 impl Display for Types {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		match self {
-			Types::Null => Display::fmt(&self::null::Null, f),
+			Types::Null => Display::fmt(&Null, f),
 			Types::Boolean(ref bool) => Display::fmt(bool, f),
 			Types::Number(ref num) => Display::fmt(num, f),
 			Types::Text(ref text) => Display::fmt(text, f),
@@ -78,7 +89,7 @@ impl Display for Types {
 impl Debug for Types {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		match self {
-			Types::Null => Debug::fmt(&self::null::Null, f),
+			Types::Null => Debug::fmt(&Null, f),
 			Types::Boolean(ref bool) => Debug::fmt(bool, f),
 			Types::Number(ref num) => Debug::fmt(num, f),
 			Types::Text(ref text) => Debug::fmt(text, f),

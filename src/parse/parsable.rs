@@ -2,6 +2,7 @@ mod r#struct;
 mod whitespace;
 mod forced_eof;
 mod comments;
+mod number;
 
 use crate::{Shared, Object, Error};
 use crate::parse::Parser;
@@ -27,5 +28,6 @@ lazy_static! {
 		ParsableStruct::new::<whitespace::Whitespace>(),
 		ParsableStruct::new::<forced_eof::ForcedEof>(),
 		ParsableStruct::new::<comments::Comments>(),
+		ParsableStruct::new::<number::Number>(),
 	});
 }
