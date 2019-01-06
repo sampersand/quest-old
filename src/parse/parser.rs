@@ -1,11 +1,14 @@
-use crate::{Object, Shared};
+use crate::{Object, Shared, Result};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use super::Parsable;
 
+type ParsableFn = fn(Shared<Parser>) -> Result;
 
 #[derive(Debug, Default)]
 pub struct Parser {
 	data: String,
+	parsers: Shared<Vec<ParsableFn>>,
 	loc: Location,
 }
 
@@ -20,12 +23,16 @@ impl Parser {
 	pub fn from_file(path: &Path) -> io::Result<Parser> {
 		Ok(Parser {
 			data: fs::read_to_string(path)?,
-			loc: Location { source: Some(path.to_owned()), ..Location::default() }
+			loc: Location {
+				source: Some(path.to_owned()),
+				..Location::default()
+			},
+			parsers: unimplemented!()
 		})
 	}
 
 	pub fn from_str(data: String) -> Parser {
-		Parser { data, loc: Location::default() }
+		Parser { data, loc: Location::default(), parsers: unimplemented!() }
 	}
 }
 

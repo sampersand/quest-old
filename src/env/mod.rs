@@ -15,13 +15,28 @@ pub struct Environment {
 }
 
 impl Environment {
-	// im not sure how i want initialization to work, that's why this is lower case
-	pub fn _new_default_with_stream(parser: Shared<Parser>) -> Shared<Environment> {
-		Shared::new(Environment {
+	fn empty() -> Environment {
+		Environment {
 			parent: None,
-			parser,
+			parser: Shared::new(Parser::default()),
 			map: Shared::new(crate::collections::Map::empty()),
 			stack: Shared::new(crate::collections::List::empty())
+		}
+	}
+
+	// im not sure how i want initialization to work, that's why this is lower case
+	pub fn _new_default_with_stream(parser: Shared<Parser>) -> Shared<Environment> {
+		lazy_static! {
+			static ref GLOBAL_ENV: Shared<Environment> = Shared::new(Environment {
+				map: Shared::new(builtins::BUILTINS_MAP.clone()),
+				..Environment::empty()
+			});
+		}
+
+		Shared::new(Environment {
+			parent: Some(GLOBAL_ENV.clone()),
+			parser,
+			..Environment::empty()
 		})
 	}
 
