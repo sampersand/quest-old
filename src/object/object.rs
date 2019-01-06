@@ -32,11 +32,14 @@ impl Object {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 		}
 
-		Object(Arc::new(InnerObject {
+		let obj = Object(Arc::new(InnerObject {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 			map: Shared::new(map) as _,
 			env
-		}))
+		}));
+
+		debug!(target: "creation", "Created object {:?}", obj);
+		obj
 	}
 
 	pub fn ptr_eq(&self, rhs: &Object) -> bool {
@@ -106,7 +109,7 @@ impl PartialEq for Object {
 		} else {
 			self.call_attr("==", &[other])
 			    .and_then(|obj| obj.into_bool())
-			    .map(|x| x.into_inner())
+			    .map(bool::from)
 			    .unwrap_or(false)
 		}
 	}
@@ -171,3 +174,9 @@ impl Mapping for Object {
 		self.0.map.read().has(key)
 	}
 }
+
+// poetry is meaningless in philosophy
+// innocence is with no sense in agony
+// turth is a blind masqqurade of why and wants
+// but silence is the kingdom of god
+

@@ -60,4 +60,8 @@ impl_type! { for Null, downcast_fn=downcast_null;
 	fn "@bool" (_) {
 		false.into_object()
 	}
+
+	fn "==" (_this, rhs) {
+		rhs.is_null().into_object()
+	}
 }

@@ -44,6 +44,10 @@ impl_type! { for Boolean, downcast_fn=downcast_bool;
 		(this.0 as u8).into_object()
 	}
 
+	fn "==" (this, rhs) {
+		(this == rhs.into_bool()?).into_object()
+	}
+
 	fn "!" (this) {
 		(!this.0).into_object()
 	}

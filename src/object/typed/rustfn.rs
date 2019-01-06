@@ -82,4 +82,12 @@ impl_type! { for RustFn, downcast_fn=downcast_rustfn;
 	fn "()" (this) args {
 		this.call(args)?
 	}
+
+	fn "==" (this, rhs) {
+		if let Some(func) = rhs.downcast_rustfn() {
+			(this == func).into_object()
+		} else {
+			false.into_object()
+		}
+	}
 }
