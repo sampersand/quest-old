@@ -1,4 +1,4 @@
-use crate::Object;
+use crate::{Object, Shared, parse::Parser};
 use std::io;
 
 #[derive(Debug/*, Clone, PartialEq, Eq*/)]
@@ -22,7 +22,8 @@ pub enum Error {
 		obj: Object
 	},
 	IoError(io::Error),
-	NothingParsableFound(crate::Shared<crate::parse::Parser>)
+	NothingParsableFound(Shared<Parser>),
+	ParserError { msg: &'static str, parser: Shared<Parser> }
 }
 
 pub type Result = ::std::result::Result<Object, Error>;

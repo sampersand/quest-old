@@ -1,4 +1,4 @@
-use crate::{Shared, Result};
+use crate::Shared;
 use crate::parse::{Parsable, ParseResult, Parser};
 
 pub(super) struct Whitespace; 
@@ -17,12 +17,12 @@ impl Parsable for Whitespace {
 		}
 
 		if idx == 0 {
-			trace!(target: "parser", "No whitespace parsed for {:?}", parser.read().beginning());
+			trace!(target: "parser", "No whitespace found. stream={:?}", parser.read().beginning());
 			ParseResult::None
 		} else {
 			let whitespace = parser.write().advance(idx); // ignore whatever whitespace we had
 			debug_assert!(whitespace.chars().all(char::is_whitespace), "invalid whitespace parsed: {:?}", whitespace);
-			debug!(target: "parser", "Whitespace parsed chars={:?}", whitespace);
+			debug!(target: "parser", "Whitespace parsed. chars={:?}", whitespace);
 			ParseResult::Restart
 		}
 	}

@@ -1,6 +1,7 @@
 mod r#struct;
 mod whitespace;
 mod forced_eof;
+mod comments;
 
 use crate::{Shared, Object, Error};
 use crate::parse::Parser;
@@ -25,5 +26,6 @@ lazy_static! {
 	pub static ref BUILTIN_PARSERS: Shared<Vec<ParsableStruct>> = Shared::new(vec!{
 		ParsableStruct::new::<whitespace::Whitespace>(),
 		ParsableStruct::new::<forced_eof::ForcedEof>(),
+		ParsableStruct::new::<comments::Comments>(),
 	});
 }

@@ -60,8 +60,9 @@ impl AsRef<str> for Parser {
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
 	pub fn next_object(parser: Shared<Parser>) -> Option<Result> {
-		trace!(target: "parse", "Starting to parse {:?}", parser.read().as_ref());
+		trace!(target: "parse", "Beginning parse. stream={:?}", parser.read().as_ref());
 		let parsers = parser.read().parsers.clone();
+
 		for parsablefn in parsers.read().iter() {
 			match parsablefn.call(&parser) {
 				ParseResult::Restart => return Parser::next_object(parser),

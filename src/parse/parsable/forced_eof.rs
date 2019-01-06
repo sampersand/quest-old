@@ -1,4 +1,4 @@
-use crate::{Shared, Result};
+use crate::Shared;
 use crate::parse::{Parsable, ParseResult, Parser};
 
 pub(super) struct ForcedEof; 
@@ -15,16 +15,12 @@ impl Parsable for ForcedEof {
 		drop(ref_data);
 		drop(data);
 
-		if !is_eof {
-			trace!(target: "parser", "No forcedeof parsed for {:?}", parser.read().beginning());
-			ParseResult::None
-		} else {
-			// let mut parser = parser.write();
-			// parser.advance(parser.as_ref().len());
-			// debug_assert!(parser.as_ref().is_empty(), "forced eof, but length wasn't 0 at the end?");
-
-			debug!(target: "parser", "Forced eof found for {:?}", parser.read().beginning());
+		if is_eof {
+			debug!(target: "parser", "Forced eof found. chars={:?}", parser.read().beginning());
 			ParseResult::Eof
+		} else {
+			trace!(target: "parser", "No forced eof found. stream={:?}", parser.read().beginning());
+			ParseResult::None
 		}
 	}
 }
