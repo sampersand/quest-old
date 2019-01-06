@@ -1,3 +1,8 @@
+#[cfg(test)]
+macro_rules! mkobj {
+	(text $x:expr) => ( $crate::object::IntoObject::into_object(String::from($x)) );
+}
+
 macro_rules! impl_quest_conversion {
 	($func:literal ($as_fn_obj:ident $is:ident) ($into_fn:ident $downcast_fn:ident) -> $inner:ty) => {
 		impl $crate::Object {
@@ -41,7 +46,7 @@ macro_rules! impl_typed_conversion {
 
 		impl From<$obj> for $inner {
 			fn from(obj: $obj) -> $inner {
-				obj.into_inner()
+				obj.0
 			}
 		}
 

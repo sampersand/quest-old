@@ -2,7 +2,7 @@
 use quest::*;
 
 fn main() {
-    simple_logger::init().unwrap();
+    // simple_logger::init().unwrap();
 
     let ref three = 3.into_object();
     let ref four = 4.into_object();

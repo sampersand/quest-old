@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct List(Vec<Object>);
+// TODO: MAKE THIS USE Shared<dyn Listing>
 
 impl List {
 	pub fn new(data: Vec<Object>) -> List {
@@ -42,8 +43,16 @@ impl_typed_object!(List, new_list, downcast_list, is_list);
 impl_quest_conversion!("@list" (as_list_obj is_list) (into_list downcast_list) -> List);
 
 impl_type! { for List, downcast_fn=downcast_list;
+	fn "@list" (this) {
+		this.into_object()
+	}
+
 	fn "@bool" (this) {
 		(!this.0.is_empty()).into_object()
+	}
+
+	fn "==" (this, rhs) {
+		(this == rhs.into_list()?).into_object()
 	}
 
 	fn "+" (this, rhs) {

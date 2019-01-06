@@ -22,6 +22,7 @@ impl Clone for ParentalObject {
 
 impl ParentalObject {
 	pub fn new(parent: InitFunc) -> ParentalObject {
+		trace!("Creating a new uninitialized ParentalObject for {:p}", parent as *const ());
 		ParentalObject {
 			inner: RwLock::new(None),
 			func: parent
@@ -29,53 +30,38 @@ impl ParentalObject {
 	}
 
 	pub fn new_initialized(parent: Object) -> ParentalObject {
+		trace!("Creating a new initialized ParentalObject for {:?}", parent);
 		ParentalObject {
 			inner: RwLock::new(Some(parent)),
 			func: || unreachable!("Attempted to create a parent that already exists")
 		}
 	}
 
-	pub fn get(&self, key: &Object) -> Option<Object> {
+	fn get_parent<T, F: Fn(&Object) -> T>(&self, func: F) -> T {
 		let inner = self.inner.read().expect("poisoned parental object read");
 		if let Some(ref map) = *inner {
-			map.get(key)
+			func(map)
 		} else {
 			drop(inner);
 			let mut inner = self.inner.write().expect("poisoned parental object write");
 			if inner.is_none() { // in case it was created after we reacquired
+				debug!("Initialized ParentalObject {:p}", self as *const _);
 				*inner = Some((self.func)());
 			}
-			inner.as_ref().unwrap().get(key)
+			func(inner.as_ref().unwrap())
 		}
+	}
+
+	pub fn get(&self, key: &Object) -> Option<Object> {
+		self.get_parent(|map| map.get(key))
 	}
 
 	pub fn has(&self, key: &Object) -> bool {
-		let inner = self.inner.read().expect("poisoned parental object read");
-		if let Some(ref map) = *inner {
-			map.has(key)
-		} else {
-			drop(inner);
-			let mut inner = self.inner.write().expect("poisoned parental object write");
-			if inner.is_none() { // in case it was created after we reacquired
-				*inner = Some((self.func)());
-			}
-			inner.as_ref().unwrap().has(key)
-		}
+		self.get_parent(|map| map.has(key))
 	}
 
 	pub fn inner(&self) -> Object {
-		let inner = self.inner.read().expect("poisoned parental object read");
-		if let Some(ref map) = *inner {
-			map.clone()
-		} else {
-			drop(inner);
-			let mut inner = self.inner.write().expect("poisoned parental object write");
-			if inner.is_none() { // in case it was created after we reacquired
-				*inner = Some((self.func)());
-			}
-			inner.clone().unwrap()
-		}
-
+		self.get_parent(|map| map.clone())
 	}
 }
 

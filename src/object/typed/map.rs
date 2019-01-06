@@ -53,8 +53,17 @@ impl_typed_object!(Map, new_map, downcast_map, is_map);
 impl_quest_conversion!("@map" (as_map_obj is_map) (into_map downcast_map) -> Map);
 
 impl_type! { for Map, downcast_fn=downcast_map;
+	fn "@map" (this) {
+		this.into_object()
+	}
+
+	fn "@list" (_this) { todo!(); }
 	fn "@bool" (this) {
 		(!this.0.is_empty()).into_object()
+	}
+
+	fn "==" (this, rhs) {
+		(this == rhs.into_map()?).into_object()
 	}
 
 	fn "len" (this) {
