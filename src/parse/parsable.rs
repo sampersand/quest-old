@@ -3,6 +3,7 @@ mod whitespace;
 mod forced_eof;
 mod comments;
 mod number;
+mod text;
 
 use crate::{Shared, Object, Error};
 use crate::parse::Parser;
@@ -29,5 +30,6 @@ lazy_static! {
 		ParsableStruct::new::<forced_eof::ForcedEof>(),
 		ParsableStruct::new::<comments::Comments>(),
 		ParsableStruct::new::<number::Number>(),
+		ParsableStruct::new::<text::Text>(),
 	});
 }
