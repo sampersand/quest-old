@@ -26,24 +26,19 @@ impl Environment {
 
 	// im not sure how i want initialization to work, that's why this is lower case
 	pub fn _new_default_with_stream(parser: Shared<Parser>) -> Shared<Environment> {
-		lazy_static! {
-			static ref GLOBAL_ENV: Shared<Environment> = Shared::new(Environment {
-				map: Shared::new(builtins::BUILTINS_MAP.clone()),
-				..Environment::empty()
-			});
-		}
-
 		Shared::new(Environment {
-			parent: Some(GLOBAL_ENV.clone()),
 			parser,
+			map: Shared::new(crate::collections::ParentalMap::new_default(|| builtins::BUILTINS_MAP.clone())),
 			..Environment::empty()
 		})
 	}
 
 	pub fn execute(env: Shared<Environment>) -> crate::Result {
+		trace!(target: "execute", "Starting to execute");
 		let mut parser = env.read().parser.clone();
 
-		while let Some(object) = Parser::next_object(parser) {
+		while let Some(object) = Parser::next_object(parser)? {
+			trace!(target: "execute", "received next object");
 			env.read().stack.write().push(object);
 			parser = env.read().parser.clone(); // in case it was updated somehow
 		}

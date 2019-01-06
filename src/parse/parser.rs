@@ -1,14 +1,12 @@
 use crate::{Object, Shared, Result};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use super::Parsable;
-
-type ParsableFn = fn(Shared<Parser>) -> Result;
+use super::parsable::{Parsable, ParsableStruct, BUILTIN_PARSERS};
 
 #[derive(Debug, Default)]
 pub struct Parser {
 	data: String,
-	parsers: Shared<Vec<ParsableFn>>,
+	parsers: Shared<Vec<ParsableStruct>>,
 	loc: Location,
 }
 
@@ -27,19 +25,30 @@ impl Parser {
 				source: Some(path.to_owned()),
 				..Location::default()
 			},
-			parsers: unimplemented!()
+			parsers: BUILTIN_PARSERS.clone()
 		})
 	}
 
 	pub fn from_str(data: String) -> Parser {
-		Parser { data, loc: Location::default(), parsers: unimplemented!() }
+		Parser {
+			data,
+			loc: Location::default(),
+			parsers: BUILTIN_PARSERS.clone()
+		}
 	}
 }
 
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
-	pub fn next_object(parser: Shared<Parser>) -> Option<Object> {
-		unimplemented!()
+	pub fn next_object(parser: Shared<Parser>) -> ::std::result::Result<Option<Object>, crate::Error> {
+		let parsers = parser.read().parsers.clone();
+		for parsablefn in parsers.read().iter() {
+			if let Some(obj) = parsablefn.call(&parser).transpose()? {
+				return Ok(Some(obj))
+			}
+		}
+
+		Err(crate::Error::NothingParsableFound(parser))
 	}
 }
 

@@ -1,6 +1,6 @@
 #![allow(unused)]
 #![cfg_attr(not(debug_assertions), deny(unreachable_code))]
-#![feature(coerce_unsized, unsize)]
+#![feature(coerce_unsized, unsize, transpose_result)]
 
 #[macro_use]
 extern crate log;

@@ -21,7 +21,8 @@ pub enum Error {
 		position: usize,
 		obj: Object
 	},
-	IoError(io::Error)
+	IoError(io::Error),
+	NothingParsableFound(crate::Shared<crate::parse::Parser>)
 }
 
 pub type Result = ::std::result::Result<Object, Error>;

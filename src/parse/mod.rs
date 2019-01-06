@@ -1,13 +1,11 @@
 mod parser;
+mod parsable;
 
 pub(crate) use self::parser::Parser;
-use std::fmt::Debug;
+
 use crate::{Shared, Environment, Result};
 use std::{io, path::Path};
-
-pub trait Parsable : Debug {
-	fn try_parse(parser: Shared<Parser>) -> Option<Result>;
-}
+pub use self::parsable::Parsable;
 
 
 pub fn parse_file<P: AsRef<Path>>(path: P) -> io::Result<Result> {
