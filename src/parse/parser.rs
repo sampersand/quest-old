@@ -103,5 +103,6 @@ impl_typed_object!(Shared<Parser>, variant Parser, new_parser, downcast_parser, 
 impl_quest_conversion!("@parser" (as_parser_obj is_parser) (into_parser downcast_parser) -> Shared<Parser>);
 
 impl_type! { for Shared<Parser>, downcast_fn=downcast_parser;
-	// todo: stuff here
+	fn "@parser" (this) { this.into_object() }
+	// todo: stuff here?
 }

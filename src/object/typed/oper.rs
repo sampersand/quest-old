@@ -267,7 +267,14 @@ impl_type! { for Oper, downcast_fn=downcast_oper;
 	fn "()" (this) args {
 		this.call(args)?
 	}
+
+	fn "__parse__" (this, parser) {
+		this.handle(&parser.into_parser()?)?
+	}
 }
+
+
+
 
 
 
