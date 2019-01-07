@@ -68,7 +68,7 @@ impl Oper {
 
 	// this disallows users to change the `precedence` function to get the precedence of opers.
 	// that might change in the future
-	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
+	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
 		if self.is_unary_and_on_lhs() {
 			unimplemented!("TODO: unary opers");
 		}
@@ -81,21 +81,23 @@ impl Oper {
 		trace!(target: "execute", "Oper={:?} found a lhs={:?}", self, lhs);
 
 
-		while let Some(mut object) = Parser::next_object(&parser).transpose()? {
+		while let Some(mut object) = Parser::next_unevaluated_object(&parser).transpose()? {
 			trace!(target: "execute", "Oper={:?} received next object={:?}", self, object);
 
 			if let Some(ref oper) = object.downcast_oper() {
-				if self < oper || (self == oper && self.is_l_to_r_assoc()) {
+				if self < oper || (self <= oper && self.is_l_to_r_assoc()) {
 					trace!(target: "execute", "Oper={:?} found a less-tightly-bound oper={:?}", self, oper);
 					drop(oper);
 					parser.read().rollback(object); // ie rollback the oper
 					break;
 				} else {
+					println!("{:#?}, {:#?}, {:?}, {:?}, {},{}", self, oper, self.precedence(), oper.precedence(), self.is_l_to_r_assoc(), oper.is_l_to_r_assoc());
 					trace!(target: "execute", "Oper={:?} found an oper more tightly bound={:?}", self, oper);
-					object = oper.handle(parser)?;
+					object = oper.evaluate(parser)?;
 				}
 			}
 
+			object = object.evaluate(parser)?;
 			Environment::current().read().stack.write().push(object);
 		}
 
@@ -268,8 +270,8 @@ impl_type! { for Oper, downcast_fn=downcast_oper;
 		this.call(args)?
 	}
 
-	fn "__parse__" (this, parser) {
-		this.handle(&parser.into_parser()?)?
+	fn "__evaluate__" (this, parser) {
+		this.evaluate(&parser.into_parser()?)?
 	}
 }
 

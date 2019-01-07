@@ -14,7 +14,7 @@ basic_map! {
 	fn "__id__" (@this) { this.id().into_object() }
 	fn "__map__" (@this) { Object::new(this.map().clone()) }
 	fn "__env__" (@this) { Object::new(this.env().clone()) }
-	fn "__parse__" (@this, _parser) { this.clone() }
+	fn "__evaluate__" (@this, _parser) { this.clone() }
 
 	fn "::" (@this, key) {
 		this.get(key).ok_or_else(|| MissingKey {

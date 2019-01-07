@@ -66,7 +66,7 @@ impl Parser {
 		self.rollback.write().push(obj);
 	}
 
-	pub fn next_object(parser: &Shared<Parser>) -> Option<Result> {
+	pub fn next_unevaluated_object(parser: &Shared<Parser>) -> Option<Result> {
 		{
 			let read = parser.read();
 			let mut rollback = read.rollback.write();
@@ -86,8 +86,8 @@ impl Parser {
 
 		for parsablefn in parsers.read().iter() {
 			match parsablefn.call(parser) {
-				ParseResult::Restart => return Parser::next_object(parser),
-				ParseResult::Ok(object) => return Some(object.handle(parser)),
+				ParseResult::Restart => return Parser::next_unevaluated_object(parser),
+				ParseResult::Ok(object) => return Some(Ok(object)),
 				ParseResult::Err(err) => return Some(Err(err)),
 				ParseResult::Eof => return None,
 				ParseResult::None => { /* do nothing */ }

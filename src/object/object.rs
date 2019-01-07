@@ -59,8 +59,8 @@ impl Object {
 		&self.0.env
 	}
 
-	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
-		self.call_attr("__parse__", &[&parser.clone().into_object()])
+	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
+		self.call_attr("__evaluate__", &[&parser.clone().into_object()])
 	}
 
 	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
