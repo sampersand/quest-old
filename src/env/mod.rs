@@ -11,7 +11,7 @@ pub struct Environment {
 	parent: Option<Shared<Environment>>,
 	parser: Shared<Parser>,
 	map: Shared<dyn Mapping>,
-	stack: Shared<dyn Listing>
+	pub(crate) stack: Shared<dyn Listing>
 }
 
 impl Environment {
@@ -33,18 +33,17 @@ impl Environment {
 		})
 	}
 
-	pub fn execute(env: Shared<Environment>) -> crate::Result {
+	pub fn execute(env: Shared<Environment>) -> Result<Shared<Environment>, crate::Error> {
 		trace!(target: "execute", "Starting to execute");
 		let mut parser = env.read().parser.clone();
+		let old_env = Environment::set_current(env);
 
-		while let Some(object) = Parser::next_object(parser).transpose()? {
+		while let Some(object) = Parser::next_object(&parser).transpose()? {
 			trace!(target: "execute", "received next object");
-			env.read().stack.write().push(object);
-			parser = env.read().parser.clone(); // in case it was updated somehow
+			 Environment::current().read().stack.write().push(object);
 		}
 
-		// todo: return an error
-		Ok(env.read().stack.write().pop().unwrap_or_else(Object::new_null))
+		Ok(Environment::set_current(old_env))
 	}
 }
 

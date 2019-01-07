@@ -19,6 +19,10 @@ basic_map! {
 		this.duplicate()
 	}
 
+	fn ";" (@_this, rhs) {
+		rhs.clone()
+	}
+
 	fn "@bool" (_) {
 		true.into_object()
 	}

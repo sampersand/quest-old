@@ -23,7 +23,8 @@ pub enum Error {
 	},
 	IoError(io::Error),
 	NothingParsableFound(Shared<Parser>),
-	ParserError { msg: &'static str, parser: Shared<Parser> }
+	ParserError { msg: &'static str, parser: Shared<Parser> },
+	NothingToReturn
 }
 
 pub type Result = ::std::result::Result<Object, Error>;

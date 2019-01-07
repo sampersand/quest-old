@@ -1,11 +1,12 @@
 use super::RustFn;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::cmp::Ordering;
-use crate::{Object, Result, IntoObject};
+use crate::{Object, Shared, Error, Result, IntoObject, Environment};
+use crate::parse::Parser;
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Oper {
-	UnaryPos, UnaryNeg,
+	Pos, Neg,
 
 	  Add,   Sub,   Mul,   Div,   Mod,   Pow,
 	AddEq, SubEq, MulEq, DivEq, ModEq, PowEq,
@@ -29,9 +30,9 @@ use self::Oper::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
 	Period_ColonColon,
-	UnaryPos_BitNot_Not,
+	Pos_BitNot_Not,
 	Pow,
-	UnaryNeg,
+	Neg,
 	Mul_Div_Mod,
 	Add_Sub,
 	BitShl_BitShr,
@@ -48,15 +49,74 @@ pub enum Precedence {
 }
 
 impl Oper {
+	// ie `~x`
+	fn is_unary_and_on_lhs(&self) -> bool {
+		match self {
+			Pos | Neg | BitNot | Not => true,
+			_ => false
+		}
+	}
+
+	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
+		if self.is_unary_and_on_lhs() {
+			unimplemented!("TODO: unary opers");
+		}
+
+		println!("{:?}", &*Environment::current().read().stack.read());
+
+
+		let lhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
+			func: self.sigil(),
+			pos: 0,
+		})?;
+
+
+		let rhs = Parser::next_object(parser).unwrap_or_else(|| Err(Error::MissingArgument {
+			func: self.sigil(),
+			pos: 1
+		}))?;
+
+		self.call(&[&lhs, &rhs])
+	}
+}
+
+impl Oper {
+	fn _all_opers_but_other() -> &'static [Oper] {
+		&[Pos, Neg, Add, Sub, Mul, Div, Mod, Pow,
+		  AddEq, SubEq, MulEq, DivEq, ModEq, PowEq,
+		  BitShl, BitShr, BitAnd, BitOr, BitXor, BitNot,
+		  BitShlEq, BitShrEq, BitAndEq, BitOrEq, BitXorEq,
+		  Eql, Neq, Lth, Leq, Gth, Geq, Cmp, And, Or, Not,
+		  Assign, ArrowRight, ArrowLeft, Period, ColonColon,
+		  Comma, Endline]
+	}
+
+	// i think it might be interesting to have this take from the current environment
+	// however, for the sake of makign sure this thing works, i wont for now
+	pub fn from_str(text: &str) -> Option<(Oper, usize)> {
+		let mut all_opers = Oper::_all_opers_but_other()
+			.iter()
+			.map(|oper| (*oper, oper.sigil()))
+			.collect::<Vec<_>>();
+
+		// you can make it `rsigil.cmp(lsigil)` for more efficiency, but this makes more sense to me.
+		all_opers.sort_by(|(_, lsigil), (_, rsigil)| lsigil.len().cmp(&rsigil.len()));
+		all_opers.reverse();
+
+		all_opers.into_iter()
+			.find(|(_, sigil)| text.starts_with(sigil))
+			.map(|(oper, sigil)| (oper, sigil.len()))
+	}
+
 	fn precedence(&self) -> Precedence {
 		match self {
 			Period
 			  | ColonColon    => Precedence::Period_ColonColon,
-			UnaryPos
+			Pos
 			  | BitNot
-			  | Not           => Precedence::UnaryPos_BitNot_Not,
+			  | Not           => Precedence::Pos_BitNot_Not,
 			Pow               => Precedence::Pow,
-			UnaryNeg          => Precedence::UnaryNeg,
+			Neg          => Precedence::Neg,
 			Mul
 			  | Div
 			  | Mod           => Precedence::Mul_Div_Mod,
@@ -96,9 +156,9 @@ impl Oper {
 		}
 	}
 
-	fn symbol(&self) -> &'static str {
+	fn sigil(&self) -> &'static str {
 		match self {
-			UnaryPos => "+@", UnaryNeg => "-@",
+			Pos => "+@", Neg => "-@",
 			Add => "+", Sub => "-", Mul => "*", Div => "/", Mod => "%", Pow => "**",
 			AddEq => "+=", SubEq => "-=", MulEq => "*=", DivEq => "/=", ModEq => "%=", PowEq => "**=",
 			BitShl => "<<", BitShr => ">>", BitAnd => "&", BitOr => "|", BitXor => "^", BitNot => "~",
@@ -107,17 +167,17 @@ impl Oper {
 			And => "and", Or => "or", Not => "not",
 			Assign => "=", ArrowRight => "->", ArrowLeft => "<-",
 			Period => ".", ColonColon => "::", Endline => ";", Comma => ",",
-			Other(_, _) => unreachable!("Shouldn't be calling `symbol` on a rustfn")
+			Other(_, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
 		}
 	}
 
 	fn call(&self, args: &[&Object]) -> Result {
 		macro_rules! arg {
-			($pos:expr) => (args.get($pos).ok_or_else(|| $crate::Error::MissingArgument{ func: self.symbol(), pos: $pos })?);
+			($pos:expr) => (args.get($pos).ok_or_else(|| $crate::Error::MissingArgument{ func: self.sigil(), pos: $pos })?);
 		}
 
 		match self {
-			UnaryPos | UnaryNeg | BitNot | Not => arg!(0).call_attr(self.symbol(), &[]),
+			Pos | Neg | BitNot | Not => arg!(0).call_attr(self.sigil(), &[]),
 			Add | Sub | Mul | Div | Mod | Pow
 				| AddEq | SubEq | MulEq | DivEq | ModEq | PowEq
 				| BitShl | BitShr | BitAnd | BitOr
@@ -125,19 +185,8 @@ impl Oper {
 				| Eql | Neq | Lth | Leq | Gth | Geq | Cmp
 				| And | Or
 				| Assign | ArrowRight | ArrowLeft
-				| Period | Comma | ColonColon | Endline => arg!(0).call_attr(self.symbol(), &[arg!(1)]),
+				| Period | Comma | ColonColon | Endline => arg!(0).call_attr(self.sigil(), &[arg!(1)]),
 			Other(_, func) => func.call(args)
-		}
-	}
-}
-
-
-impl Debug for Oper {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if f.alternate() {
-			write!(f, "Oper({:#})", self)
-		} else {
-			write!(f, "Oper({}", self)
 		}
 	}
 }
@@ -154,12 +203,39 @@ impl Ord for Oper {
 	}
 }
 
+impl Debug for Oper {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		if f.alternate() {
+			write!(f, "Oper({:#})", self)
+		} else {
+			write!(f, "Oper({})", self)
+		}
+	}
+}
+
 impl Display for Oper {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		if let Other(_, rustfn) = self {
 			Display::fmt(rustfn, f)
 		} else {
-			write!(f, "{}", self.symbol())
+			write!(f, "{}", self.sigil())
 		}
 	}
 }
+
+
+impl_typed_object!(Oper, new_oper, downcast_oper, is_oper);
+impl_quest_conversion!("@oper" (as_oper_obj is_oper) (into_oper downcast_oper) -> Oper);
+
+impl_type! { for Oper, downcast_fn=downcast_oper;
+	fn "@text" (this) {
+		this.sigil().to_string().into_object()
+	}
+
+	fn "()" (this) args {
+		this.call(args)?
+	}
+}
+
+
+

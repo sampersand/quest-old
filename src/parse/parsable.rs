@@ -4,6 +4,7 @@ mod forced_eof;
 mod comments;
 mod number;
 mod text;
+mod oper;
 
 use crate::{Shared, Object, Error};
 use crate::parse::Parser;
@@ -31,5 +32,6 @@ lazy_static! {
 		ParsableStruct::new::<comments::Comments>(),
 		ParsableStruct::new::<number::Number>(),
 		ParsableStruct::new::<text::Text>(),
+		ParsableStruct::new::<oper::Oper>(),
 	});
 }

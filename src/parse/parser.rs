@@ -59,12 +59,12 @@ impl AsRef<str> for Parser {
 
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
-	pub fn next_object(parser: Shared<Parser>) -> Option<Result> {
+	pub fn next_object(parser: &Shared<Parser>) -> Option<Result> {
 		trace!(target: "parse", "Beginning parse. stream={:?}", parser.read().as_ref());
 		let parsers = parser.read().parsers.clone();
-
+		println!("{:?}", crate::env::Environment::current());
 		for parsablefn in parsers.read().iter() {
-			match parsablefn.call(&parser) {
+			match parsablefn.call(parser) {
 				ParseResult::Restart => return Parser::next_object(parser),
 				ParseResult::Ok(object) => return Some(Ok(object)),
 				ParseResult::Err(err) => return Some(Err(err)),
@@ -73,7 +73,7 @@ impl Parser {
 			}
 		}
 
-		Some(Err(crate::Error::NothingParsableFound(parser)))
+		Some(Err(crate::Error::NothingParsableFound(parser.clone())))
 	}
 }
 

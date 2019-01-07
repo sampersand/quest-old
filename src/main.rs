@@ -5,6 +5,14 @@ fn main() {
     simple_logger::init().unwrap();
     let res = quest::parse::parse_file("code/test.qs");
     println!("{:?}", res);
+
+
+	// match env.execute_stream(stream).map_err(|err| err.to_string())? {
+	// 	Err(err) => println!("err: {:#?}", err),
+	// 	Ok(env) => env.stream.write().pop()
+	// }
+	
+	// Ok(())
 }
 
 
