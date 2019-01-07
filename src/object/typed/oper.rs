@@ -60,27 +60,14 @@ impl Oper {
 	// e.g. because `2 - 3 - 4` = `(2 - 3) - 4` it's right assoc
 	fn is_l_to_r_assoc(&self) -> bool {
 		match self {
+			Pos => false,
 			Pos | Neg | BitNot | Not | Pow | ArrowLeft => false,
 			Other(assoc, _, _) => *assoc,
 			_ => true
 		}
 	}
 
-	// this disallows users to change the `precedence` function to get the precedence of opers.
-	// that might change in the future
-	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
-		if self.is_unary_and_on_lhs() {
-			unimplemented!("TODO: unary opers");
-		}
-
-		let lhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
-			func: self.sigil(),
-			pos: 0,
-		})?;
-
-		trace!(target: "execute", "Oper={:?} found a lhs={:?}", self, lhs);
-
-
+	fn get_next_oper(&self, parser: &Shared<Parser>) -> ::std::result::Result<Option<Object>, Error> {
 		while let Some(mut object) = Parser::next_unevaluated_object(&parser).transpose()? {
 			trace!(target: "execute", "Oper={:?} received next object={:?}", self, object);
 
@@ -91,7 +78,6 @@ impl Oper {
 					parser.read().rollback(object); // ie rollback the oper
 					break;
 				} else {
-					println!("{:#?}, {:#?}, {:?}, {:?}, {},{}", self, oper, self.precedence(), oper.precedence(), self.is_l_to_r_assoc(), oper.is_l_to_r_assoc());
 					trace!(target: "execute", "Oper={:?} found an oper more tightly bound={:?}", self, oper);
 					object = oper.evaluate(parser)?;
 				}
@@ -101,11 +87,33 @@ impl Oper {
 			Environment::current().read().stack.write().push(object);
 		}
 
-		let rhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
+		Ok(Environment::current().read().stack.write().pop())
+	}
+
+	// this disallows users to change the `precedence` function to get the precedence of opers.
+	// that might change in the future
+	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
+		if self.is_unary_and_on_lhs() {
+			let rhs = self.get_next_oper(parser)?.ok_or_else(|| Error::MissingArgument {
+				func: self.sigil(),
+				pos: 0
+			})?;
+			trace!(target: "execute", "Oper={:?} found a rhs={:?}", self, rhs);
+			trace!(target: "execute", "Oper={:?} is executing ({:?})", self, rhs);
+			return self.call(&[&rhs]);
+		}
+
+		let lhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
+			func: self.sigil(),
+			pos: 0,
+		})?;
+
+		trace!(target: "execute", "Oper={:?} found a lhs={:?}", self, lhs);
+
+		let rhs = self.get_next_oper(parser)?.ok_or_else(|| Error::MissingArgument {
 			func: self.sigil(),
 			pos: 1
 		})?;
-
 		trace!(target: "execute", "Oper={:?} found a rhs={:?}", self, rhs);
 		trace!(target: "execute", "Oper={:?} is executing ({:?}, {:?})", self, lhs, rhs);
 		return self.call(&[&lhs, &rhs]);

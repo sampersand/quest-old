@@ -19,7 +19,7 @@ basic_map! {
 		this.duplicate()
 	}
 
-	fn ";" (@_this, rhs) {
+	fn ";" (@_this; rhs=Object::new_null()) {
 		rhs.clone()
 	}
 

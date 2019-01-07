@@ -126,6 +126,9 @@ impl_type! { for Number, downcast_fn=downcast_num;
 		this.to_string().into_object()
 	}
 
+	fn "-@" (this) { (-this.0.abs()).into_object() }
+	fn "+@" (this) { ( this.0.abs()).into_object() } // note this forced even negative numebrs to be positive
+
 	fn "+" (this, rhs) { binary_oper!(this + rhs) }
 	fn "-" (this, rhs) { binary_oper!(this - rhs) }
 	fn "*" (this, rhs) { binary_oper!(this * rhs) }
