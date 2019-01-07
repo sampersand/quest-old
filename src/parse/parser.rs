@@ -4,15 +4,15 @@ use std::{fs, io, sync::Mutex};
 use super::parsable::{BUILTIN_PARSERS, ParsableStruct};
 use crate::parse::{Parsable, ParseResult};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Parser {
 	data: String,
 	parsers: Shared<Vec<ParsableStruct>>,
 	loc: Location,
-	rollback: Mutex<Vec<Object>>
+	rollback: Shared<Vec<Object>>
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 struct Location {
 	source: Option<PathBuf>,
 	line: usize,
@@ -28,7 +28,7 @@ impl Parser {
 				..Location::default()
 			},
 			parsers: BUILTIN_PARSERS.clone(),
-			rollback: Mutex::new(Vec::new())
+			rollback: Shared::new(Vec::new())
 		})
 	}
 
@@ -37,7 +37,7 @@ impl Parser {
 			data,
 			loc: Location::default(),
 			parsers: BUILTIN_PARSERS.clone(),
-			rollback: Mutex::new(Vec::new())
+			rollback: Shared::new(Vec::new())
 		}
 	}
 
@@ -63,13 +63,13 @@ impl AsRef<str> for Parser {
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
 	pub fn rollback(&self, obj: Object) {
-		self.rollback.lock().expect("rollback poisoned").push(obj);
+		self.rollback.write().push(obj);
 	}
 
 	pub fn next_object(parser: &Shared<Parser>) -> Option<Result> {
 		{
 			let read = parser.read();
-			let mut rollback = read.rollback.lock().expect("rollback poisoned");
+			let mut rollback = read.rollback.write();
 			if let Some(obj) = rollback.pop() {
 				trace!(target: "parse", "'Parsed' rolled-back obj={:?}", obj);
 				return Some(Ok(obj));
@@ -87,7 +87,7 @@ impl Parser {
 		for parsablefn in parsers.read().iter() {
 			match parsablefn.call(parser) {
 				ParseResult::Restart => return Parser::next_object(parser),
-				ParseResult::Ok(object) => return Some(Ok(object)),
+				ParseResult::Ok(object) => return Some(object.handle(parser)),
 				ParseResult::Err(err) => return Some(Err(err)),
 				ParseResult::Eof => return None,
 				ParseResult::None => { /* do nothing */ }
@@ -99,13 +99,9 @@ impl Parser {
 }
 
 
+impl_typed_object!(Shared<Parser>, variant Parser, new_parser, downcast_parser, is_parser);
+impl_quest_conversion!("@parser" (as_parser_obj is_parser) (into_parser downcast_parser) -> Shared<Parser>);
 
-
-
-
-
-
-
-
-
-
+impl_type! { for Shared<Parser>, downcast_fn=downcast_parser;
+	// todo: stuff here
+}

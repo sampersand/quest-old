@@ -1,4 +1,4 @@
-mod basic;
+pub(crate) mod basic;
 mod pristine;
 
 mod boolean;
@@ -36,7 +36,7 @@ use std::fmt::Debug;
 
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
-enum Types {
+pub(crate) enum Types {
 	Null,
 	Boolean(Boolean),
 	Number(Number),
@@ -45,10 +45,11 @@ enum Types {
 	RustFn(RustFn),
 	List(List),
 	Map(Map),
-	Oper(Oper)
+	Oper(Oper),
+	Parser(Shared<crate::parse::Parser>),
 }
 
-trait Type : Into<Types> {
+pub(crate) trait Type : Into<Types> {
 	fn create_mapping() -> Shared<dyn Mapping>;
 }
 
@@ -56,12 +57,12 @@ trait Type : Into<Types> {
 #[derive(Clone)]//, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
 pub struct TypedObject {
-	data: Types,
+	pub(crate) data: Types,
 	map: Shared<dyn Mapping>
 }
 
 impl TypedObject {
-	fn new<T: Type>(obj: T) -> Self {
+	pub(crate) fn new<T: Type>(obj: T) -> Self {
 		TypedObject {
 			data: obj.into(),
 			map: T::create_mapping(),
@@ -85,6 +86,7 @@ impl Display for Types {
 			Types::List(ref list) => Display::fmt(list, f),
 			Types::Map(ref map) => Display::fmt(map, f),
 			Types::Oper(ref oper) => Display::fmt(oper, f),
+			Types::Parser(ref parse) => write!(f, "<parser>")
 		}
 	}
 }
@@ -102,6 +104,7 @@ impl Debug for Types {
 			Types::List(ref list) => Debug::fmt(list, f),
 			Types::Map(ref map) => Debug::fmt(map, f),
 			Types::Oper(ref oper) => Debug::fmt(oper, f),
+			Types::Parser(ref parser) => Debug::fmt(parser, f),
 		}
 	}
 }

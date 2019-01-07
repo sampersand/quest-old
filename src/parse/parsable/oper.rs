@@ -15,10 +15,7 @@ impl Parsable for Oper {
 			debug_assert_eq!(oper, Oper::from_str(&res).unwrap().0);
 			debug!(target: "parser", "Oper parsed. chars={:?}", res);
 
-			match oper.handle(parser) {
-				Err(err) => ParseResult::Err(err),
-				Ok(ok) =>  ParseResult::Ok(ok)
-			}
+			ParseResult::Ok(oper.into_object())
 		} else {
 			trace!(target: "parser", "No oper found. stream={:?}", parser.read().beginning());
 			ParseResult::None

@@ -1,5 +1,6 @@
 use crate::{Shared, Environment};
 use crate::err::{Error, Result};
+use crate::parse::Parser;
 use crate::collections::{Collection, Mapping};
 use super::IntoObject;
 
@@ -56,6 +57,10 @@ impl Object {
 
 	pub fn env(&self) -> &Shared<Environment> {
 		&self.0.env
+	}
+
+	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
+		self.call_attr("__parse__", &[&parser.clone().into_object()])
 	}
 
 	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {

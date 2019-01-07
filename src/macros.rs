@@ -53,12 +53,13 @@ macro_rules! impl_typed_conversion {
 	}
 }
 macro_rules! impl_typed_object {
-	($obj:ident, $new:ident, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj, $new, $downcast, $is); };
-	($obj:ident, _, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj,, $downcast, $is); };
-	(@; $obj:ident, $($new:ident)?, $downcast:ident, $is:ident) => {
+	($obj:ident, $new:ident, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj, $obj, $new, $downcast, $is); };
+	($obj:ident, _, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj, $obj,, $downcast, $is); };
+	($obj:ty, variant $var:ident, $new:ident, $downcast:ident, $is:ident) => { impl_typed_object!(@; $obj, $var, $new, $downcast, $is); };
+	(@; $obj:ty, $var:ident, $($new:ident)?, $downcast:ident, $is:ident) => {
 		impl From<$obj> for $crate::object::typed::Types {
 			fn from(val: $obj) -> Self {
-				$crate::object::typed::Types::$obj(val)
+				$crate::object::typed::Types::$var(val)
 			}
 		}
 
@@ -78,7 +79,7 @@ macro_rules! impl_typed_object {
 			)?
 
 			pub fn $downcast(&self) -> Option<&$obj> {
-				if let $crate::object::typed::Types::$obj(ref val) = self.data {
+				if let $crate::object::typed::Types::$var(ref val) = self.data {
 					Some(val)
 				} else {
 					None
