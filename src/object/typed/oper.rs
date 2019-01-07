@@ -57,26 +57,49 @@ impl Oper {
 		}
 	}
 
+	// this disallows users to change the `precedence` function to get the precedence of opers.
+	// that might change in the future
 	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
 		if self.is_unary_and_on_lhs() {
 			unimplemented!("TODO: unary opers");
 		}
-
-		println!("{:?}", &*Environment::current().read().stack.read());
-
 
 		let lhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
 			func: self.sigil(),
 			pos: 0,
 		})?;
 
+		trace!(target: "execute", "Oper={:?} found a lhs={:?}", self, lhs);
 
-		let rhs = Parser::next_object(parser).unwrap_or_else(|| Err(Error::MissingArgument {
+
+		while let Some(mut object) = Parser::next_object(&parser).transpose()? {
+			trace!(target: "execute", "Oper={:?} received next object={:?}", self, object);
+
+			if let Some(oper) = object.downcast_oper() {
+				if self > &oper || (self >= &oper && /* is (r/l?) associative*/ false) {
+					trace!(target: "execute", "Oper={:?} found an oper more tightly bound={:?}", self, oper);
+					object = oper.handle(parser)?;
+				} else {
+					trace!(target: "execute", "Oper={:?} found a less-tightly-bound oper={:?}", self, oper);
+					drop(oper);
+					parser.read().rollback(object); // ie rollback the oper
+					break;
+				}
+			}
+
+			Environment::current().read().stack.write().push(object);
+		}
+
+		let rhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
 			func: self.sigil(),
 			pos: 1
-		}))?;
+		})?;
 
-		self.call(&[&lhs, &rhs])
+		trace!(target: "execute", "Oper={:?} found a rhs={:?}", self, rhs);
+		trace!(target: "execute", "Oper={:?} is executing ({:?}, {:?})", self, lhs, rhs);
+		return self.call(&[&lhs, &rhs]);
+
+		// Err(Error::ParserError { msg: "No rhs found for oper", parser: parser.clone() })
 	}
 }
 

@@ -38,7 +38,7 @@ impl Object {
 			env
 		}));
 
-		debug!(target: "creation", "Created object {:?}", obj);
+		trace!(target: "creation", "Created object {:?}", obj);
 		obj
 	}
 

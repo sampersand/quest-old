@@ -1,6 +1,6 @@
 use crate::{Object, Shared, Result};
 use std::path::{Path, PathBuf};
-use std::{fs, io};
+use std::{fs, io, sync::Mutex};
 use super::parsable::{BUILTIN_PARSERS, ParsableStruct};
 use crate::parse::{Parsable, ParseResult};
 
@@ -9,6 +9,7 @@ pub struct Parser {
 	data: String,
 	parsers: Shared<Vec<ParsableStruct>>,
 	loc: Location,
+	rollback: Mutex<Vec<Object>>
 }
 
 #[derive(Debug, Default)]
@@ -26,7 +27,8 @@ impl Parser {
 				source: Some(path.to_owned()),
 				..Location::default()
 			},
-			parsers: BUILTIN_PARSERS.clone()
+			parsers: BUILTIN_PARSERS.clone(),
+			rollback: Mutex::new(Vec::new())
 		})
 	}
 
@@ -34,7 +36,8 @@ impl Parser {
 		Parser {
 			data,
 			loc: Location::default(),
-			parsers: BUILTIN_PARSERS.clone()
+			parsers: BUILTIN_PARSERS.clone(),
+			rollback: Mutex::new(Vec::new())
 		}
 	}
 
@@ -59,10 +62,28 @@ impl AsRef<str> for Parser {
 
 // not using `Iterator` in case i want to modify it to return `Result` in the future
 impl Parser {
+	pub fn rollback(&self, obj: Object) {
+		self.rollback.lock().expect("rollback poisoned").push(obj);
+	}
+
 	pub fn next_object(parser: &Shared<Parser>) -> Option<Result> {
+		{
+			let read = parser.read();
+			let mut rollback = read.rollback.lock().expect("rollback poisoned");
+			if let Some(obj) = rollback.pop() {
+				trace!(target: "parse", "'Parsed' rolled-back obj={:?}", obj);
+				return Some(Ok(obj));
+			}
+		}
+
+		if parser.read().data.is_empty() {
+			return None;
+		}
+
 		trace!(target: "parse", "Beginning parse. stream={:?}", parser.read().as_ref());
+
 		let parsers = parser.read().parsers.clone();
-		println!("{:?}", crate::env::Environment::current());
+
 		for parsablefn in parsers.read().iter() {
 			match parsablefn.call(parser) {
 				ParseResult::Restart => return Parser::next_object(parser),

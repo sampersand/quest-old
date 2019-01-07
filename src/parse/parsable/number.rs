@@ -10,7 +10,7 @@ impl Parsable for Number {
 
 		if let Some((number, index)) = number {
 			let mut parser = parser.write();
-			let res = parser.advance(index);
+			let res = parser.advance(index-1);
 			debug_assert_eq!(number, Number::from_str(&res).unwrap().0);
 			debug!(target: "parser", "Number parsed. chars={:?}", res);
 			ParseResult::Ok(number.into_object())

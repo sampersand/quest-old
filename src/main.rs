@@ -2,7 +2,7 @@
 use quest::*;
 
 fn main() {
-    simple_logger::init().unwrap();
+    env_logger::init();
     let res = quest::parse::parse_file("code/test.qs");
     println!("{:?}", res);
 

@@ -39,7 +39,7 @@ impl Environment {
 		let old_env = Environment::set_current(env);
 
 		while let Some(object) = Parser::next_object(&parser).transpose()? {
-			trace!(target: "execute", "received next object");
+			trace!(target: "execute", "Env received next object: {:?}", object);
 			 Environment::current().read().stack.write().push(object);
 		}
 

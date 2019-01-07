@@ -22,7 +22,7 @@ impl Clone for ParentalObject {
 
 impl ParentalObject {
 	pub fn new(parent: InitFunc) -> ParentalObject {
-		trace!("Creating a new uninitialized ParentalObject for {:p}", parent as *const ());
+		trace!(target: "creation", "Creating a new uninitialized ParentalObject for {:p}", parent as *const ());
 		ParentalObject {
 			inner: RwLock::new(None),
 			func: parent
@@ -30,7 +30,7 @@ impl ParentalObject {
 	}
 
 	pub fn new_initialized(parent: Object) -> ParentalObject {
-		trace!("Creating a new initialized ParentalObject for {:?}", parent);
+		trace!(target: "creation", "Creating a new initialized ParentalObject for {:?}", parent);
 		ParentalObject {
 			inner: RwLock::new(Some(parent)),
 			func: || unreachable!("Attempted to create a parent that already exists")
@@ -45,7 +45,7 @@ impl ParentalObject {
 			drop(inner);
 			let mut inner = self.inner.write().expect("poisoned parental object write");
 			if inner.is_none() { // in case it was created after we reacquired
-				debug!("Initialized ParentalObject {:p}", self as *const _);
+				trace!(target: "creation", "Initialized ParentalObject {:p}", self as *const _);
 				*inner = Some((self.func)());
 			}
 			func(inner.as_ref().unwrap())
