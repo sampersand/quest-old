@@ -3,6 +3,7 @@ mod whitespace;
 mod forced_eof;
 mod comments;
 mod number;
+mod variable;
 mod text;
 mod oper;
 
@@ -33,5 +34,6 @@ lazy_static! {
 		ParsableStruct::new::<number::Number>(),
 		ParsableStruct::new::<text::Text>(),
 		ParsableStruct::new::<oper::Oper>(),
+		ParsableStruct::new::<variable::Variable>(),
 	});
 }

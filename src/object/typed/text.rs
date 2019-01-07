@@ -42,7 +42,7 @@ impl_type! { for Text, downcast_fn=downcast_text;
 	}
 
 	fn "@num" (this) {
-		super::Number::from_str(&this.0)
+		super::Number::parse(&this.0)
 			.map(|(num, _)| num.into_object())
 			.unwrap_or_else(Object::new_null)
 	}

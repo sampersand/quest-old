@@ -39,6 +39,43 @@ impl Variable {
 	pub fn into_inner(self) -> &'static str {
 		self.0
 	}
+
+	pub fn parse(text: &str) -> Option<(Variable, usize)> {
+		let mut chars = text.chars();
+		let mut count = 1;
+		match chars.next()? {
+			'`' => {
+				let mut string = String::new();
+				loop {
+					count += 1;
+					match chars.next().expect("No ending '`' found!! (todo: make this an Err)") {
+						'\\' => {
+							string.push(chars.next().expect("bad `\\` encountered; todo: make this an Err"));
+							count += 1;
+						},
+						'`' => break,
+						other => string.push(other)
+					}
+				}
+
+				Some((Variable::from_string(string), count))
+			},
+			chr if chr.is_alphabetic() || chr == '_' => {
+				let mut string = String::with_capacity(1);
+				string.push(chr);
+				for chr in chars {
+					if chr.is_alphanumeric() || chr == '_' {
+						count += 1;
+						string.push(chr);
+					} else {
+						break
+					}
+				}
+				Some((Variable::from_string(string), count))
+			},
+			_ => None
+		}
+	}
 }
 
 impl Debug for Variable {

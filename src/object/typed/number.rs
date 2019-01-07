@@ -18,7 +18,7 @@ impl Number {
 		Number((self.0 as u64) as f64)
 	}
 
-	pub fn from_str(mut text: &str) -> Option<(Number, usize)> {
+	pub fn parse(mut text: &str) -> Option<(Number, usize)> {
 		// for now, this can only parse whole numbers. also, no hexadecimal or stuff
 		const RADIX: u32 = 10;
 
@@ -30,6 +30,10 @@ impl Number {
 			if let Some(digit) = chr.to_digit(RADIX) {
 				number = number * RADIX + digit;
 				count += 1;
+			} else if chr == '_' {
+				continue;
+			} else if chr.is_alphabetic() {
+				panic!("invalid number ending found found ({:?}); todo: make this an error", chr)
 			} else {
 				break;
 			}

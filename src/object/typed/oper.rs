@@ -135,7 +135,7 @@ impl Oper {
 
 	// i think it might be interesting to have this take from the current environment
 	// however, for the sake of makign sure this thing works, i wont for now
-	pub fn from_str(text: &str) -> Option<(Oper, usize)> {
+	pub fn parse(text: &str) -> Option<(Oper, usize)> {
 		let mut all_opers = Oper::_all_opers_but_other()
 			.iter()
 			.map(|oper| (*oper, oper.sigil()))

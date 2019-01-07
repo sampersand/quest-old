@@ -8,13 +8,12 @@ pub use crate::object::typed::Oper;
 impl Parsable for Oper {
 	const NAME: &'static str = "Oper";
 	fn try_parse(parser: &Shared<Parser>) -> ParseResult {
-		let oper = Oper::from_str(parser.read().as_ref());
+		let oper = Oper::parse(parser.read().as_ref());
 
 		if let Some((oper, index)) = oper {
 			let res = parser.write().advance(index-1);
-			debug_assert_eq!(oper, Oper::from_str(&res).unwrap().0);
+			debug_assert_eq!(oper, Oper::parse(&res).unwrap().0);
 			debug!(target: "parser", "Oper parsed. chars={:?}", res);
-
 			ParseResult::Ok(oper.into_object())
 		} else {
 			trace!(target: "parser", "No oper found. stream={:?}", parser.read().beginning());
