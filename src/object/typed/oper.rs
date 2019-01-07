@@ -20,7 +20,7 @@ pub enum Oper {
 	Assign, ArrowRight, ArrowLeft,
 	Period, ColonColon, Comma, Endline,
 
-	Other(Precedence, RustFn)
+	Other(bool, Precedence, RustFn) // bool is whether or not is_l_to_r_assoc; `+` is true
 }
 
 use self::Oper::*;
@@ -57,6 +57,15 @@ impl Oper {
 		}
 	}
 
+	// e.g. because `2 - 3 - 4` = `(2 - 3) - 4` it's right assoc
+	fn is_l_to_r_assoc(&self) -> bool {
+		match self {
+			Pos | Neg | BitNot | Not | Pow | ArrowLeft => false,
+			Other(assoc, _, _) => *assoc,
+			_ => true
+		}
+	}
+
 	// this disallows users to change the `precedence` function to get the precedence of opers.
 	// that might change in the future
 	pub fn handle(&self, parser: &Shared<Parser>) -> Result {
@@ -75,15 +84,15 @@ impl Oper {
 		while let Some(mut object) = Parser::next_object(&parser).transpose()? {
 			trace!(target: "execute", "Oper={:?} received next object={:?}", self, object);
 
-			if let Some(oper) = object.downcast_oper() {
-				if self > &oper || (self >= &oper && /* is (r/l?) associative*/ false) {
-					trace!(target: "execute", "Oper={:?} found an oper more tightly bound={:?}", self, oper);
-					object = oper.handle(parser)?;
-				} else {
+			if let Some(ref oper) = object.downcast_oper() {
+				if self < oper || (self == oper && self.is_l_to_r_assoc()) {
 					trace!(target: "execute", "Oper={:?} found a less-tightly-bound oper={:?}", self, oper);
 					drop(oper);
 					parser.read().rollback(object); // ie rollback the oper
 					break;
+				} else {
+					trace!(target: "execute", "Oper={:?} found an oper more tightly bound={:?}", self, oper);
+					object = oper.handle(parser)?;
 				}
 			}
 
@@ -175,7 +184,7 @@ impl Oper {
 			  | BitXorEq      => Precedence::CompoundAssignment,
 			Comma             => Precedence::Comma,
 			Endline           => Precedence::Endline,
-			Other(prec, _)    => *prec
+			Other(_, prec, _)    => *prec
 		}
 	}
 
@@ -190,7 +199,7 @@ impl Oper {
 			And => "and", Or => "or", Not => "not",
 			Assign => "=", ArrowRight => "->", ArrowLeft => "<-",
 			Period => ".", ColonColon => "::", Endline => ";", Comma => ",",
-			Other(_, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
+			Other(_, _, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
 		}
 	}
 
@@ -209,7 +218,7 @@ impl Oper {
 				| And | Or
 				| Assign | ArrowRight | ArrowLeft
 				| Period | Comma | ColonColon | Endline => arg!(0).call_attr(self.sigil(), &[arg!(1)]),
-			Other(_, func) => func.call(args)
+			Other(_, _, func) => func.call(args)
 		}
 	}
 }
@@ -238,7 +247,7 @@ impl Debug for Oper {
 
 impl Display for Oper {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if let Other(_, rustfn) = self {
+		if let Other(_, _, rustfn) = self {
 			Display::fmt(rustfn, f)
 		} else {
 			write!(f, "{}", self.sigil())
