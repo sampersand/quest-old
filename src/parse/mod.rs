@@ -16,9 +16,15 @@ pub fn parse_str<T: Into<String>>(text: T) -> Result {
 	parse(Parser::from_str(text.into()))
 }
 
+
+
 fn parse(parser: Parser) -> Result {
 	use crate::{Environment, Shared, Object};
-	Environment::execute(
+	let env = Environment::execute(
 		Environment::_new_default_with_stream(Shared::new(parser))
-	)?.read().stack.write().pop().ok_or_else(|| Error::NothingToReturn)
+	)?;
+	println!("{:#?}", env);
+	let res = env.read().stack.write().pop().ok_or_else(|| Error::NothingToReturn);
+	drop(env);
+	res
 }

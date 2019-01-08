@@ -19,8 +19,8 @@ basic_map! {
 		this.duplicate()
 	}
 
-	fn ";" (@_this; rhs=Object::new_null()) {
-		rhs.clone()
+	fn ";" (@_this) {
+		return Err(crate::Error::NothingToReturn)
 	}
 
 	fn "@bool" (_) {
@@ -45,8 +45,8 @@ basic_map! {
 		   .call_attr("!", &[])?
 	}
 
-	fn "!" (@this) {
-		this.as_bool_obj()?.call_attr("!", &[])?
+	fn "not" (@this) {
+		this.as_bool_obj()?.call_attr("not", &[])?
 	}
 
 	fn "and" (@lhs, rhs) {

@@ -6,6 +6,7 @@ mod number;
 mod variable;
 mod text;
 mod oper;
+mod block;
 
 use crate::{Shared, Object, Error};
 use crate::parse::Parser;
@@ -35,5 +36,6 @@ lazy_static! {
 		ParsableStruct::new::<text::Text>(),
 		ParsableStruct::new::<oper::Oper>(),
 		ParsableStruct::new::<variable::Variable>(),
+		ParsableStruct::new::<block::Block>(),
 	});
 }

@@ -38,10 +38,20 @@ impl Environment {
 		let mut parser = env.read().parser.clone();
 		let old_env = Environment::set_current(env);
 
-		while let Some(object) = Parser::next_unevaluated_object(&parser).transpose()? {
-			let object = object.evaluate(&parser)?;
-			trace!(target: "execute", "Env received next object: {:?}", object);
-			Environment::current().read().stack.write().push(object);
+		loop {
+			match Parser::next_unevaluated_object(&parser).transpose() {
+				Err(crate::Error::NothingToReturn) => continue,
+				Err(err) => return Err(err),
+				Ok(Some(object)) => match object.evaluate(&parser) {
+					Err(crate::Error::NothingToReturn) => continue,
+					Err(err) => return Err(err),
+					Ok(object) => {
+						trace!(target: "execute", "Env received next object: {:?}", object);
+						Environment::current().read().stack.write().push(object);
+					}
+				},
+				Ok(None) => break
+			}
 		}
 
 		Ok(Environment::set_current(old_env))

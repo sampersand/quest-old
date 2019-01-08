@@ -20,7 +20,17 @@ pub enum Oper {
 	Assign, ArrowRight, ArrowLeft,
 	Period, ColonColon, Comma, Endline,
 
-	Other(bool, Precedence, RustFn) // bool is whether or not is_l_to_r_assoc; `+` is true
+	Execute, // this is temporary
+	Other(Arity, Precedence, RustFn) // bool is whether or not is_l_to_r_assoc; `+` is true
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Arity {
+	Nonary,
+	UnaryOnL,
+	UnaryOnR,
+	BinaryLtoR,
+	BinaryRtoL
 }
 
 use self::Oper::*;
@@ -49,30 +59,23 @@ pub enum Precedence {
 }
 
 impl Oper {
-	// ie `~x`
-	fn is_unary_and_on_lhs(&self) -> bool {
+	fn arity(&self) -> Arity {
 		match self {
-			Pos | Neg | BitNot | Not => true,
-			_ => false
-		}
-	}
-
-	// e.g. because `2 - 3 - 4` = `(2 - 3) - 4` it's right assoc
-	fn is_l_to_r_assoc(&self) -> bool {
-		match self {
-			Pos => false,
-			Pos | Neg | BitNot | Not | Pow | ArrowLeft => false,
+			Pos | Neg | BitNot | Not => Arity::UnaryOnL,
+			Endline | Execute => Arity::UnaryOnR,
+			Comma => Arity::Nonary,
+			Pow | Assign | ArrowRight => Arity::BinaryRtoL,
 			Other(assoc, _, _) => *assoc,
-			_ => true
+			_ => Arity::BinaryLtoR
 		}
 	}
 
-	fn get_next_oper(&self, parser: &Shared<Parser>) -> ::std::result::Result<Option<Object>, Error> {
+	fn get_net_obj(&self, parser: &Shared<Parser>) -> ::std::result::Result<Option<Object>, Error> {
 		while let Some(mut object) = Parser::next_unevaluated_object(&parser).transpose()? {
 			trace!(target: "execute", "Oper={:?} received next object={:?}", self, object);
 
 			if let Some(ref oper) = object.downcast_oper() {
-				if self < oper || (self <= oper && self.is_l_to_r_assoc()) {
+				if self < oper || (self <= oper && self.arity() == Arity::BinaryLtoR) {
 					trace!(target: "execute", "Oper={:?} found a less-tightly-bound oper={:?}", self, oper);
 					drop(oper);
 					parser.read().rollback(object); // ie rollback the oper
@@ -93,32 +96,54 @@ impl Oper {
 	// this disallows users to change the `precedence` function to get the precedence of opers.
 	// that might change in the future
 	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
-		if self.is_unary_and_on_lhs() {
-			let rhs = self.get_next_oper(parser)?.ok_or_else(|| Error::MissingArgument {
-				func: self.sigil(),
-				pos: 0
-			})?;
-			trace!(target: "execute", "Oper={:?} found a rhs={:?}", self, rhs);
-			trace!(target: "execute", "Oper={:?} is executing ({:?})", self, rhs);
-			return self.call(&[&rhs]);
+		macro_rules! pop_stack {
+			(err_pos=$err_pos:expr) => {
+				Environment::current().read()
+					.stack.write()
+					.pop().ok_or_else(|| Error::MissingArgument {
+						func: self.sigil(),
+						pos: $err_pos
+					})?
+			}
 		}
 
-		let lhs = Environment::current().read().stack.write().pop().ok_or_else(|| Error::MissingArgument {
-			func: self.sigil(),
-			pos: 0,
-		})?;
+		macro_rules! next_object {
+			(err_pos=$err_pos:expr) => {
+				self.get_net_obj(parser)?
+					.ok_or_else(|| Error::MissingArgument {
+						func: self.sigil(),
+						pos: $err_pos
+					})?
+			}
+		}
 
-		trace!(target: "execute", "Oper={:?} found a lhs={:?}", self, lhs);
+		match self.arity() {
+			Arity::Nonary => {
+				trace!(target: "execute", "Oper={:?} is executing []", self);
+				self.call(&[])
+			},
 
-		let rhs = self.get_next_oper(parser)?.ok_or_else(|| Error::MissingArgument {
-			func: self.sigil(),
-			pos: 1
-		})?;
-		trace!(target: "execute", "Oper={:?} found a rhs={:?}", self, rhs);
-		trace!(target: "execute", "Oper={:?} is executing ({:?}, {:?})", self, lhs, rhs);
-		return self.call(&[&lhs, &rhs]);
+			Arity::UnaryOnR => {
+				let lhs = pop_stack!(err_pos=0);
+				trace!(target: "execute", "Oper={:?} found lhs={:?}", self, lhs);
+				trace!(target: "execute", "Oper={:?} is executing [{:?}]", self, lhs);
+				self.call(&[&lhs])
+			},
+			Arity::UnaryOnL => {
+				let rhs = next_object!(err_pos=0);
+				trace!(target: "execute", "Oper={:?} found rhs={:?}", self, rhs);
+				trace!(target: "execute", "Oper={:?} is executing [{:?}]", self, rhs);
+				self.call(&[&rhs])
+			},
+			Arity::BinaryLtoR | Arity::BinaryRtoL => {
+				let lhs = pop_stack!(err_pos=0);
+				let rhs = next_object!(err_pos=1);
 
-		// Err(Error::ParserError { msg: "No rhs found for oper", parser: parser.clone() })
+				trace!(target: "execute", "Oper={:?} found lhs={:?}, rhs={:?}", self, lhs, rhs);
+				trace!(target: "execute", "Oper={:?} is executing [{:?}, {:?}]", self, lhs, rhs);
+				self.call(&[&lhs, &rhs])
+			}
+		}
 	}
 }
 
@@ -130,7 +155,7 @@ impl Oper {
 		  BitShlEq, BitShrEq, BitAndEq, BitOrEq, BitXorEq,
 		  Eql, Neq, Lth, Leq, Gth, Geq, Cmp, And, Or, Not,
 		  Assign, ArrowRight, ArrowLeft, Period, ColonColon,
-		  Comma, Endline]
+		  Comma, Endline, Execute]
 	}
 
 	// i think it might be interesting to have this take from the current environment
@@ -152,6 +177,7 @@ impl Oper {
 
 	fn precedence(&self) -> Precedence {
 		match self {
+			Execute => Precedence::Pos_BitNot_Not,
 			Period
 			  | ColonColon    => Precedence::Period_ColonColon,
 			Pos
@@ -200,6 +226,7 @@ impl Oper {
 
 	fn sigil(&self) -> &'static str {
 		match self {
+			Execute => "!",
 			Pos => "+@", Neg => "-@",
 			Add => "+", Sub => "-", Mul => "*", Div => "/", Mod => "%", Pow => "**",
 			AddEq => "+=", SubEq => "-=", MulEq => "*=", DivEq => "/=", ModEq => "%=", PowEq => "**=",
@@ -207,7 +234,7 @@ impl Oper {
 			BitShlEq => "<<=", BitShrEq => ">>=", BitAndEq => "&=", BitOrEq => "|=", BitXorEq => "^=",
 			Eql => "==", Lth => "<", Gth => ">", Cmp => "<=>", Neq => "!=", Leq => "<=", Geq => ">=",
 			And => "and", Or => "or", Not => "not",
-			Assign => "=", ArrowRight => "->", ArrowLeft => "<-",
+			Assign => "=", ArrowRight => "()", ArrowLeft => "<-",
 			Period => ".", ColonColon => "::", Endline => ";", Comma => ",",
 			Other(_, _, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
 		}
@@ -218,17 +245,14 @@ impl Oper {
 			($pos:expr) => (args.get($pos).ok_or_else(|| $crate::Error::MissingArgument{ func: self.sigil(), pos: $pos })?);
 		}
 
-		match self {
-			Pos | Neg | BitNot | Not => arg!(0).call_attr(self.sigil(), &[]),
-			Add | Sub | Mul | Div | Mod | Pow
-				| AddEq | SubEq | MulEq | DivEq | ModEq | PowEq
-				| BitShl | BitShr | BitAnd | BitOr
-				| BitXor | BitShlEq | BitShrEq | BitAndEq | BitOrEq | BitXorEq 
-				| Eql | Neq | Lth | Leq | Gth | Geq | Cmp
-				| And | Or
-				| Assign | ArrowRight | ArrowLeft
-				| Period | Comma | ColonColon | Endline => arg!(0).call_attr(self.sigil(), &[arg!(1)]),
-			Other(_, _, func) => func.call(args)
+		if *self == Execute {
+			return arg!(0).call_attr("()", &[]);
+		}
+
+		match self.arity() {
+			Arity::Nonary => Err(Error::NothingToReturn) /* don't do anything */,
+			Arity::UnaryOnL | Arity::UnaryOnR => arg!(0).call_attr(self.sigil(), &[]),
+			Arity::BinaryLtoR | Arity::BinaryRtoL => arg!(0).call_attr(self.sigil(), &[arg!(1)])
 		}
 	}
 }

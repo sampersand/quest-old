@@ -10,6 +10,7 @@ mod rustfn;
 mod list;
 mod map;
 mod oper;
+mod block;
 
 pub use self::{
 	boolean::Boolean,
@@ -20,7 +21,8 @@ pub use self::{
 	rustfn::RustFn,
 	list::List,
 	map::Map,
-	oper::Oper
+	oper::Oper,
+	block::Block,
 };
 
 pub(crate) use self::pristine::PRISTINE_MAP;
@@ -47,6 +49,7 @@ pub(crate) enum Types {
 	Map(Map),
 	Oper(Oper),
 	Parser(Shared<crate::parse::Parser>),
+	Block(Block),
 }
 
 pub(crate) trait Type : Into<Types> {
@@ -86,7 +89,8 @@ impl Display for Types {
 			Types::List(ref list) => Display::fmt(list, f),
 			Types::Map(ref map) => Display::fmt(map, f),
 			Types::Oper(ref oper) => Display::fmt(oper, f),
-			Types::Parser(ref parse) => write!(f, "<parser>")
+			Types::Parser(_) => write!(f, "<parser>"),
+			Types::Block(ref block) => Display::fmt(block, f),
 		}
 	}
 }
@@ -105,6 +109,7 @@ impl Debug for Types {
 			Types::Map(ref map) => Debug::fmt(map, f),
 			Types::Oper(ref oper) => Debug::fmt(oper, f),
 			Types::Parser(ref parser) => Debug::fmt(parser, f),
+			Types::Block(ref block) => Debug::fmt(block, f),
 		}
 	}
 }

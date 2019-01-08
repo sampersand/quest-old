@@ -48,7 +48,7 @@ impl_type! { for Boolean, downcast_fn=downcast_bool;
 		(this == rhs.into_bool()?).into_object()
 	}
 
-	fn "!" (this) {
+	fn "not" (this) {
 		(!this.0).into_object()
 	}
 
