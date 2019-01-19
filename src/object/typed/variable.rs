@@ -41,7 +41,7 @@ impl Variable {
 	}
 
 	pub fn from_str(text: &str) -> Option<Result<(Variable, usize), Error>> {
-		const fn is_varchar(c: char) -> bool {
+		fn is_varchar(c: char) -> bool {
 			c.is_alphanumeric() || c == '_'
 		}
 
