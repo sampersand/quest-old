@@ -13,7 +13,7 @@ macro_rules! impl_quest_conversion {
 					.ok_or_else(|| $crate::Error::ConversionFailure { func: $func, obj: self.clone() })
 			}
 
-			pub fn $as_fn_obj(&self) -> $crate::Result {
+			pub fn $as_fn_obj(&self) -> $crate::Result<$crate::Object> {
 				let obj = self.call_attr($func, &[])?;
 				if obj.$is() {
 					Ok(obj)

@@ -1,6 +1,6 @@
 pub mod builtins;
 
-use crate::{Shared, Object, parse::Parser};
+use crate::{Shared, Object, Result, parse::Parser};
 use crate::collections::{Collection, Mapping, Listing};
 use std::fmt::{self, Display, Formatter};
 use std::{mem, sync::RwLock};
@@ -33,7 +33,7 @@ impl Environment {
 		})
 	}
 
-	pub fn execute(env: Shared<Environment>) -> Result<Shared<Environment>, crate::Error> {
+	pub fn execute(env: Shared<Environment>) -> Result<Shared<Environment>> {
 		trace!(target: "execute", "Starting to execute");
 		let mut parser = env.read().parser.clone();
 		let old_env = Environment::set_current(env);

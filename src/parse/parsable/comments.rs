@@ -1,11 +1,11 @@
-use crate::{Shared, Error};
-use crate::parse::{Parsable, ParseResult, Parser};
+use crate::{Shared, Error, Object};
+use crate::parse::{self, Parsable, Parser};
 
 pub(super) struct Comments; 
 
 impl Parsable for Comments {
 	const NAME: &'static str = "Comments";
-	fn try_parse(parser: &Shared<Parser>) -> ParseResult {
+	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let (single, multi) = {
 			let parser_read = parser.read();
 			let data = parser_read.as_ref();
@@ -25,10 +25,10 @@ impl Parsable for Comments {
 				debug_assert!(comment.starts_with("//") || comment.starts_with("#"));
 				debug_assert!(comment.ends_with('\n'));
 				debug!(target: "parser", "Single-line comment parsed. chars={:?}", comment);
-				ParseResult::Restart
+				parse::Result::Restart
 			} else {
 				debug!(target: "parser", "Single-line comment until EOF parsed. chars={:?}", parser.as_ref());
-				ParseResult::Eof
+				parse::Result::Eof
 			}
 		} else if multi {
 			let mut parser = parser.write();
@@ -39,14 +39,14 @@ impl Parsable for Comments {
 				debug_assert!(comment.ends_with("*/"));
 				debug_assert!(comment.len() >= 4);
 				debug!(target: "parser", "Multi-line comment parsed. chars={:?}", comment);
-				ParseResult::Restart
+				parse::Result::Restart
 			} else {
 				warn!(target: "parser", "No ending `*/` found for multiline comment. data={:?}", parser.beginning());
-				ParseResult::Eof
+				parse::Result::Eof
 			}
 		} else {
 			trace!(target: "parser", "No comment found. stream={:?}", parser.read().beginning());
-			ParseResult::None
+			parse::Result::None
 		}
 	}
 }

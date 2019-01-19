@@ -1,9 +1,9 @@
 use std::fmt::{self, Debug, Formatter};
-use crate::{Shared, Result};
-use crate::parse::{Parser, Parsable, ParseResult};
+use crate::{Shared, Result, Object};
+use crate::parse::{self, Parser, Parsable};
 
 #[derive(Clone, Copy)]
-pub struct ParsableStruct(&'static str, fn(&Shared<Parser>) -> ParseResult);
+pub struct ParsableStruct(&'static str, fn(&Shared<Parser>) -> parse::Result<Object>);
 
 
 impl Eq for ParsableStruct {}
@@ -29,7 +29,7 @@ impl ParsableStruct {
 		ParsableStruct(T::NAME, T::try_parse)
 	}
 
-	pub fn call(&self, parser: &Shared<Parser>) -> ParseResult {
+	pub fn call(&self, parser: &Shared<Parser>) -> parse::Result<Object> {
 		(self.1)(parser)
 	}
 }

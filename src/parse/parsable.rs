@@ -9,20 +9,12 @@ mod oper;
 mod block;
 
 use crate::{Shared, Object, Error};
-use crate::parse::Parser;
+use crate::parse::{self, Parser};
 use lazy_static::lazy_static;
 
 pub trait Parsable {
 	const NAME: &'static str;
-	fn try_parse(parser: &Shared<Parser>) -> ParseResult;
-}
-
-pub enum ParseResult {
-	Restart, // for things like whitespace and comments
-	Ok(Object),
-	Err(Error),
-	Eof, // for things like __END__
-	None
+	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object>;
 }
 
 pub use self::r#struct::ParsableStruct;

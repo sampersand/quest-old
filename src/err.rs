@@ -27,4 +27,5 @@ pub enum Error {
 	NothingToReturn
 }
 
-pub type Result = ::std::result::Result<Object, Error>;
+pub type Result<T> = ::std::result::Result<T, Error>;
+pub type ObjResult = Result<Object>;

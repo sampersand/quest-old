@@ -1,11 +1,11 @@
-use crate::Shared;
-use crate::parse::{Parsable, ParseResult, Parser};
+use crate::{Shared, Object};
+use crate::parse::{self, Parsable, Parser};
 
 pub(super) struct Whitespace; 
 
 impl Parsable for Whitespace {
 	const NAME: &'static str = "Whitespace";
-	fn try_parse(parser: &Shared<Parser>) -> ParseResult {
+	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let mut idx = None;
 		
 		for (i, c) in parser.read().as_ref().chars().enumerate() {
@@ -20,10 +20,10 @@ impl Parsable for Whitespace {
 			let whitespace = parser.write().advance(index); // ignore whatever whitespace we had
 			debug_assert!(whitespace.chars().all(char::is_whitespace), "invalid whitespace parsed: {:?}", whitespace);
 			debug!(target: "parser", "Whitespace parsed. chars={:?}", whitespace);
-			ParseResult::Restart
+			parse::Result::Restart
 		} else {
 			trace!(target: "parser", "No whitespace found. stream={:?}", parser.read().beginning());
-			ParseResult::None
+			parse::Result::None
 		}
 	}
 }

@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Display, Formatter};
 
-type Inner = fn(&[&Object]) -> Result;
+type Inner = fn(&[&Object]) -> Result<Object>;
 
 #[derive(Clone, Copy)]
 pub struct RustFn {
@@ -18,7 +18,7 @@ impl RustFn {
 		RustFn { name, func }
 	}
 
-	pub fn call(&self, args: &[&Object]) -> Result {
+	pub fn call(&self, args: &[&Object]) -> Result<Object> {
 		(self.func)(args)
 	}
 }

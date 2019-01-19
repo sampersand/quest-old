@@ -59,11 +59,11 @@ impl Object {
 		&self.0.env
 	}
 
-	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
+	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result<Object> {
 		self.call_attr("__evaluate__", &[&parser.clone().into_object()])
 	}
 
-	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result {
+	pub fn call(&self, attr: &Object, args: &[&Object]) -> Result<Object> {
 		if self.is_rustfn() && attr.is_variable("()") {
 			return self.call_unbound(args);
 		}
@@ -77,7 +77,7 @@ impl Object {
 		value.call_unbound(&new_args)
 	}
 
-	fn call_unbound(&self, args: &[&Object]) -> Result {
+	fn call_unbound(&self, args: &[&Object]) -> Result<Object> {
 		if let Some(rustfn) = self.downcast_rustfn() {
 			rustfn.call(args)
 		} else {
@@ -91,7 +91,7 @@ impl Object {
 }
 
 impl Object {
-	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result {
+	pub fn call_attr(&self, attr: &'static str, args: &[&Object]) -> Result<Object> {
 		self.call(&attr.into_object(), args)
 	}
 }

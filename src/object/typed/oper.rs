@@ -95,7 +95,7 @@ impl Oper {
 
 	// this disallows users to change the `precedence` function to get the precedence of opers.
 	// that might change in the future
-	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result {
+	pub fn evaluate(&self, parser: &Shared<Parser>) -> Result<Object> {
 		macro_rules! pop_stack {
 			(err_pos=$err_pos:expr) => {
 				Environment::current().read()
@@ -240,7 +240,7 @@ impl Oper {
 		}
 	}
 
-	fn call(&self, args: &[&Object]) -> Result {
+	fn call(&self, args: &[&Object]) -> Result<Object> {
 		macro_rules! arg {
 			($pos:expr) => (args.get($pos).ok_or_else(|| $crate::Error::MissingArgument{ func: self.sigil(), pos: $pos })?);
 		}

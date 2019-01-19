@@ -1,6 +1,6 @@
 #![allow(unused)]
 #![cfg_attr(not(debug_assertions), deny(unreachable_code))]
-#![feature(coerce_unsized, unsize, transpose_result)]
+#![feature(coerce_unsized, unsize, transpose_result, try_trait)]
 
 #[macro_use]
 extern crate log;
@@ -20,5 +20,5 @@ pub use self::{
 	collections::Mapping,
 	object::{Object, IntoObject},
 	env::Environment,
-	err::{Error, Result}
+	err::{Result, Error}
 };

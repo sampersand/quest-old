@@ -2,7 +2,7 @@ use crate::{Object, Shared, Result};
 use std::path::{Path, PathBuf};
 use std::{fs, io, sync::Mutex};
 use super::parsable::{BUILTIN_PARSERS, ParsableStruct};
-use crate::parse::{Parsable, ParseResult};
+use crate::parse::{self, Parsable};
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Parser {
@@ -66,7 +66,7 @@ impl Parser {
 		self.rollback.write().push(obj);
 	}
 
-	pub fn next_unevaluated_object(parser: &Shared<Parser>) -> Option<Result> {
+	pub fn next_unevaluated_object(parser: &Shared<Parser>) -> Option<Result<Object>> {
 		{
 			let read = parser.read();
 			let mut rollback = read.rollback.write();
@@ -86,11 +86,11 @@ impl Parser {
 
 		for parsablefn in parsers.read().iter() {
 			match parsablefn.call(parser) {
-				ParseResult::Restart => return Parser::next_unevaluated_object(parser),
-				ParseResult::Ok(object) => return Some(Ok(object)),
-				ParseResult::Err(err) => return Some(Err(err)),
-				ParseResult::Eof => return None,
-				ParseResult::None => { /* do nothing */ }
+				parse::Result::Restart => return Parser::next_unevaluated_object(parser),
+				parse::Result::Ok(object) => return Some(Ok(object)),
+				parse::Result::Err(err) => return Some(Err(err)),
+				parse::Result::Eof => return None,
+				parse::Result::None => { /* do nothing */ }
 			}
 		}
 

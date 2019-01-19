@@ -1,4 +1,4 @@
-use crate::Shared;
+use crate::{Shared, Error};
 use crate::env::Environment;
 use crate::object::Object;
 use lazy_static::lazy_static;
@@ -40,42 +40,81 @@ impl Variable {
 		self.0
 	}
 
-	pub fn parse(text: &str) -> Option<(Variable, usize)> {
-		let mut chars = text.chars();
-		let mut count = 1;
-		match chars.next()? {
-			'`' => {
-				let mut string = String::new();
-				loop {
-					count += 1;
-					match chars.next().expect("No ending '`' found!! (todo: make this an Err)") {
-						'\\' => {
-							string.push(chars.next().expect("bad `\\` encountered; todo: make this an Err"));
-							count += 1;
-						},
-						'`' => break,
-						other => string.push(other)
-					}
-				}
-
-				Some((Variable::from_string(string), count))
-			},
-			chr if chr.is_alphabetic() || chr == '_' => {
-				let mut string = String::with_capacity(1);
-				string.push(chr);
-				for chr in chars {
-					if chr.is_alphanumeric() || chr == '_' {
-						count += 1;
-						string.push(chr);
-					} else {
-						break
-					}
-				}
-				Some((Variable::from_string(string), count))
-			},
-			_ => None
+	pub fn from_str(text: &str) -> Option<Result<(Variable, usize), Error>> {
+		const fn is_varchar(c: char) -> bool {
+			c.is_alphanumeric() || c == '_'
 		}
+
+		let mut chars = text.chars();
+		let mut string = String::new();
+		let mut count = 1;
+		let mut backtick = false;
+
+		match chars.next()? {
+			sigil @ '@' | sigil @ '$'  => {
+				count += 1;
+				match chars.next()? {
+					'`' => backtick = true,
+					x if x.is_whitespace() => unimplemented!("err"),
+					chr => string.push(chr),
+				};;
+				string.push(chars.next()?);
+			},
+			chr if is_varchar(chr) => string.push(chr),
+			'`' => backtick = true,
+			_ => return None
+		}
+
+		unimplemented!()
 	}
+
+	// pub fn parse(text: &str) -> Option<(Variable, usize)> {
+	// 	let mut chars = text.chars();
+	// 	match chars.next()? {
+	// 		chr @ '$' | chr @ '@' => {
+	// 			let (mut string, count) = Variable::get_inner(chars.next()?, chars)?;
+	// 			string.insert(0, chr);
+	// 			Some((Variable::from_string(string), count + 1))
+	// 		},
+	// 		other => Variable::get_inner(other, chars).map(|(s, c)| (Variable::from_string(s), c))
+	// 	}
+	// }
+
+	// fn get_inner(first_char: char, mut chars: std::str::Chars) -> Option<(String, usize)> {
+	// 	let mut count = 1;
+	// 	match first_char {
+	// 		'`' => {
+	// 			let mut string = String::new();
+	// 			loop {
+	// 				count += 1;
+	// 				match chars.next().expect("No ending '`' found!! (todo: make this an Err)") {
+	// 					'\\' => {
+	// 						string.push(chars.next().expect("bad `\\` encountered; todo: make this an Err"));
+	// 						count += 1;
+	// 					},
+	// 					'`' => break,
+	// 					other => string.push(other)
+	// 				}
+	// 			}
+
+	// 			Some((string, count))
+	// 		},
+	// 		chr if chr.is_alphabetic() || chr == '_' => {
+	// 			let mut string = String::with_capacity(1);
+	// 			string.push(chr);
+	// 			for chr in chars {
+	// 				if chr.is_alphanumeric() || chr == '_' {
+	// 					count += 1;
+	// 					string.push(chr);
+	// 				} else {
+	// 					break
+	// 				}
+	// 			}
+	// 			Some((string, count))
+	// 		},
+	// 		_ => None
+	// 	}
+	// }
 }
 
 impl Debug for Variable {

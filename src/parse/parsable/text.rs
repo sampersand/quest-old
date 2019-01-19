@@ -1,11 +1,11 @@
-use crate::{Shared, Error, IntoObject};
-use crate::parse::{Parsable, ParseResult, Parser};
+use crate::{Shared, Error, Object, IntoObject};
+use crate::parse::{self, Parsable, Parser};
 
 pub use crate::object::typed::Text;
 
 impl Parsable for Text {
 	const NAME: &'static str = "Text";
-	fn try_parse(parser: &Shared<Parser>) -> ParseResult {
+	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let parser_read = parser.read();
 		let mut chars = parser_read.as_ref().chars();
 		let mut count = 0;
@@ -18,7 +18,7 @@ impl Parsable for Text {
 			Some(quote @ '\'') | Some(quote @ '\"') => quote,
 			_ => {
 				trace!(target: "parser", "No text found. stream={:?}", parser_read.beginning());;
-				return ParseResult::None
+				return parse::Result::None
 			}
 		};
 
@@ -29,7 +29,7 @@ impl Parsable for Text {
 		macro_rules! parse_err {
 			($msg:expr) => ({
 				warn!(target: "parser", concat!("Invalid text encountered (", $msg, ")"));
-				ParseResult::Err(Error::ParserError {
+				parse::Result::Err(Error::ParserError {
 					msg: $msg,
 					parser: { drop(chars); drop(parser_read); parser.clone() }
 				})
@@ -72,7 +72,7 @@ impl Parsable for Text {
 
 		debug!(target: "parser", "Text parsed. chars={:?}", res);
 
-		ParseResult::Ok(text.into_object())
+		parse::Result::Ok(text.into_object())
 
 		// if data.is_empty() || (data[0] != '\'' && data[0] != '\"') {
 		// }
@@ -91,10 +91,10 @@ impl Parsable for Text {
 		// 	let res = parser.advance(index);
 		// 	debug_assert_eq!(number, Text::from_str(&res).unwrap().0);
 		// 	debug!(target: "parser", "Text parsed. chars={:?}", res);
-		// 	ParseResult::Ok(number.into_object())
+		// 	parse::Result::Ok(number.into_object())
 		// } else {
 		// 	trace!(target: "parser", "No number found. stream={:?}", parser.read().beginning());
-		// 	ParseResult::None
+		// 	parse::Result::None
 		// }
 	}
 }
