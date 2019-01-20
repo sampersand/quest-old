@@ -1,11 +1,12 @@
-use crate::{Object, Error};
+use std::error::Error;
+use crate::Object;
 use std::ops::Try;
 
 #[derive(Debug)]
 pub enum Result<T=Object> {
 	Restart, // for things like whitespace and comments
 	Ok(T),
-	Err(Error),
+	Err(Box<dyn Error>),
 	Eof, // for things like __END__
 	None
 }

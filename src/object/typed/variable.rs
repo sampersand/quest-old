@@ -40,34 +40,6 @@ impl Variable {
 		self.0
 	}
 
-	pub fn from_str(text: &str) -> Option<Result<(Variable, usize), Error>> {
-		fn is_varchar(c: char) -> bool {
-			c.is_alphanumeric() || c == '_'
-		}
-
-		let mut chars = text.chars();
-		let mut string = String::new();
-		let mut count = 1;
-		let mut backtick = false;
-
-		match chars.next()? {
-			sigil @ '@' | sigil @ '$'  => {
-				count += 1;
-				match chars.next()? {
-					'`' => backtick = true,
-					x if x.is_whitespace() => unimplemented!("err"),
-					chr => string.push(chr),
-				};;
-				string.push(chars.next()?);
-			},
-			chr if is_varchar(chr) => string.push(chr),
-			'`' => backtick = true,
-			_ => return None
-		}
-
-		unimplemented!()
-	}
-
 	// pub fn parse(text: &str) -> Option<(Variable, usize)> {
 	// 	let mut chars = text.chars();
 	// 	match chars.next()? {

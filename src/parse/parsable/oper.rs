@@ -1,12 +1,12 @@
 use crate::{Shared, IntoObject, Object};
 use crate::parse::{self, Parsable, Parser};
-
 pub use crate::object::typed::Oper;
+
+named!(Oper);
 
 // in the future, i might add a parsable for each oper to allow for adding / subtraction operators
 // but for now, just to get this working, one parsable for the entire oper
 impl Parsable for Oper {
-	const NAME: &'static str = "Oper";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let oper = Oper::parse(parser.read().as_ref());
 

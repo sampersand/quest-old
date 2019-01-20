@@ -17,30 +17,6 @@ impl Number {
 	pub fn into_integer(self) -> Number {
 		Number((self.0 as u64) as f64)
 	}
-
-	pub fn parse(mut text: &str) -> Option<(Number, usize)> {
-		// for now, this can only parse whole numbers. also, no hexadecimal or stuff
-		const RADIX: u32 = 10;
-
-		let mut chars = text.chars();
-		let mut number = chars.next()?.to_digit(RADIX)?;
-		let mut count = 1;
-
-		for chr in chars {
-			if let Some(digit) = chr.to_digit(RADIX) {
-				number = number * RADIX + digit;
-				count += 1;
-			} else if chr == '_' {
-				continue;
-			} else if chr.is_alphabetic() {
-				panic!("invalid number ending found found ({:?}); todo: make this an error", chr)
-			} else {
-				break;
-			}
-		}
-
-		Some((Number::new(number as f64), count))
-	}
 }
 
 impl Display for Number {

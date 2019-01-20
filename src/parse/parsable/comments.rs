@@ -1,10 +1,12 @@
 use crate::{Shared, Error, Object};
 use crate::parse::{self, Parsable, Parser};
+use crate::parse::parsable::Named;
 
 pub(super) struct Comments; 
 
+named!(Comments);
+
 impl Parsable for Comments {
-	const NAME: &'static str = "Comments";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let (single, multi) = {
 			let parser_read = parser.read();

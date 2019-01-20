@@ -1,4 +1,6 @@
 use crate::{Object, Shared, parse::Parser};
+use std::error;
+use std::fmt::{self, Display, Formatter};
 use std::io;
 
 #[derive(Debug/*, Clone, PartialEq, Eq*/)]
@@ -24,8 +26,25 @@ pub enum Error {
 	IoError(io::Error),
 	NothingParsableFound(Shared<Parser>),
 	ParserError { msg: &'static str, parser: Shared<Parser> },
-	NothingToReturn
+	NothingToReturn,
+	Boxed(Box<dyn error::Error>)
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 pub type ObjResult = Result<Object>;
+
+impl Display for Error {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		unimplemented!()
+	}
+}
+
+impl error::Error for Error {
+	fn description(&self) -> &str {
+		unimplemented!()
+	}
+
+	fn cause(&self) -> Option<&dyn error::Error> {
+		unimplemented!()
+	}
+}

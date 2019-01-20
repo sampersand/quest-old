@@ -1,10 +1,12 @@
 use crate::{Shared, Object};
 use crate::parse::{self, Parsable, Parser};
+use crate::parse::parsable::Named;
 
 pub(super) struct ForcedEof; 
 
+named!(ForcedEof);
+
 impl Parsable for ForcedEof {
-	const NAME: &'static str = "ForcedEof";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		// let mut is_eof;
 		let data = parser.read();

@@ -1,10 +1,10 @@
 use crate::{Shared, IntoObject, Object};
 use crate::parse::{self, Parsable, Parser};
-
 pub use crate::object::typed::Block;
 
+named!(Block);
+
 impl Parsable for Block {
-	const NAME: &'static str = "Block";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let number = Block::parse(parser.read().as_ref());
 

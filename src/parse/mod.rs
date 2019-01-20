@@ -3,7 +3,7 @@ mod parsable;
 mod result;
 
 pub use self::parser::Parser;
-pub use self::parsable::Parsable;
+pub use self::parsable::{Parsable, ParseFromStr, ParseOk};
 pub use self::result::Result;
 
 use std::{io, path::Path};

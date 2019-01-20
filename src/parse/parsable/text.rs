@@ -1,10 +1,10 @@
 use crate::{Shared, Error, Object, IntoObject};
 use crate::parse::{self, Parsable, Parser};
-
 pub use crate::object::typed::Text;
 
+named!(Text);
+
 impl Parsable for Text {
-	const NAME: &'static str = "Text";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let parser_read = parser.read();
 		let mut chars = parser_read.as_ref().chars();
@@ -29,10 +29,10 @@ impl Parsable for Text {
 		macro_rules! parse_err {
 			($msg:expr) => ({
 				warn!(target: "parser", concat!("Invalid text encountered (", $msg, ")"));
-				parse::Result::Err(Error::ParserError {
+				parse::Result::Err(Box::new(Error::ParserError {
 					msg: $msg,
 					parser: { drop(chars); drop(parser_read); parser.clone() }
-				})
+				}))
 			})
 		}
 

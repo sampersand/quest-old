@@ -42,9 +42,12 @@ impl_type! { for Text, downcast_fn=downcast_text;
 	}
 
 	fn "@num" (this) {
-		super::Number::parse(&this.0)
-			.map(|(num, _)| num.into_object())
-			.unwrap_or_else(Object::new_null)
+		use crate::parse::{ParseFromStr, ParseOk};
+		match super::Number::from_str(&this.0) {
+			Ok(ParseOk::NotFound) => Object::new_null(),
+			Ok(ParseOk::Found(num, _)) => num.into_object(),
+			Err(err) => return Err(crate::Error::Boxed(Box::new(err)))
+		}
 	}
 
 	fn "==" (this, rhs) {

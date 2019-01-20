@@ -3,8 +3,9 @@ use crate::parse::{self, Parsable, Parser};
 
 pub(super) struct Whitespace; 
 
+named!(Whitespace);
+
 impl Parsable for Whitespace {
-	const NAME: &'static str = "Whitespace";
 	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
 		let mut idx = None;
 		
