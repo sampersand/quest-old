@@ -12,9 +12,7 @@ pub enum VariableParseError {
 	NotAllowedAsSuffix { sigil: char, suffix: char }
 }
 
-impl Named for Variable {
-	const NAME: &'static str = "Variable";
-}
+named!(Variable);
 
 impl ParseFromStr for Variable {
 	type Err = VariableParseError;
