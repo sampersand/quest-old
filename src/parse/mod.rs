@@ -24,7 +24,6 @@ fn parse(parser: Parser) -> crate::Result<crate::Object> {
 	let env = Environment::execute(
 		Environment::_new_default_with_stream(Shared::new(parser))
 	)?;
-	println!("{:#?}", env);
 	let res = env.read().stack.write().pop().ok_or_else(|| crate::err::Error::NothingToReturn);
 	drop(env);
 	res

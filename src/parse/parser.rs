@@ -8,22 +8,23 @@ use crate::parse::{self, Parsable};
 pub struct Parser {
 	data: String,
 	parsers: Shared<Vec<ParsableStruct>>,
-	loc: Location,
+	location: Location,
 	rollback: Shared<Vec<Object>>
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-struct Location {
-	source: Option<PathBuf>,
-	line: usize,
-	col: usize,
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct Location {
+	pub source: Option<PathBuf>,
+	pub line: usize,
+	pub col: usize,
+	pub chars: usize
 }
 
 impl Parser {
 	pub fn from_file(path: &Path) -> io::Result<Parser> {
 		Ok(Parser {
 			data: fs::read_to_string(path)?,
-			loc: Location {
+			location: Location {
 				source: Some(path.to_owned()),
 				..Location::default()
 			},
@@ -35,14 +36,18 @@ impl Parser {
 	pub fn from_str(data: String) -> Parser {
 		Parser {
 			data,
-			loc: Location::default(),
+			location: Location::default(),
 			parsers: BUILTIN_PARSERS.clone(),
 			rollback: Shared::new(Vec::new())
 		}
 	}
 
 	pub fn advance(&mut self, amount: usize) -> String {
-		self.data.drain(..=amount).collect()
+		let data: String = self.data.drain(..=amount).collect();
+		self.location.line += data.lines().count();
+		self.location.col = data.lines().last().map(str::len).unwrap_or(0);
+		self.location.chars += data.chars().count();
+		data
 	}
 
 	pub fn beginning(&self) -> String {
@@ -51,6 +56,10 @@ impl Parser {
 		} else {
 			format!("{}…", &self.data[..14])
 		}
+	}
+
+	pub fn location(&self) -> &Location {
+		&self.location
 	}
 }
 

@@ -12,9 +12,7 @@ pub enum NumberParseError {
 	BadRadix { pos: usize, radix: char },
 }
 
-impl Named for Number {
-	const NAME: &'static str = "Number";
-}
+named!(Number);
 
 impl ParseFromStr for Number {
 	type Err = NumberParseError;

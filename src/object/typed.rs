@@ -10,7 +10,7 @@ mod rustfn;
 mod list;
 mod map;
 mod oper;
-mod block;
+pub mod block;
 
 pub use self::{
 	boolean::Boolean,

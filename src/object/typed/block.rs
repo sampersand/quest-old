@@ -1,3 +1,5 @@
+use crate::{Shared, Result};
+use crate::parse::Parser;
 use crate::object::{TypedObject, Object};
 use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
@@ -12,18 +14,28 @@ impl Block {
 	pub fn new<T: Into<String>>(parens: Parens, body: T) -> Block {
 		Block { parens, body: body.into() }
 	}
+}
 
-	pub fn parse(text: &str) -> Option<(Block, usize)> {
-		// todo: parse block
-		if text.starts_with('{') {
-			let index = text.find('}').expect("Bad index");
-			let body: String = text.chars().skip(1).take(index-1).collect();
-			Some((Block::new(Parens::Curly, body), index + 1))
-		} else {
-			None
+impl Parens {
+	pub fn try_from_start(chr: char) -> Option<Parens> {
+		match chr {
+			'{' => Some(Parens::Curly),
+			'[' => Some(Parens::Square),
+			'(' => Some(Parens::Round),
+			_ => None
 		}
 	}
+	pub fn try_from_end(chr: char) -> Option<Parens> {
+		match chr {
+			'}' => Some(Parens::Curly),
+			']' => Some(Parens::Square),
+			')' => Some(Parens::Round),
+			_ => None
+		}
+	}
+
 }
+
 
 impl Display for Block {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -64,6 +76,15 @@ impl_type! { for Block, downcast_fn=downcast_block;
 
 	fn "()" (this) _args {
 		crate::parse::parse_str(this.body)?
+	}
+
+	fn "__evaluate__" (@this, parser) {
+		let do_exec = this.downcast_block().map(|block| block.parens == Parens::Round).unwrap_or(false);
+		if do_exec {
+			this.call_attr("()", &[])?
+		} else {
+			this.clone()
+		}
 	}
 }
 
