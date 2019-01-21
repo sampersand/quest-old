@@ -17,8 +17,6 @@ pub fn parse_str<T: Into<String>>(text: T, parent: Option<Shared<Environment>>) 
 	parse(Parser::from_str(text.into()), parent)
 }
 
-
-
 fn parse(parser: Parser, parent: Option<Shared<Environment>>) -> crate::Result<Object> {
 	let env = Environment::execute(
 		Environment::_new_default_with_stream_using_parent_stack(Shared::new(parser), parent)

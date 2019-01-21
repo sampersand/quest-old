@@ -24,6 +24,14 @@ impl Environment {
 		}
 	}
 
+	pub fn new(parser: Shared<Parser>, parent: Option<Shared<Environment>>, map: Option<Shared<dyn Mapping>>, stack: Option<Shared<dyn Listing>>) -> Shared<Environment> {
+		Shared::new(Environment {
+			parser, parent,
+			map: map.unwrap_or_else(|| Shared::new(crate::collections::Map::empty())),
+			stack: stack.unwrap_or_else(|| Shared::new(crate::collections::List::empty()))
+		})
+	}
+
 
 	// im not sure how i want initialization to work, that's why this is underscored
 	pub fn _new_default_with_stream_and_parent(parser: Shared<Parser>, parent: Option<Shared<Environment>>) -> Shared<Environment> {
@@ -33,6 +41,7 @@ impl Environment {
 			..Environment::empty()
 		})
 	}
+
 	pub fn _new_default_with_stream_using_parent_stack(parser: Shared<Parser>, parent: Option<Shared<Environment>>) -> Shared<Environment> {
 		Shared::new(Environment {
 			stack: parent.as_ref().map(|p| p.read().stack.clone()).unwrap_or_else(|| Environment::empty().stack.clone()),
@@ -121,6 +130,11 @@ impl Environment {
 					}
 				}
 				return stack.get(nth as usize).cloned();
+			}
+		} else if sigil == '$' {
+			if key == "stack" {
+				use crate::object::IntoObject;
+				return Some(self.stack.clone().into_object())
 			}
 		}
 

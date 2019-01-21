@@ -74,9 +74,27 @@ impl_type! { for Block, downcast_fn=downcast_block;
 		this.into_object()
 	}
 
-	fn "()" (@this) _args {
-		let body = this.downcast_block().map(|block| block.body.clone()).expect("<todo: error here>");
-		crate::parse::parse_str(body, Some(this.env().clone()))?
+	fn "()" (@this) args {
+		use crate::{Environment, parse::Parser};
+
+		let (body, is_square) = this.downcast_block().map(|block| (block.body.clone(), block.parens == Parens::Square)).expect("<todo: error here>");
+		let parser = Shared::new(Parser::from_str(body));
+		let parent = Some(this.env().clone());
+
+		let stack = Some(Shared::new(crate::collections::List::new(args.iter().skip(1).map(|x| (*x).clone()).collect::<Vec<_>>())) as _);
+		let env = Environment::execute(Environment::new(parser, parent, None, stack))?;
+		let x = env.read().stack.write().pop().ok_or_else(|| crate::err::Error::NothingToReturn)?;
+		x
+		// if is_square {
+		// 	use crate::{Environment, parse::Parser};
+		// 	let env = Environment::execute(
+		// 		Environment::_new_default_with_stream_and_parent(Shared::new(parser), Some(this.env().clone()))
+		// 	)?;
+		// 	let x = env.read().stack.write().pop().ok_or_else(|| crate::err::Error::NothingToReturn)?;
+		// 	x
+		// } else {
+		// 	crate::parse::parse_str(body, Some(this.env().clone()))?
+		// }
 	}
 
 	fn "__evaluate__" (@this, parser) {

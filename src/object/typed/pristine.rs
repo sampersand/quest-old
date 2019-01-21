@@ -29,10 +29,9 @@ basic_map! {
 	}
 
 	fn "_D" (@this, rhs) {
-		println!("hi");
-		let rhs = rhs.call_attr("()", &[])?;
-		let stack = crate::Environment::current().read().stack.read()._to_vec();
-		this.call_attr("()", &stack.iter().collect::<Vec<&Object>>())?
+		let list = rhs.into_list()?;
+
+		this.call_attr("()", &list.into_inner().iter().collect::<Vec<&Object>>())?
 	}
 
 	fn ".=" (@this, key, val) {
