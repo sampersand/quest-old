@@ -11,7 +11,7 @@ impl Parsable for Oper {
 		let oper = Oper::parse(parser.read().as_ref());
 
 		if let Some((oper, index)) = oper {
-			let res = parser.write().advance(index-1);
+			let res = parser.write().advance(index);
 			debug_assert_eq!(oper, Oper::parse(&res).unwrap().0);
 			debug!(target: "parser", "Oper parsed. chars={:?}", res);
 			parse::Result::Ok(oper.into_object())

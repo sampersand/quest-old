@@ -64,7 +64,7 @@ impl Parsable for Text {
 
 		drop(parser_read);
 
-		let mut res = parser.write().advance(count - 1);
+		let mut res = parser.write().advance(count);
 
 		debug_assert!(res.chars().next().unwrap() == quote, res);
 		debug_assert!(res.chars().last().unwrap() == quote, res);
@@ -88,7 +88,7 @@ impl Parsable for Text {
 
 		// if let Some((number, index)) = number {
 		// 	let mut parser = parser.write();
-		// 	let res = parser.advance(index);
+		// 	let res = parser.advance(1+index);
 		// 	debug_assert_eq!(number, Text::from_str(&res).unwrap().0);
 		// 	debug!(target: "parser", "Text parsed. chars={:?}", res);
 		// 	parse::Result::Ok(number.into_object())

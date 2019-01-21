@@ -53,7 +53,7 @@ impl<T: ParseFromStr + Named + crate::object::IntoObject> Parsable for T {
 			},
 			Ok(ParseOk::Found(object, index)) => {
 				let mut parser = parser.write();
-				let res = parser.advance(index-1);
+				let res = parser.advance(index);
 				// debug_assert_eq!(number, Number::parse(&res).unwrap().0);
 				debug!(target: "parser", "{} parsed. chars={:?}", Self::NAME, res);
 				parse::Result::Ok(object.into_object())

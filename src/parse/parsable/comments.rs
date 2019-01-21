@@ -23,9 +23,9 @@ impl Parsable for Comments {
 			let mut parser = parser.write();
 
 			if let Some((idx, _)) = parser.as_ref().chars().enumerate().find(|(_, c)| *c == '\n') {
-				let comment = parser.advance(idx);
-				debug_assert!(comment.starts_with("//") || comment.starts_with("#"));
-				debug_assert!(comment.ends_with('\n'));
+				let comment = parser.advance(idx + 1);
+				debug_assert!(comment.starts_with("//") || comment.starts_with("#"), comment);
+				debug_assert!(comment.ends_with('\n'), comment);
 				debug!(target: "parser", "Single-line comment parsed. chars={:?}", comment);
 				parse::Result::Restart
 			} else {
@@ -36,10 +36,10 @@ impl Parsable for Comments {
 			let mut parser = parser.write();
 			// [2..] skips the `/*` we just found, so `/*/` doesn't work
 			if let Some(mut index) = parser.as_ref()[2..].find("*/") {
-				let comment = parser.advance(index + 2); // add two to index to make up for slicing `/*` off.
-				debug_assert!(comment.starts_with("/*"));
-				debug_assert!(comment.ends_with("*/"));
-				debug_assert!(comment.len() >= 4);
+				let comment = parser.advance(index + 3); // add two to index to make up for slicing `/*` off.
+				debug_assert!(comment.starts_with("/*"), comment);
+				debug_assert!(comment.ends_with("*/"), comment);
+				debug_assert!(comment.len() >= 4, comment);
 				debug!(target: "parser", "Multi-line comment parsed. chars={:?}", comment);
 				parse::Result::Restart
 			} else {

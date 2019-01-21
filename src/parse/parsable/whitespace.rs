@@ -18,7 +18,7 @@ impl Parsable for Whitespace {
 		}
 
 		if let Some(index) = idx {
-			let whitespace = parser.write().advance(index); // ignore whatever whitespace we had
+			let whitespace = parser.write().advance(1 + index); // ignore whatever whitespace we had
 			debug_assert!(whitespace.chars().all(char::is_whitespace), "invalid whitespace parsed: {:?}", whitespace);
 			debug!(target: "parser", "Whitespace parsed. chars={:?}", whitespace);
 			parse::Result::Restart

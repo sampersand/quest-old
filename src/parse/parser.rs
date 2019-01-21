@@ -43,7 +43,7 @@ impl Parser {
 	}
 
 	pub fn advance(&mut self, amount: usize) -> String {
-		let data: String = self.data.drain(..=amount).collect();
+		let data: String = self.data.drain(..amount).collect();
 		self.location.line += data.lines().count();
 		self.location.col = data.lines().last().map(str::len).unwrap_or(0);
 		self.location.chars += data.chars().count();
@@ -54,7 +54,7 @@ impl Parser {
 		if self.data.len() < 15 {
 			self.data.clone()
 		} else {
-			format!("{}…", &self.data[..14])
+			format!("{}…", &self.data.chars().take(14).collect::<String>())
 		}
 	}
 

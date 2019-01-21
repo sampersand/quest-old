@@ -20,7 +20,7 @@ impl Parsable for Block {
 
 		// if it's an ending paren, we're at eof
 		if let Some(paren) = Parens::try_from_end(first) {
-			let x = parser.write().advance(0);
+			let x = parser.write().advance(1);
 			debug_assert_eq!(Parens::try_from_end(x.chars().next().unwrap()), Some(paren));
 			 // we know its the end of block because it's eof
 			// so if we get an ending, we are at end of block
@@ -29,7 +29,7 @@ impl Parsable for Block {
 
 		// if it's a starting paren, go until we hit eof
 		let paren = if let Some(paren) = Parens::try_from_start(first) {
-			let x = parser.write().advance(0);
+			let x = parser.write().advance(1);
 			debug_assert_eq!(Parens::try_from_start(x.chars().next().unwrap()), Some(paren));
 			paren
 		} else {
