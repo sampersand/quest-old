@@ -132,6 +132,11 @@ impl_type! { for Variable, downcast_fn=downcast_var;
 
 	fn "()" (@this) { env().get(this).unwrap_or_else(Object::new_null) }
 	fn "=" (@this, rhs) { env().set(this.clone(), rhs.clone()); rhs.clone() }
+	fn "<-" (@this, rhs) { env().set(this.clone(), rhs.clone()); rhs.clone() }
 	fn "~" (@this) { env().del(this).unwrap_or_else(Object::new_null) }
 	fn "?" (@this) { env().has(this).into_object() }
 }
+
+
+
+

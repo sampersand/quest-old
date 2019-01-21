@@ -36,6 +36,9 @@ basic_map! {
 		   .call_attr("!", &[])?
 	}
 
+	fn "->" (@this, rhs) { rhs.call_attr("<-", &[this])? }
+
+
 	fn "===" (@lhs, rhs) {
 		(lhs.id() == rhs.id()).into_object()
 	}

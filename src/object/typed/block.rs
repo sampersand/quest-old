@@ -74,8 +74,9 @@ impl_type! { for Block, downcast_fn=downcast_block;
 		this.into_object()
 	}
 
-	fn "()" (this) _args {
-		crate::parse::parse_str(this.body)?
+	fn "()" (@this) _args {
+		let body = this.downcast_block().map(|block| block.body.clone()).expect("<todo: error here>");
+		crate::parse::parse_str(body, Some(this.env().clone()))?
 	}
 
 	fn "__evaluate__" (@this, parser) {

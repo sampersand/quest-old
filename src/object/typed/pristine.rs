@@ -28,6 +28,13 @@ basic_map! {
 		todo!()
 	}
 
+	fn "_D" (@this, rhs) {
+		println!("hi");
+		let rhs = rhs.call_attr("()", &[])?;
+		let stack = crate::Environment::current().read().stack.read()._to_vec();
+		this.call_attr("()", &stack.iter().collect::<Vec<&Object>>())?
+	}
+
 	fn ".=" (@this, key, val) {
 		this.map().write()
 		    .set(key.clone(), val.clone())

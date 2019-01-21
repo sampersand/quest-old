@@ -47,6 +47,7 @@ mopafy!(Mapping);
 pub trait Listing : Collection {
 	fn push(&mut self, obj: Object);
 	fn pop(&mut self) -> Option<Object>;
+	fn _to_vec(&self) -> Vec<Object>;
 }
 
 impl<T: Collection + ?Sized> Collection for Shared<T> {

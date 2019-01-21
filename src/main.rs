@@ -3,7 +3,7 @@ use quest::*;
 
 fn main() {
     env_logger::init();
-    let res = quest::parse::parse_file("code/test.qs");
+    let res = quest::parse::parse_file("code/test.qs", None);
     println!("{:?}", res);
 
 

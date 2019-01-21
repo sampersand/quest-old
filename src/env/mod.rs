@@ -24,14 +24,24 @@ impl Environment {
 		}
 	}
 
-	// im not sure how i want initialization to work, that's why this is lower case
-	pub fn _new_default_with_stream(parser: Shared<Parser>) -> Shared<Environment> {
+
+	// im not sure how i want initialization to work, that's why this is underscored
+	pub fn _new_default_with_stream_and_parent(parser: Shared<Parser>, parent: Option<Shared<Environment>>) -> Shared<Environment> {
 		Shared::new(Environment {
-			parser,
+			parser, parent,
 			map: Shared::new(crate::collections::ParentalMap::new_default(|| builtins::BUILTINS_MAP.clone())),
 			..Environment::empty()
 		})
 	}
+	pub fn _new_default_with_stream_using_parent_stack(parser: Shared<Parser>, parent: Option<Shared<Environment>>) -> Shared<Environment> {
+		Shared::new(Environment {
+			stack: parent.as_ref().map(|p| p.read().stack.clone()).unwrap_or_else(|| Environment::empty().stack.clone()),
+			parser, parent,
+			map: Shared::new(crate::collections::ParentalMap::new_default(|| builtins::BUILTINS_MAP.clone())),
+			..Environment::empty()
+		})
+	}
+
 
 	pub fn execute(env: Shared<Environment>) -> Result<Shared<Environment>> {
 		trace!(target: "execute", "Starting to execute");
@@ -60,7 +70,7 @@ impl Environment {
 
 /** CURRENT for env **/
 lazy_static! {
-	static ref CURRENT: RwLock<Shared<Environment>> = RwLock::new(Environment::_new_default_with_stream(Shared::new(Parser::default())));
+	static ref CURRENT: RwLock<Shared<Environment>> = RwLock::new(Environment::_new_default_with_stream_and_parent(Shared::new(Parser::default()), None));
 }
 
 impl Environment {
@@ -93,13 +103,48 @@ impl Collection for Environment {
 	}
 }
 
+impl Environment {
+	fn get_special(&self, key: &str) -> Option<Object> {
+		use std::str::FromStr;
+
+		let sigil = key.chars().next().unwrap();
+		debug_assert!(sigil == '@' || sigil == '$');
+		let key: &str = &key[1..];
+		if sigil == '@' {
+			if let Ok(mut nth) = isize::from_str(key) {
+				let stack = self.stack.read()._to_vec();
+				if nth < 0 {
+					if (-nth as usize) < stack.len() {
+						nth += stack.len() as isize;
+					} else {
+						return None;
+					}
+				}
+				return stack.get(nth as usize).cloned();
+			}
+		}
+
+		None
+	}
+}
+
 impl Mapping for Environment {
 	fn duplicate(&self) -> Shared<dyn Mapping> {
 		unimplemented!("duplicate")
 	}
 
 	fn get(&self, key: &Object) -> Option<Object> {
-		self.map.get(key)
+		// hack to allow for special $-vars
+		if let Some(var) = key.downcast_var() {
+			match var.as_ref().chars().next() {
+				Some('$') | Some('@') => if let Some(special) = self.get_special(var.as_ref()) {
+					return Some(special);
+				},
+				_ => {}
+			}
+		}
+
+		self.map.get(key).or_else(|| self.parent.as_ref().and_then(|parent| parent.get(key)))
 	}
 
 	fn set(&mut self, key: Object, val: Object) -> Option<Object> {
@@ -111,6 +156,7 @@ impl Mapping for Environment {
 	}
 
 	fn has(&self, key: &Object) -> bool {
-		self.map.has(key)
+		// todo: get special for has
+		self.map.has(key) || self.parent.as_ref().map(|parent| parent.has(key)).unwrap_or(false)
 	}
 }

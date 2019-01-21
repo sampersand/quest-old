@@ -47,6 +47,9 @@ impl Listing for List {
 	fn pop(&mut self) -> Option<Object> {
 		self.0.pop()
 	}
+	fn _to_vec(&self) -> Vec<Object> {
+		self.0.clone()
+	}
 }
 
 impl FromIterator<Object> for List {

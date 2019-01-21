@@ -20,7 +20,8 @@ pub enum Oper {
 	Assign, ArrowRight, ArrowLeft,
 	Period, ColonColon, Comma, Endline,
 
-	Execute, // this is temporary
+	Execute,
+	_Debug, // temporary
 	Other(Arity, Precedence, RustFn) // bool is whether or not is_l_to_r_assoc; `+` is true
 }
 
@@ -40,7 +41,7 @@ use self::Oper::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
 	Period_ColonColon,
-	Pos_BitNot_Not,
+	Pos_BitNot_Not_Execute,
 	Pow,
 	Neg,
 	Mul_Div_Mod,
@@ -155,7 +156,7 @@ impl Oper {
 		  BitShlEq, BitShrEq, BitAndEq, BitOrEq, BitXorEq,
 		  Eql, Neq, Lth, Leq, Gth, Geq, Cmp, And, Or, Not,
 		  Assign, ArrowRight, ArrowLeft, Period, ColonColon,
-		  Comma, Endline, Execute]
+		  Comma, Endline, Execute, _Debug]
 	}
 
 	// i think it might be interesting to have this take from the current environment
@@ -177,12 +178,13 @@ impl Oper {
 
 	fn precedence(&self) -> Precedence {
 		match self {
-			Execute => Precedence::Pos_BitNot_Not,
+			_Debug => Precedence::Pow,
 			Period
 			  | ColonColon    => Precedence::Period_ColonColon,
 			Pos
 			  | BitNot
-			  | Not           => Precedence::Pos_BitNot_Not,
+			  | Execute
+			  | Not           => Precedence::Pos_BitNot_Not_Execute,
 			Pow               => Precedence::Pow,
 			Neg          => Precedence::Neg,
 			Mul
@@ -226,7 +228,6 @@ impl Oper {
 
 	fn sigil(&self) -> &'static str {
 		match self {
-			Execute => "!",
 			Pos => "+@", Neg => "-@",
 			Add => "+", Sub => "-", Mul => "*", Div => "/", Mod => "%", Pow => "**",
 			AddEq => "+=", SubEq => "-=", MulEq => "*=", DivEq => "/=", ModEq => "%=", PowEq => "**=",
@@ -234,8 +235,10 @@ impl Oper {
 			BitShlEq => "<<=", BitShrEq => ">>=", BitAndEq => "&=", BitOrEq => "|=", BitXorEq => "^=",
 			Eql => "==", Lth => "<", Gth => ">", Cmp => "<=>", Neq => "!=", Leq => "<=", Geq => ">=",
 			And => "and", Or => "or", Not => "not",
-			Assign => "=", ArrowRight => "()", ArrowLeft => "<-",
+			Assign => "=", ArrowRight => "->", ArrowLeft => "<-",
 			Period => ".", ColonColon => "::", Endline => ";", Comma => ",",
+			Execute => "!",
+			_Debug => "_D",
 			Other(_, _, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
 		}
 	}

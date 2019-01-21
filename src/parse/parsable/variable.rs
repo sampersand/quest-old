@@ -78,6 +78,20 @@ impl ParseFromStr for Variable {
 				}
 			}
 
+			chr @ '+' | chr @ '-' => {
+				let mut variable = String::with_capacity(2);
+				variable.push(chr);
+				let mut count = 1;
+				for chr in chars {
+					if chr.is_digit(10) || chr == '_' {
+						variable.push(chr);
+						count += 1;
+					} else {
+						break
+					}
+				}
+	 			Ok(ParseOk::Found(Variable::from_string(variable), count))
+			} 
 			chr if is_valid_variable_start(chr) => {
 				let mut variable = String::with_capacity(1);
 				variable.push(chr);
