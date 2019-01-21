@@ -13,6 +13,9 @@ mod variable;
 mod text;
 mod oper;
 mod block;
+mod char_iter;
+
+pub use self::char_iter::CharIter;
 
 use crate::{Shared, Object, Error};
 use crate::parse::{self, Parser};

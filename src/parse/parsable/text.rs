@@ -1,100 +1,87 @@
-use crate::{Shared, Error, Object, IntoObject};
-use crate::parse::{self, Parsable, Parser};
+use crate::{Shared, IntoObject, Object};
+use crate::parse::{self, Parser};
+use crate::parse::parsable::{ParseFromStr, ParseOk, CharIter};
+use std::error::Error;
+use std::fmt::{self, Display, Formatter};
+
 pub use crate::object::typed::Text;
+
+#[derive(Debug)]
+pub enum TextParseError {
+	Unterminated,
+	BadHexEscapeSeq(Option<char>, Option<char>),
+	BadEscapeSeq(char),
+}
+use self::TextParseError::*;
 
 named!(Text);
 
-impl Parsable for Text {
-	fn try_parse(parser: &Shared<Parser>) -> parse::Result<Object> {
-		let parser_read = parser.read();
-		let mut chars = parser_read.as_ref().chars();
-		let mut count = 0;
+fn parse_escape(chars: &mut CharIter<'_>) -> Result<char, TextParseError> {
+	match chars.next().ok_or(Unterminated)? {
+		c @ '\\' | c @ '\'' | c @ '\"' => Ok(c),
+		'n' => Ok('\n'),
+		't' => Ok('\t'),
+		'r' => Ok('\r'),
+		'0' => Ok('\0'),
+		'x' => {
+			let first = chars.next().ok_or_else(|| BadHexEscapeSeq(None, None))?;
+			let second = chars.next().ok_or_else(|| BadHexEscapeSeq(Some(first), None))?;
+			first.to_digit(16)
+				.and_then(|x| second.to_digit(16).map(|y| (x << 4) + y))
+				.and_then(std::char::from_u32)
+				.ok_or_else(|| BadHexEscapeSeq(Some(first), Some(second)))
+		},
+		'u' => unimplemented!("\\u"),
+		'U' => unimplemented!("\\U"),
+		other => Err(BadEscapeSeq(other))
+	}
+}
 
-		macro_rules! next {
-			() => ({ count += 1; chars.next() })
-		}
+impl ParseFromStr for Text {
+	type Err = TextParseError;
+	fn from_str(text: &str) -> Result<ParseOk<Text>, TextParseError> {
+		let mut chars = CharIter::from(text);
 
-		let quote = match next!() {
-			Some(quote @ '\'') | Some(quote @ '\"') => quote,
-			_ => {
-				trace!(target: "parser", "No text found. stream={:?}", parser_read.beginning());;
-				return parse::Result::None
-			}
+		let quote = match chars.next() {
+			Some(q @ '\"') | Some(q @ '\'') => q,
+			_ => return Ok(ParseOk::NotFound)
 		};
 
-		debug_assert!(quote == '\'' || quote == '\"');
-
+		debug_assert!(quote == '\'' || quote == '\"', quote);
 		let mut text = String::new();
 
-		macro_rules! parse_err {
-			($msg:expr) => ({
-				warn!(target: "parser", concat!("Invalid text encountered (", $msg, ")"));
-				parse::Result::Err(Box::new(Error::ParserError {
-					msg: $msg,
-					parser: { drop(chars); drop(parser_read); parser.clone() }
-				}))
-			})
-		}
-
 		loop {
-			match next!() {
-				None => return parse_err!("Unterminated string found"),
-				Some(chr) if chr == quote => break,
-				Some('\\') => match next!() {
-					None => return parse_err!("Lonely `\\` found"),
-					Some(chr @ '\"') | Some(chr @ '\'') | Some(chr @ '\\') => text.push(chr),
-					Some('n') => text.push('\n'),
-					Some('t') => text.push('\t'),
-					Some('r') => text.push('\r'),
-					Some('0') => text.push('\0'),
-					Some('x') => match next!().and_then(|f| next!().map(|s| (f, s))) {
-						None => return parse_err!("Unfinished `\\x` found"),
-						Some((x, y)) => match (x.to_digit(16), y.to_digit(16)) {
-							(Some(x), Some(y)) => text.push((x * 0x10 + y) as u8 as char),
-							_ => return parse_err!("Invalid `\\x` escape code found")
-						}
-					},
-					Some('u') => unimplemented!("TODO: `\\u`"),
-					Some('U') => unimplemented!("TODO: `\\U`"),
-					Some(other) => return parse_err!("Unknown escape code found")
-				},
-				Some(other) => text.push(other)
+			match chars.next() {
+				Some(q) if q == quote => break,
+				Some('\\') => text.push(parse_escape(&mut chars)?),
+				Some(other) => text.push(other),
+				None => return Err(Unterminated)
 			}
 		}
 
-		drop(parser_read);
+		Ok(ParseOk::Found(Text::from(text), chars.chars_count()))
+	}
+}
 
-		let mut res = parser.write().advance(count);
+impl Display for TextParseError {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		match self {
+			Unterminated => write!(f, "Unterminated string"),
+			BadEscapeSeq(seq) => write!(f, "Bad escape sequence '\\{}'", seq),
+			BadHexEscapeSeq(None, None) => write!(f, "Missing hex escape seq"),
+			BadHexEscapeSeq(Some(x), None) => write!(f, "Bad hex escape seq '\\x{}'", x),
+			BadHexEscapeSeq(Some(x), Some(y)) => write!(f, "Bad hex escape seq '\\x{}{}'", x, y),
+			BadHexEscapeSeq(None, Some(_)) => unreachable!(),
+		}
+	}
+}
 
-		debug_assert!(res.chars().next().unwrap() == quote, res);
-		debug_assert!(res.chars().last().unwrap() == quote, res);
-		debug_assert!(res.chars().count() >= 2, res);
-
-		debug!(target: "parser", "Text parsed. chars={:?}", res);
-
-		parse::Result::Ok(text.into_object())
-
-		// if data.is_empty() || (data[0] != '\'' && data[0] != '\"') {
-		// }
-
-		// let quote = data[0].a;
-
-		// let is_eof = ref_data.starts_with("__END__") || ref_data.starts_with("__EOF__");
-
-		// drop(ref_data);
-		// drop(data);
-
-		// let number = Text::from_str(parser.read().as_ref());
-
-		// if let Some((number, index)) = number {
-		// 	let mut parser = parser.write();
-		// 	let res = parser.advance(1+index);
-		// 	debug_assert_eq!(number, Text::from_str(&res).unwrap().0);
-		// 	debug!(target: "parser", "Text parsed. chars={:?}", res);
-		// 	parse::Result::Ok(number.into_object())
-		// } else {
-		// 	trace!(target: "parser", "No number found. stream={:?}", parser.read().beginning());
-		// 	parse::Result::None
-		// }
+impl Error for TextParseError {
+	fn description(&self) -> &str {
+		match self {
+			Unterminated => "unterminated string",
+			BadEscapeSeq(_) => "bad escape sequence",
+			BadHexEscapeSeq(_, _) => "bad hex escape sequence",
+		}
 	}
 }
