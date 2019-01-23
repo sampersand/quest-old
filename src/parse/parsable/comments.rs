@@ -36,7 +36,7 @@ impl Parsable for Comments {
 			let mut parser = parser.write();
 			// [2..] skips the `/*` we just found, so `/*/` doesn't work
 			if let Some(mut index) = parser.as_ref()[2..].find("*/") {
-				let comment = parser.advance(index + 3); // add two to index to make up for slicing `/*` off.
+				let comment = parser.advance(index + 4); // add two to index to make up for slicing `/*` off.
 				debug_assert!(comment.starts_with("/*"), comment);
 				debug_assert!(comment.ends_with("*/"), comment);
 				debug_assert!(comment.len() >= 4, comment);

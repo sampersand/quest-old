@@ -132,9 +132,11 @@ impl Environment {
 				return stack.get(nth as usize).cloned();
 			}
 		} else if sigil == '$' {
+			use crate::object::IntoObject;
 			if key == "stack" {
-				use crate::object::IntoObject;
 				return Some(self.stack.clone().into_object())
+			} else if key == "locals" {
+				return Some(self.map.clone().into_object())
 			}
 		}
 

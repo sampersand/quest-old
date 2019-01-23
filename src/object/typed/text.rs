@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
+use crate::{Error, Result};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Text(String);
@@ -28,6 +29,74 @@ impl_typed_conversion!(Text, String);
 impl_typed_object!(Text, new_text, downcast_text, is_text);
 impl_quest_conversion!("@text" (as_text_obj is_text) (into_text downcast_text) -> Text);
 
+fn exec_shell(cmd: String) -> Result<String> {
+	use libc::{popen, pclose, fgets, fread, ferror, c_char, c_int, c_void};
+	use std::ffi::{CString, CStr};
+	use std::io::{self, ErrorKind};
+	use std::mem::size_of;
+
+	const CAPACITY: usize = 1024;
+	const READ: *const c_char = b"r\0".as_ptr() as *const c_char;
+
+	unsafe fn shutdown(cmd: *mut c_char, fp: Option<*mut libc::FILE>) -> Result<()> {
+		CString::from_raw(cmd);
+		if let Some(fp) = fp {
+			if pclose(fp) == -1 {
+				return Err(Error::IoError(io::Error::new(ErrorKind::Other, "pclose failed")));
+			}
+		}
+		Ok(())
+	}
+
+
+	let cmd = CString::new(cmd)
+		.map_err(|_| Error::IoError(io::Error::new(
+			ErrorKind::InvalidInput,
+			"command contained a null (\\0) byte"
+		)))?
+		.into_raw();
+
+	let fp;
+
+	unsafe {
+		fp = popen(cmd, READ);
+
+		if fp == (0 as _) {
+			// if the allocation fails, then we dont get an error code.
+			// im not sure how to fix that, oh well
+			shutdown(cmd, None)?;
+			return Err(Error::IoError(io::Error::last_os_error()));
+		}
+	}
+
+	let mut result = String::new();
+	let mut buf = Vec::<c_char>::with_capacity(CAPACITY);
+	let ptr = buf.as_mut_ptr();
+
+	unsafe {
+		while fgets(ptr, CAPACITY as c_int - 1, fp) != (0 as _) {
+			match CStr::from_ptr(ptr).to_str() {
+				Ok(buf_str) => result.push_str(buf_str),
+				Err(err) => {
+					shutdown(cmd, Some(fp))?;
+					return Err(Error::IoError(io::Error::new(ErrorKind::InvalidData, err)))
+				}
+			}
+		}
+
+		if ferror(fp) != 0 {
+			shutdown(cmd, Some(fp))?;
+			return Err(Error::IoError(io::Error::last_os_error()));
+		}
+
+		assert_ne!(libc::feof(fp), 0);
+		shutdown(cmd, Some(fp))?
+	};
+
+	Ok(result)
+}
+
+
 impl_type! { for Text, downcast_fn=downcast_text;
 	fn "@text" (this) {
 		this.into_object()
@@ -54,7 +123,10 @@ impl_type! { for Text, downcast_fn=downcast_text;
 		(this == rhs.into_text()?).into_object()
 	}
 
-	fn "()" (_this) { todo!("this will be a shell command"); }
+	fn "()" (this) {
+		exec_shell(this.0)?.into_object()
+	}
+
 	fn "eval" (_this) { todo!("this will be evaluate, possibly with new env"); }
 
 	fn "+" (this, rhs) {

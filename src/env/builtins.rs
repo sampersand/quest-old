@@ -8,7 +8,7 @@ macro_rules! builtins {
 		lazy_static! { 
 			pub static ref BUILTINS_MAP: Object = Object::new(crate::collections::ParentalMap::new_mapped(
 				|| crate::object::typed::PRISTINE_MAP.clone(),
-				function_map!(prefix="Baisc", downcast_fn=__error, $($args)*)
+				function_map!(prefix="Builtins", downcast_fn=__error, $($args)*)
 			));
 		}
 	}

@@ -1,0 +1,17 @@
+def compare ( eles ): # assume eles is even multiple of 2
+# Base case
+	if count(eles) == 2: # O(1)
+		if eles[0] == eles[1]: # O(1)
+			return { eles[0]: 2 };
+		else:
+			return { eles[0]: 1, eles[1]: 1 };
+# 2 T(n / 2)
+	lhs = compare( first half of eles ); # called log(n) times
+	rhs = compare( second half of eles ); 
+
+# c · n
+	for element in rhs: # O(n/2) = O(n)
+		lhs[element] ||= 0 # O(1)
+		lhs[element] += rhs[element] # O(1)
+# result
+	return lhs # O(1)

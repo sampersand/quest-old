@@ -106,6 +106,8 @@ impl_type! { for Number, downcast_fn=downcast_num;
 		this.to_string().into_object()
 	}
 
+	fn "()" (@this, rhs) { this.call_attr("*", &[rhs])? }
+
 	fn "-@" (this) { (-this.0.abs()).into_object() }
 	fn "+@" (this) { ( this.0.abs()).into_object() } // note this forced even negative numebrs to be positive
 

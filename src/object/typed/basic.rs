@@ -8,7 +8,7 @@ macro_rules! basic_map {
 		lazy_static! { 
 			pub static ref BASIC_MAP: Object = Object::new(ParentalMap::new_mapped(
 				|| super::pristine::PRISTINE_MAP.clone(),
-				function_map!(prefix="Baisc", downcast_fn=__error, $($args)*)
+				function_map!(prefix="Basic", downcast_fn=__error, $($args)*)
 			));
 		}
 	}
