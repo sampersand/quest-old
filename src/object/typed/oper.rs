@@ -20,8 +20,7 @@ pub enum Oper {
 	Assign, ArrowRight, ArrowLeft,
 	Period, ColonColon, Comma, Endline,
 
-	Execute,
-	_Debug, // temporary
+	Execute, Call,
 	Other(Arity, Precedence, RustFn) // bool is whether or not is_l_to_r_assoc; `+` is true
 }
 
@@ -41,7 +40,9 @@ use self::Oper::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
 	Period_ColonColon,
-	Pos_BitNot_Not_Execute,
+	Execute,
+	Call,
+	Pos_BitNot_Not,
 	Pow,
 	Neg,
 	Mul_Div_Mod,
@@ -63,8 +64,8 @@ impl Oper {
 	fn arity(&self) -> Arity {
 		match self {
 			Pos | Neg | BitNot | Not => Arity::UnaryOnL,
-			Endline | Execute => Arity::UnaryOnR,
-			Comma => Arity::Nonary,
+			Execute => Arity::UnaryOnR,
+			Comma | Endline => Arity::Nonary,
 			Pow | Assign | ArrowRight => Arity::BinaryRtoL,
 			Other(assoc, _, _) => *assoc,
 			_ => Arity::BinaryLtoR
@@ -156,7 +157,7 @@ impl Oper {
 		  BitShlEq, BitShrEq, BitAndEq, BitOrEq, BitXorEq,
 		  Eql, Neq, Lth, Leq, Gth, Geq, Cmp, And, Or, Not,
 		  Assign, ArrowRight, ArrowLeft, Period, ColonColon,
-		  Comma, Endline, Execute, _Debug]
+		  Comma, Endline, Execute, Call]
 	}
 
 	// i think it might be interesting to have this take from the current environment
@@ -178,13 +179,13 @@ impl Oper {
 
 	fn precedence(&self) -> Precedence {
 		match self {
-			_Debug => Precedence::Pow,
+			Call => Precedence::Call,
+			Execute => Precedence::Execute,
 			Period
 			  | ColonColon    => Precedence::Period_ColonColon,
 			Pos
 			  | BitNot
-			  | Execute
-			  | Not           => Precedence::Pos_BitNot_Not_Execute,
+			  | Not           => Precedence::Pos_BitNot_Not,
 			Pow               => Precedence::Pow,
 			Neg          => Precedence::Neg,
 			Mul
@@ -237,9 +238,15 @@ impl Oper {
 			And => "and", Or => "or", Not => "not",
 			Assign => "=", ArrowRight => "->", ArrowLeft => "<-",
 			Period => ".", ColonColon => "::", Endline => ";", Comma => ",",
-			Execute => "!",
-			_Debug => "_D",
+			Execute => "!", Call => ":",
 			Other(_, _, _) => unreachable!("Shouldn't be calling `sigil` on a rustfn")
+		}
+	}
+
+	fn call_sigil(&self) -> &'static str {
+		match self {
+			Call | Execute => "()",
+			_ => self.sigil()
 		}
 	}
 
@@ -248,14 +255,19 @@ impl Oper {
 			($pos:expr) => (args.get($pos).ok_or_else(|| $crate::Error::MissingArgument{ func: self.sigil(), pos: $pos })?);
 		}
 
-		if *self == Execute {
-			return arg!(0).call_attr("()", &[]);
+		if *self == Endline {
+			crate::Environment::current().read().stack.write().pop();
+		}
+
+		if *self == Call {
+			let l = arg!(1).into_list()?.into_inner();
+			return arg!(0).call_attr(self.call_sigil(), l.iter().collect::<Vec<_>>().as_ref())
 		}
 
 		match self.arity() {
 			Arity::Nonary => Err(Error::NothingToReturn) /* don't do anything */,
-			Arity::UnaryOnL | Arity::UnaryOnR => arg!(0).call_attr(self.sigil(), &[]),
-			Arity::BinaryLtoR | Arity::BinaryRtoL => arg!(0).call_attr(self.sigil(), &[arg!(1)])
+			Arity::UnaryOnL | Arity::UnaryOnR => arg!(0).call_attr(self.call_sigil(), &[]),
+			Arity::BinaryLtoR | Arity::BinaryRtoL => arg!(0).call_attr(self.call_sigil(), &[arg!(1)])
 		}
 	}
 }

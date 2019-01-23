@@ -2,7 +2,7 @@ use crate::{Object, Shared, collections::{self, Listing}};
 use std::fmt::{self, Debug, Display, Formatter};
 use lazy_static::lazy_static;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct List(Shared<dyn Listing>);
 
 impl Eq for List {}
@@ -37,11 +37,11 @@ impl Display for List {
 	}
 }
 
-impl Debug for List {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "List({:?})", self.0)
-	}
-}
+// impl Debug for List {
+// 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+// 		write!(f, "List({:#?})", self.0)
+// 	}
+// }
 
 impl crate::object::IntoObject for Vec<Object> {
 	fn into_object(self) -> crate::Object {

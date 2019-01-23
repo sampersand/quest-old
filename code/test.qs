@@ -1,48 +1,66 @@
-#disp _D [ "ls"! $stack ]!;
-disp! ( "cat code/foo.qs"!, $stack! )
+`map` = { `x`=59; `y`=12; $locals }!;
+`x` = {
+	`$this` = map;
+	{ -> `key`; ($this :: `[]`):($this key $stack) }
+}!;
+
+(map :: `[]=`):[map `get` x $stack]!;
+(map :: `[]=`):[map `set` { `$this` = map; {
+	`key` = @0; `val` = @1;
+	($this :: `[]=`):($this key val $stack)
+}}! $stack]!;
+(map :: `[]`):(map `get` $stack):(`x` $stack);
+(map :: `[]`):(map `set` $stack):(`z` 3 $stack);
+(map :: `[]`):(map `get` $stack):(`z` $stack)
 
 __END__
-`x` = 1;
+`map` = { `x`=59; `y`=12; $locals }!;
+(map :: `[]=`):( map, `get`, {
+	`$this` = map;
+	{-> `key`; ($this :: `[]`) ($this key $stack) }
+}!, $stack);
 
-disp! _D [ "`" + x! + "` is", (if! _D [x! "truthy" "falsey" $stack!]!), $stack!]!;
-(if! _D [
-	x!
-	{ disp! _D [ "`" + x! + "` is truthy", $stack!]! },
-	#{ disp! _D [ "`" + x! + "` is falsey", $stack!]! }
-	$stack!
-]!)!;
 
-`x` = 3;
-l = $locals!;
-($locals! :: `[]=`) _D [l! `x` 4 $stack!]!;
-x!
+(map :: `[]`)(map `get` $stack) (`x` $stack)
+
 __END__
-map = {
+`get` = {
+	-> `key`;
+	-> `map`;
+	(map :: `[]`) (map, key, $stack)
+};
+`set` = {
+	-> `val`; -> `key`; -> `map`;
+	(map :: `[]=a`) (map, key, val, $stack)	
+};
+
+set (map, `get`, {
+	`call` = map :: `[]`;
+	{ -> `key`; call ($this, key, $stack) }
+}!)
+
+__END__
+map = (
 	x = 59;
 	y = 12;
 	$locals!
-}!;
+);
 
 get = {
 	map = @0!;
 	key = @1!;
-	(map! :: `[]`) _D [map! key! $stack!]!
+	(map! :: `[]`) (map! key! $stack!)
 };
 
-set = {
-	map = @0!;
-	key = @1!;
-	val = @2!;
-	(map! :: `[]=`) _D [map! key! val! $stack!]!
-};
 
-set! _D [ map! `set` { this = map!; {
+set! ( map! `set` { this = map!; {
 	key = @0!;
 	val = @1!;
-	disp! _D [key! val! $stack!]!;
-	this! :: `[]=` _D [this! key! val! $stack!]!
-}}! $stack! ]!;
+	disp! (key! val! $stack!);
+	(this! :: `[]=`) (this! key! val! $stack!)
+}}! $stack! );
 
+__END__
 (get! _D [map! `set` $stack! ]!) _D [z 3 $stack!]!;
 (get! _D [map! `z` $stack! ]!) _D [z 3 $stack!]!;
 

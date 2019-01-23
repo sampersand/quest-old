@@ -135,6 +135,21 @@ impl_type! { for Variable, downcast_fn=downcast_var;
 	fn "<-" (@this, rhs) { env().set(this.clone(), rhs.clone()); rhs.clone() }
 	fn "~" (@this) { env().del(this).unwrap_or_else(Object::new_null) }
 	fn "?" (@this) { env().has(this).into_object() }
+
+	fn "__evaluate__" (@this, parser) {
+		// println!("{:?}", crate::Environment::current().read().stack);
+		{
+			let var = this.downcast_var().expect("var downcast failed").0;
+			if var.starts_with('`') && var.ends_with('`') && var.len() != 1 {
+				return Ok(Variable::from_string(var[1..var.len() - 1].to_string()).into_object())
+			}
+		}
+		this.call_attr("()", &[])?
+	}
 }
+
+
+
+
 
 

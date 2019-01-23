@@ -98,18 +98,19 @@ impl_type! { for Block, downcast_fn=downcast_block;
 	}
 
 	fn "__evaluate__" (@this, parser) {
-		let do_exec = this.downcast_block().map(|block| block.parens == Parens::Round).unwrap_or(false);
-		// println!("{:?}", crate::Environment::current().read().stack);
-		if do_exec {
-			let contents = this.call_attr("()", &[])?;
-			if let Some(thing_to_call) = crate::Environment::current().read().stack.write().pop() {
-				let argl = contents.into_list()?.into_inner();
-				thing_to_call.call_attr("()", &argl.iter().collect::<Vec<_>>())?
-			} else {
-				contents
-			}
-		} else {
-			this.clone()
+		let parens = { this.downcast_block().expect("todo: error").parens };
+		match parens {
+			Parens::Round => {
+				let contents = this.call_attr("()", &[])?;
+				// println!("{:?}", crate::Environment::current().read().stack);
+				// if let Some(thing_to_call) = crate::Environment::current().read().stack.write().pop() {
+				// 	let argl = contents.into_list()?.into_inner();
+				// 	thing_to_call.call_attr("()", &argl.iter().collect::<Vec<_>>())?
+				// } else {
+					contents
+				// }
+			},
+			Parens::Curly | Parens::Square => this.clone(),
 		}
 	}
 }
