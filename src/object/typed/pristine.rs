@@ -28,12 +28,6 @@ basic_map! {
 		todo!()
 	}
 
-	fn "_D" (@this, rhs) {
-		let list = rhs.into_list()?;
-
-		this.call_attr("()", &list.into_inner().iter().collect::<Vec<&Object>>())?
-	}
-
 	fn ".=" (@this, key, val) {
 		this.map().write()
 		    .set(key.clone(), val.clone())

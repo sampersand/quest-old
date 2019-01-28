@@ -16,7 +16,7 @@ macro_rules! builtins {
 
 builtins! {
 	fn "if" (@cond, if_true; if_false=Object::new_null()) {
-		if *cond.into_bool()?.as_ref() {
+		if cond.into_bool()?.into_inner() {
 			if_true.clone()
 		} else {
 			if_false
@@ -24,8 +24,12 @@ builtins! {
 	}
 
 	fn "while" (@cond, body) {
-		while *cond.into_bool()?.as_ref() {
-			body.call_attr("()", &[])?;
+		while cond.call_attr("()", &[])?.into_bool()?.into_inner() {
+			match body.call_attr("()", &[]) {
+				Ok(_) => {},
+				Err(crate::Error::NothingToReturn) => {},
+				Err(other) => return Err(other)
+			}
 		}
 		Object::new_null()
 	}
@@ -36,8 +40,20 @@ builtins! {
 		}
 	}
 
-	fn "switch" (@_case) args { todo!(); }
-	fn "return" (_) { todo!(); } // exit === return
+	fn "switch" (@case, body) {
+		body.call_attr("()", &[])?.call_attr("[]", &[case])?
+	}
+
+	fn "return" (@which) args {
+		return Err(crate::Error::Return {
+			env: which.into_env()?,
+			obj: args.get(1).cloned().cloned()
+		})
+		// return Err(crate::Error::)
+		// let obj = args.get(1)
+		// println!("{:?}", args);
+		// todo!();
+	} // exit === return
 
 	fn "import" (@_file) { todo!(); }
 

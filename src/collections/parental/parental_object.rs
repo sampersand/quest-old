@@ -37,6 +37,15 @@ impl ParentalObject {
 		}
 	}
 
+	pub fn duplicate(&self) -> ParentalObject {
+		use crate::collections::Mapping;
+
+		ParentalObject {
+			inner: RwLock::new(self.inner.try_read().expect("shouldn't be cloning whilst locked").as_ref().map(|x| x.duplicate())),
+			func: self.func
+		}
+	}
+
 	fn get_parent<T, F: Fn(&Object) -> T>(&self, func: F) -> T {
 		let inner = self.inner.read().expect("poisoned parental object read");
 		if let Some(ref map) = *inner {

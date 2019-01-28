@@ -49,6 +49,7 @@ pub(crate) enum Types {
 	Map(Map),
 	Oper(Oper),
 	Parser(Shared<crate::parse::Parser>),
+	Env(Shared<crate::env::Environment>),
 	Block(Block),
 }
 
@@ -90,6 +91,7 @@ impl Display for Types {
 			Types::Map(ref map) => Display::fmt(map, f),
 			Types::Oper(ref oper) => Display::fmt(oper, f),
 			Types::Parser(_) => write!(f, "<parser>"),
+			Types::Env(_) => write!(f, "<env>"),
 			Types::Block(ref block) => Display::fmt(block, f),
 		}
 	}
@@ -109,6 +111,7 @@ impl Debug for Types {
 			Types::Map(ref map) => Debug::fmt(map, f),
 			Types::Oper(ref oper) => Debug::fmt(oper, f),
 			Types::Parser(ref parser) => Debug::fmt(parser, f),
+			Types::Env(ref env) => Debug::fmt(env, f),
 			Types::Block(ref block) => Debug::fmt(block, f),
 		}
 	}

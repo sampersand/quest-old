@@ -8,15 +8,32 @@ use lazy_static::lazy_static;
 
 #[derive(Debug)]
 pub struct Environment {
+	id: usize,
 	parent: Option<Shared<Environment>>,
 	parser: Shared<Parser>,
 	map: Shared<dyn Mapping>,
 	pub(crate) stack: Shared<dyn Listing>
 }
 
+impl Eq for Environment {}
+impl PartialEq for Environment {
+	fn eq(&self, other: &Environment) -> bool {
+		self.id == other.id
+	}
+}
 impl Environment {
+	fn next_id() -> usize {
+		use std::sync::atomic::{AtomicUsize, Ordering};
+		lazy_static! {
+			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
+		}
+
+		ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+	}
+
 	fn empty() -> Environment {
 		Environment {
+			id: Environment::next_id(),
 			parent: None,
 			parser: Shared::new(Parser::default()),
 			map: Shared::new(crate::collections::Map::empty()),
@@ -28,7 +45,8 @@ impl Environment {
 		Shared::new(Environment {
 			parser, parent,
 			map: map.unwrap_or_else(|| Shared::new(crate::collections::Map::empty())),
-			stack: stack.unwrap_or_else(|| Shared::new(crate::collections::List::empty()))
+			stack: stack.unwrap_or_else(|| Shared::new(crate::collections::List::empty())),
+			id: Environment::next_id()
 		})
 	}
 
@@ -60,10 +78,23 @@ impl Environment {
 		loop {
 			match Parser::next_unevaluated_object(&parser).transpose() {
 				Err(crate::Error::NothingToReturn) => continue,
-				Err(err) => return Err(err),
+				Err(err) => { Environment::set_current(old_env); return Err(err) },
 				Ok(Some(object)) => match object.evaluate(&parser) {
 					Err(crate::Error::NothingToReturn) => continue,
-					Err(err) => return Err(err),
+					Err(crate::Error::Return { env, obj }) => {
+						if env == Environment::current() {
+							if let Some(object) = obj {
+								trace!(target: "execute", "Env received next object from return statement: {:?}", object);
+								Environment::current().read().stack.write().push(object);
+							} else {
+								continue
+							}
+						} else {
+							Environment::set_current(old_env);
+							return Err(crate::Error::Return { env, obj })
+						}
+					},
+					Err(err) => {Environment::set_current(old_env); return Err(err) },
 					Ok(object) => {
 						trace!(target: "execute", "Env received next object: {:?}", object);
 						Environment::current().read().stack.write().push(object);
@@ -101,6 +132,12 @@ impl Display for Environment {
 	}
 }
 
+impl_typed_object!(Shared<Environment>, variant Env, new_env, downcast_env, is_env);
+impl_quest_conversion!("@env" (as_env_obj is_env) (into_env downcast_env) -> Shared<Environment>);
+impl_type! { for Shared<Environment>, downcast_fn=downcast_env;
+	fn "@env" (this) { this.into_object() }
+	// todo: stuff here?
+}
 
 impl Collection for Environment {
 	fn len(&self) -> usize {
@@ -120,6 +157,7 @@ impl Environment {
 		debug_assert!(sigil == '@' || sigil == '$');
 		let key: &str = &key[1..];
 		if sigil == '@' {
+
 			if let Ok(mut nth) = isize::from_str(key) {
 				let stack = self.stack.read()._to_vec();
 				if nth < 0 {
@@ -137,6 +175,25 @@ impl Environment {
 				return Some(self.stack.clone().into_object())
 			} else if key == "locals" {
 				return Some(self.map.clone().into_object())
+			} else if let Ok(mut nth) = isize::from_str(key) {
+				let mut env_stack = vec![/* and self here in the future */];
+				let mut p = self.parent.clone();
+				while let Some(parent) = p {
+					p = parent.read().parent.clone();
+					env_stack.push(parent);
+				}
+
+				if nth < 0 {
+					if (-nth as usize) < env_stack.len() {
+						nth += env_stack.len() as isize;
+					} else {
+						return None;
+					}
+				} else {
+					nth = nth - 1; // temporary, until i get a `this` working
+				}
+				use crate::object::IntoObject;
+				return env_stack.get(nth as usize).cloned().map(|x| x.into_object());
 			}
 		}
 

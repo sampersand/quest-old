@@ -67,7 +67,10 @@ impl<M: Mapping> Collection for ParentalMap<M> {
 
 impl<M: Mapping> Mapping for ParentalMap<M> {
 	fn duplicate(&self) -> crate::Shared<dyn Mapping> {
-		unimplemented!("duplicate")
+		crate::Shared::new(ParentalMap {
+			parent: self.parent.duplicate(),
+			map: self.map.duplicate()
+		}) as _
 	}
 
 	fn get(&self, key: &Object) -> Option<Object> {

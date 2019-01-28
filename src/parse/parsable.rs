@@ -63,7 +63,7 @@ impl<T: ParseFromStr + Named + crate::object::IntoObject> Parsable for T {
 			},
 			Err(err) => {
 				warn!(target: "parser", "{} parsing caused an error. err={:?}", Self::NAME, err);
-				parse::Result::Err(Box::new(err))
+				parse::Result::Err(crate::Error::Boxed(Box::new(err)))
 			}
 		}
 	}

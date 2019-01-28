@@ -6,7 +6,7 @@ use std::ops::Try;
 pub enum Result<T=Object> {
 	Restart, // for things like whitespace and comments
 	Ok(T),
-	Err(Box<dyn Error>),
+	Err(crate::Error),
 	Eof, // for things like __END__
 	None
 }

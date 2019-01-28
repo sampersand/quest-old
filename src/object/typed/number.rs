@@ -106,6 +106,13 @@ impl_type! { for Number, downcast_fn=downcast_num;
 		this.to_string().into_object()
 	}
 
+	fn "round" (this; places = 0.into_object()) {
+		if places.into_num()?.0 != 0_f64 {
+			unimplemented!("todo: round to non-integers");
+		}
+		this.0.round().into_object()
+	}
+
 	fn "()" (@this, rhs) { this.call_attr("*", &[rhs])? }
 
 	fn "-@" (this) { (-this.0.abs()).into_object() }

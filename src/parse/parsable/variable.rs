@@ -27,13 +27,15 @@ impl ParseFromStr for Variable {
 			c.is_alphabetic() || c == '_'
 		}
 
-		fn parse_quoted_variable(mut chars: Chars, mut variable: String, mut count: usize) -> Result<ParseOk<Variable>, VariableParseError> {
+		fn parse_quoted_variable(mut chars: Chars, mut variable: String, mut count: usize, pop_last: bool) -> Result<ParseOk<Variable>, VariableParseError> {
 			const QUOTED_ESCAPE: char = '\\';
 			loop {
 				count += 1;
 				match chars.next().ok_or_else(|| UnterminatedQuoted)? {
 					QUOTED_BOUND => {
-						variable.push('`');
+						if !pop_last {
+							variable.push('`');
+						}
 						return Ok(ParseOk::Found(Variable::from_string(variable), count))
 					},
 					QUOTED_ESCAPE => {
@@ -62,7 +64,7 @@ impl ParseFromStr for Variable {
 			QUOTED_BOUND => {
 				let mut variable = String::with_capacity(1);
 				variable.push('`');
-				return parse_quoted_variable(chars, variable, 1)
+				parse_quoted_variable(chars, variable, 1, false)
 			},
 
 			sigil @ DOLLAR_SIGIL | sigil @ ATSIGN_SIGIL => {
@@ -72,8 +74,8 @@ impl ParseFromStr for Variable {
 				match chars.next().ok_or_else(|| UnterminatedQuoted)? {
 					suffix if suffix.is_whitespace() => return Err(NotAllowedAsSuffix { sigil, suffix }),
 					QUOTED_BOUND => {
-						variable.insert(0, '`');
-						return parse_quoted_variable(chars, variable, 2)
+						// variable.insert(0, '`');
+						return parse_quoted_variable(chars, variable, 2, true)
 					},
 					chr if is_valid_variable_start(chr) => {
 						variable.push(chr);

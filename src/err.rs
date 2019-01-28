@@ -27,7 +27,8 @@ pub enum Error {
 	NothingParsableFound(Shared<Parser>),
 	ParserError { msg: &'static str, parser: Shared<Parser> },
 	NothingToReturn,
-	Boxed(Box<dyn error::Error>)
+	Boxed(Box<dyn error::Error>),
+	Return { env: Shared<crate::Environment>, obj: Option<Object> }
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;

@@ -118,7 +118,6 @@ impl Oper {
 					})?
 			}
 		}
-
 		match self.arity() {
 			Arity::Nonary => {
 				trace!(target: "execute", "Oper={:?} is executing []", self);

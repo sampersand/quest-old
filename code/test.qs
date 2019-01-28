@@ -1,114 +1,66 @@
-`map` = { `x`=59; `y`=12; $locals }!;
-`x` = {
-	`$this` = map;
-	{ -> `key`; ($this :: `[]`):($this key $stack) }
+`secret` = (0 :: `round`):((rand:($stack) * 100) $stack);
+`guesses` = 0;
+
+disp:("S" $stack);
+{
+	disp:(" S" $stack);
+	{
+		disp:("  S" $stack);
+		{
+			disp:("   S" $stack);
+			{
+				disp:("    S" $stack);
+				return:($`-1`, $stack);
+				disp:("    E" $stack);
+			}!;
+			disp:("   E" $stack);
+		}!;
+		disp:("  E" $stack);
+	}!;
+	disp:(" E" $stack);
 }!;
-
-(map :: `[]=`):[map `get` x $stack]!;
-(map :: `[]=`):[map `set` { `$this` = map; {
-	`key` = @0; `val` = @1;
-	($this :: `[]=`):($this key val $stack)
-}}! $stack]!;
-(map :: `[]`):(map `get` $stack):(`x` $stack);
-(map :: `[]`):(map `set` $stack):(`z` 3 $stack);
-(map :: `[]`):(map `get` $stack):(`z` $stack)
+disp:("E" $stack);
+__END__
+{
+	{
+		`x` = {
+			{
+				return:($2 1 $stack);
+				disp:("a" $stack);
+			}!
+				disp:("b" $stack);
+		}!; disp:(x $stack);
+				disp:("c" $stack);
+	}!
+				disp:("d" $stack);
+}!
+				disp:("e" $stack);
 
 __END__
-`map` = { `x`=59; `y`=12; $locals }!;
-(map :: `[]=`):( map, `get`, {
-	`$this` = map;
-	{-> `key`; ($this :: `[]`) ($this key $stack) }
-}!, $stack);
+{
+	#disp:($2 $stack);
+	return:($1, 1 $stack);
+}!
 
-
-(map :: `[]`)(map `get` $stack) (`x` $stack)
-
+(switch:(1 <=> 0, {
+	`l` = $locals;
+	($locals::`[]=`):(l, 0-1, { disp:("too low!" $stack); }, $stack);
+	($locals::`[]=`):(l, 0, { disp:("correct!" $stack); }, $stack);
+	($locals::`[]=`):(l, 1, { disp:("too high!" $stack); }, $stack);
+	($locals::`[]~`):(l `l` $stack);
+	$locals
+}, $stack))!
+#disp:(1 <=> 1, $stack);
 __END__
-`get` = {
-	-> `key`;
-	-> `map`;
-	(map :: `[]`) (map, key, $stack)
-};
-`set` = {
-	-> `val`; -> `key`; -> `map`;
-	(map :: `[]=a`) (map, key, val, $stack)	
-};
+while:({ ($2::`[]=`):($2 `guesses` input:('get' $stack) $stack); guesses } {
 
-set (map, `get`, {
-	`call` = map :: `[]`;
-	{ -> `key`; call ($this, key, $stack) }
-}!)
-
-__END__
-map = (
-	x = 59;
-	y = 12;
-	$locals!
-);
-
-get = {
-	map = @0!;
-	key = @1!;
-	(map! :: `[]`) (map! key! $stack!)
-};
-
-
-set! ( map! `set` { this = map!; {
-	key = @0!;
-	val = @1!;
-	disp! (key! val! $stack!);
-	(this! :: `[]=`) (this! key! val! $stack!)
-}}! $stack! );
-
-__END__
-(get! _D [map! `set` $stack! ]!) _D [z 3 $stack!]!;
-(get! _D [map! `z` $stack! ]!) _D [z 3 $stack!]!;
-
-
-#map!::`[]` _D [map! x $stack!]!
-
-#add_two = { @0! }; #-> a; -> b; a! + b! };
-#add_two! _D [ 1 5 9 4 $stack! ]! # => 3
-__END__
-`x` = 4;
-`y` = {
-	`x` = 3;
-	{ 1 + x! }
-};
-{ @0! } _D [1]
-
-#(y _D [1, 2])
-#y!!! # => returns `4`
-
-__END__
-#(1 + 2)
-
-#{2 + 3}::`()` ! {2 + 3}
-__END__
-`y` = 3;
-`x` = `y`;
-4 + 5 * 6;
-4 * 5 ** 6;
-
-`y` = 3;
-`x` = `y`;
-4 + 5 * 6;
-4 * 5 ** 6;
-`y` = 3;
-`x` = `y`;
-4 + 5 * 6;
-4 * 5 ** 6;
-`y` = 3;
-`x` = `y`;
-4 + 5 * 6;
-4 * 5 ** 6
-
-//x!!; //123 + 456
-__END__
-#foo = {1};
-#x = foo! :: `()`;
-#5 * {4 + 4}_!
-#1, 2
-x = 1, y = 2;;
-a = b = 3;
-$locals
+});
+`x` = 0;
+`c` = { $1 }!;
+while:({x < 4}, {
+	disp:(x $stack);
+	#`a` = ;
+	#disp:(a, $stack);
+	(c::`[]=`):(c, `x`, x + 1, $stack);
+}, $stack);
+1

@@ -24,10 +24,10 @@ struct InnerObject {
 
 impl Object {
 	pub fn new<M: Mapping + 'static>(map: M) -> Self {
-		Object::new_with_env(map, Environment::current())
+		Object::new_with_env(Shared::new(map), Environment::current())
 	}
 
-	pub fn new_with_env<M: Mapping + 'static>(map: M, env: Shared<Environment>) -> Self {
+	pub fn new_with_env(map: Shared<dyn Mapping>, env: Shared<Environment>) -> Self {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 		lazy_static! {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -35,7 +35,7 @@ impl Object {
 
 		let obj = Object(Arc::new(InnerObject {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
-			map: Shared::new(map) as _,
+			map,
 			env
 		}));
 
@@ -161,6 +161,11 @@ impl Mapping for Object {
 	}
 
 	fn get(&self, key: &Object) -> Option<Object> {
+		if let Some(map) = self.downcast_map() {
+			if let Some(x) = map.into_inner().get(key) {
+				return Some(x)
+			}
+		}
 		self.0.map.read().get(key)
 	}
 

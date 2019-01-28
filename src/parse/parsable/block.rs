@@ -44,7 +44,7 @@ impl Parsable for Block {
 			match Parser::next_unevaluated_object(parser) {
 				None => break,
 				Some(Ok(obj)) => { /* do nothing*/ },
-				Some(Err(err)) => return parse::Result::Err(Box::new(err))
+				Some(Err(err)) => return parse::Result::Err(err)
 			}
 		}
 		// now we've hit EOF

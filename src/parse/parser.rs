@@ -97,7 +97,8 @@ impl Parser {
 			match parsablefn.call(parser) {
 				parse::Result::Restart => return Parser::next_unevaluated_object(parser),
 				parse::Result::Ok(object) => return Some(Ok(object)),
-				parse::Result::Err(err) => return Some(Err(crate::Error::Boxed(err))),
+				parse::Result::Err(err) => return Some(Err(err)),
+
 				parse::Result::Eof => return None,
 				parse::Result::None => { /* do nothing */ }
 			}
