@@ -36,7 +36,11 @@ builtins! {
 
 	fn "loop" (@body) {
 		loop {
-			body.call_attr("()", &[])?;
+			match body.call_attr("()", &[]) {
+				Ok(_) => {},
+				Err(crate::Error::NothingToReturn) => {},
+				Err(other) => return Err(other)
+			}
 		}
 	}
 
@@ -86,12 +90,16 @@ builtins! {
 
 	fn "input" (@;prompt=Object::new_null()) {
 		if !prompt.is_null() {
-			io::stdout()
-				.write(prompt.into_text()?.as_ref().as_ref())
-				.map_err(Error::IoError)?;
+			let mut prompt: String = prompt.into_text()?.into_inner();
+			// if !prompt.ends_with('\n') {
+			// 	prompt.push('\n');
+			// }
+			let mut stdout = io::stdout();
+			stdout.write(<str as AsRef<[u8]>>::as_ref(prompt.as_ref())).map_err(Error::IoError)?;
+			stdout.flush().map_err(Error::IoError)?;
 		}
 		let mut buffer = String::new();
-		io::stdin().read_to_string(&mut buffer).map_err(Error::IoError)?;
+		io::stdin().read_line(&mut buffer).map_err(Error::IoError)?;
 		buffer.into_object()
 	}
 	

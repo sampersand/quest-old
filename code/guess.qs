@@ -1,21 +1,16 @@
-MAX = 100;
-secret = rand() % MAX;
-guesses = 0;
+`secret` = (0 :: `round`):((rand:($stack) * 100) $stack);
+`guesses` = 0;
+`l` = $locals;
 
-done = false;
-
-while({ done == false }, {
-	guess = prompt("Pick a number from 0 to " + MAX + " (guess #" + guesses + ")").@num();
-	guesses.`@++`();
-	if(guess < secret, {
-		disp("too low!");
-	}, if(guess > secret, {
-		disp("too high!");
-	}, {
-		$2.get(`@locals`).set(`done`, true);
-	}))();
-});
-
-disp("it took you", guesses, "tries to guess the number");
-
-
+loop:({
+	`guess` = input:("Guess: " $stack);
+	`guess` = (guess::`@num`) : (guess $stack);
+	l::`[]=` : (l `guesses` guesses + 1, $stack);
+	switch:(guess <=> secret, {
+		`l` = $locals;	(l::`[]=`):(l, 0-1, { disp:("too small" $stack); } $stack);
+		(l::`[]=`):(l, 0, { return:($`-1` $stack); } $stack);
+		(l::`[]=`):(l, 1, { disp:("too large" $stack); } $stack);
+		$locals
+	} $stack):($stack);
+} $stack);
+disp:("It took you " + guesses + " tries.", $stack);

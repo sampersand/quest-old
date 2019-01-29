@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Weak as StdWeak};
 use std::hash::{Hash, Hasher};
 use std::{marker::Unsize, ops::CoerceUnsized};
 use std::thread;
@@ -8,6 +8,10 @@ use std::fmt::{self, Debug, Display, Formatter};
 #[derive(Default)]
 pub struct Shared<T: ?Sized> {
 	data: Arc<RwLock<T>>
+}
+
+pub struct Weak<T: ?Sized> {
+	data: StdWeak<RwLock<T>>
 }
 
 impl<T: Unsize<U> + ?Sized, U: ?Sized> CoerceUnsized<Shared<U>> for Shared<T> {}
@@ -26,9 +30,19 @@ impl<T: Clone> Shared<T> {
 	}
 }
 
+impl <T: ?Sized> Weak<T> {
+	fn upgrade(&self) -> Option<Shared<T>> {
+		Some(Shared { data: StdWeak::upgrade(&self.data)? })
+	}
+}
+
 impl<T: ?Sized> Shared<T> {
 	pub fn ptr_eq(&self, other: &Shared<T>) -> bool {
 		Arc::ptr_eq(&self.data, &other.data)
+	}
+
+	pub fn downgrade(&self) -> Weak<T> {
+		Weak { data: Arc::downgrade(&self.data) }
 	}
 
 	pub fn read<'a>(&'a self) -> impl Deref<Target=T> + 'a {

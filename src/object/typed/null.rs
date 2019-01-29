@@ -64,4 +64,6 @@ impl_type! { for Null, downcast_fn=downcast_null;
 	fn "==" (_this, rhs) {
 		rhs.is_null().into_object()
 	}
+
+	fn "()" (@_this) { Object::new_null() } // for stuff like if(foo {12})!
 }

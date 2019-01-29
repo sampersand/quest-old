@@ -10,6 +10,7 @@ mod rustfn;
 mod list;
 mod map;
 mod oper;
+mod bound;
 pub mod block;
 
 pub use self::{
@@ -23,8 +24,8 @@ pub use self::{
 	map::Map,
 	oper::Oper,
 	block::Block,
+	bound::BoundObject
 };
-
 pub(crate) use self::pristine::PRISTINE_MAP;
 
 use crate::shared::Shared;
@@ -51,6 +52,7 @@ pub(crate) enum Types {
 	Parser(Shared<crate::parse::Parser>),
 	Env(Shared<crate::env::Environment>),
 	Block(Block),
+	BoundObject(BoundObject)
 }
 
 pub(crate) trait Type : Into<Types> {
@@ -92,6 +94,7 @@ impl Display for Types {
 			Types::Oper(ref oper) => Display::fmt(oper, f),
 			Types::Parser(_) => write!(f, "<parser>"),
 			Types::Env(_) => write!(f, "<env>"),
+			Types::BoundObject(bound) => write!(f, "<bound>"),
 			Types::Block(ref block) => Display::fmt(block, f),
 		}
 	}
@@ -112,6 +115,7 @@ impl Debug for Types {
 			Types::Oper(ref oper) => Debug::fmt(oper, f),
 			Types::Parser(ref parser) => Debug::fmt(parser, f),
 			Types::Env(ref env) => Debug::fmt(env, f),
+			Types::BoundObject(ref bound) => Debug::fmt(bound, f),
 			Types::Block(ref block) => Debug::fmt(block, f),
 		}
 	}

@@ -15,6 +15,7 @@ basic_map! {
 	fn "__map__" (@this) { Object::new(this.map().clone()) }
 	fn "__env__" (@this) { Object::new(this.env().clone()) }
 	fn "__evaluate__" (@this, _parser) { this.clone() }
+	fn "__missing__" (@_this, _key) { return Err(crate::Error::NothingToReturn); }
 
 	fn "::" (@this, key) {
 		this.get(key).ok_or_else(|| MissingKey {
@@ -22,10 +23,8 @@ basic_map! {
 		})?
 	}
 
-	fn "." (@_this, _key) {
-		
-		// how is this different than `::` ?
-		todo!()
+	fn "." (@this, key) {
+		crate::object::typed::BoundObject::new(this.clone(), key.clone()).into_object()
 	}
 
 	fn ".=" (@this, key, val) {

@@ -9,6 +9,10 @@ impl Text {
 	pub fn new<T: Into<String>>(data: T) -> Text {
 		Text(data.into())
 	}
+
+	pub fn into_inner(self) -> String {
+		self.0
+	}
 }
 
 impl Display for Text {

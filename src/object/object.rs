@@ -5,7 +5,7 @@ use crate::collections::{Collection, Mapping};
 use super::IntoObject;
 
 use std::fmt::{self, Debug, Display, Formatter};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use lazy_static::lazy_static;
 
 // note how there isn't a RwLock on the InnerObject
@@ -18,6 +18,7 @@ pub struct Object(Arc<InnerObject>);
 #[cfg_attr(feature = "fine-debug", derive(Debug))]
 struct InnerObject {
 	id: usize,
+	this: Shared<Weak<InnerObject>>,
 	map: Shared<dyn Mapping>,
 	env: Shared<Environment>
 }
@@ -36,8 +37,11 @@ impl Object {
 		let obj = Object(Arc::new(InnerObject {
 			id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 			map,
-			env
+			env,
+			this: Shared::new(Weak::new())
 		}));
+
+		*obj.0.this.write() = Arc::downgrade(&obj.0);
 
 		trace!(target: "creation", "Created object {:?}", obj);
 		obj
@@ -166,7 +170,15 @@ impl Mapping for Object {
 				return Some(x)
 			}
 		}
-		self.0.map.read().get(key)
+
+		if let Some(val) = self.0.map.read().get(key) {
+			Some(val)
+		} else if let Some(missing) = self.0.map.read().get(&"__missing__".into_object()) {
+			let this = Object(self.0.this.read().upgrade().expect("couldnt upgrade weak"));
+			missing.call_attr("()", &[&this, key]).ok()
+		} else {
+			None
+		}
 	}
 
 	#[inline]

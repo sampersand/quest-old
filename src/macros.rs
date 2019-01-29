@@ -186,6 +186,7 @@ macro_rules! _create_rustfn {
 	};
 	($($other:tt)*) => { compile_error!(stringify!($other)); }
 }
+
 macro_rules! impl_type {
 	(for $obj:ty, downcast_fn = $downcast:ident; $(fn $name:tt $args:tt $($args_ident:ident)? $body:block)* ) => {
 		impl_type!{
