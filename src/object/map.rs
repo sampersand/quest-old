@@ -44,6 +44,7 @@ impl ObjectMap {
 		}
 	}
 
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn is_initialized(&self) -> bool {
 		match &*self.0.read().expect("ObjectMap.0 read failed in `is_initialized`") {
 			MapType::Uninit(_) => false,

@@ -1,4 +1,5 @@
 use std::sync::RwLock;
+use crate::object::Object;
 use std::collections::HashSet;
 
 lazy_static::lazy_static! {
@@ -15,6 +16,13 @@ impl Variable {
 		Variable(id)
 	}
 }
+
+impl Object<Variable> {
+	pub fn new_variable(id: &'static str) -> Object<Variable> {
+		Object::new(Variable::new(id))
+	}
+}
+
 
 impl From<Variable> for &'static str {
 	fn from(var: Variable) -> &'static str {
@@ -55,6 +63,7 @@ impl From<String> for Variable {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
 	#[test]
 	fn new() {
 		assert_eq!(Variable::new("").as_ref(), &"");
@@ -64,6 +73,7 @@ mod tests {
 		assert_eq!(Variable::new("🚀s are cool!").as_ref(), &"\u{1f680}s are cool!");
 		assert_eq!(Variable::new("Ɣ㠨𥊗").as_ref(), &"\u{194}㠨\u{25297}");
 	}
+
 	#[test]
 	fn from_static_str() {
 		assert_eq!(Variable::from("foobarbaz").as_ref(), &"foobarbaz");
@@ -79,13 +89,9 @@ mod tests {
 		assert_eq!(Variable::from("AWF_EAW".to_string()).as_ref(), &"AWF_EAW");
 		assert_eq!(Variable::from("┌─┘lol what ⓪❼༩".to_string()).as_ref(), &"┌─┘lol what ⓪❼༩");
 	}
+
+	#[test]
+	fn new_variable() {
+		assert_eq!(Object::new(Variable::new("quest is fun")), Object::new_variable("quest is fun"));
+	}
 }
-
-
-
-
-
-
-
-
-

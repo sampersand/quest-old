@@ -1,6 +1,6 @@
 [package]
 name = "quest"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["sam <westerhack@gmail.com>"]
 edition = "2018"
 
@@ -12,6 +12,8 @@ ignore-unused = []
 lazy_static = "1.1.0"
 mopa = "0.2"
 libc = "0.2"
+type-name = "0.1.0"
+
 #regex = { version = "1.0", features = ["pattern"] }
 log = "0.4"
 env_logger = "0.5"

@@ -8,26 +8,32 @@ use std::sync::{Arc, Weak};
 use std::any::Any;
 use crate::shared::Shared;
 use crate::map::Map;
+use crate::err::{Error, Result};
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 
-#[derive(Debug)]
 pub struct Object<T: ?Sized + Send + Sync>(Arc<Inner<T>>);
 pub type AnyObject = Object<dyn Any + Send + Sync>;
 
+struct InternalOps {
+	hash: fn(&dyn Any, &mut Hasher),
+	eq: fn(&dyn Any, &dyn Any) -> bool,
+	debug: fn(&dyn Any, &mut Formatter) -> fmt::Result
+}
+
+#[derive(Debug)]
 struct ObjectInfo {
 	id: usize,
 	env: Shared<dyn Map>,
 	parent: Option<AnyObject>,
-	hash: fn(&dyn Any, &mut Hasher)
 }
 
-#[derive(Debug)]
 struct Inner<T: ?Sized + Send + Sync> {
 	map: Shared<ObjectMap>,
 	info: ObjectInfo,
+	ops: InternalOps,
 	weakref: Weak<Inner<dyn Any + Send + Sync>>,
-	data: T
+	data: T,
 }
 
 impl<T: Type + Sized> Object<T> {
@@ -43,6 +49,7 @@ impl<T: Type + Sized> Object<T> {
 
 	fn _new(data: T, parent: Option<AnyObject>) -> Object<T> {
 		use std::sync::atomic::{AtomicUsize, Ordering};
+
 		lazy_static::lazy_static! {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 		}
@@ -53,9 +60,13 @@ impl<T: Type + Sized> Object<T> {
 				id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 				env: crate::env::current(),
 				parent: parent,
-				hash: (|obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to hasher").hash(&mut hasher))
 			},
-			weakref: unsafe { ::std::mem::uninitialized() },
+			ops: InternalOps {
+				hash: |obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to `hasher`").hash(&mut hasher),
+				eq: |obj, rhs| Any::downcast_ref::<T>(rhs).map(|rhs| Any::downcast_ref::<T>(obj).expect("bad obj passed to `eq`") == rhs).unwrap_or(false),
+				debug: |obj, f| Debug::fmt(Any::downcast_ref::<T>(obj).expect("bad obj passed to `fmt`"), f)
+			},
+			weakref: unsafe { std::mem::uninitialized() },
 			data: data
 		});
 
@@ -92,28 +103,70 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	}
 }
 
+impl<T: Send + Sync + Sized + 'static> Object<T> {
+	pub fn call_attr(&self, attr: &'static str, args: &[&AnyObject]) -> Result<AnyObject> {
+		self.as_any().call_attr(attr, args)
+	}
+
+	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		self.as_any().call(attr, args)
+	}
+}
+
+impl AnyObject {
+	pub fn call_attr(&self, attr: &'static str, args: &[&AnyObject]) -> Result<AnyObject> {
+		self.call(&Object::new_variable(attr).as_any(), args)
+	}
+
+	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		let val = self.0.map.read().expect("cant read obj map").get(attr)
+			.ok_or_else(|| Error::AttrMissing { obj: self.clone(), attr: attr.clone()})?;
+
+		match val.downcast::<types::RustFn>() {
+			Some(rustfn) => rustfn.data().call(self, args),
+			None => {
+				let mut self_args = Vec::with_capacity(args.len() + 1);
+				self_args.push(self);
+				self_args.extend(args);
+				val.call_attr("()", self_args.as_ref())
+			}
+		}
+
+	}
+}
+
 impl<T: 'static + Send + Sync + Sized> Object<T> {
-	#[cfg_attr(feature = "ignore-unused", allow(unused))]
-	fn as_any(&self) -> AnyObject {
+	pub fn as_any(&self) -> AnyObject {
 		Object(self.0.clone() as _)
 	}
 }
 
-impl Debug for ObjectInfo {
-	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		struct PtrFormatter(usize);
+impl AnyObject {
+	pub fn downcast_or_err<T: Send + Sync + 'static>(&self) -> Result<Object<T>> {
+		self.downcast::<T>().ok_or_else(|| Error::CastError {
+			obj: self.clone(),
+			into: type_name::get::<T>()
+		})
+	}
 
-		impl Debug for PtrFormatter {
-			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-				write!(f, "{:p}", self.0 as *const ())
-			}
+	pub fn downcast<T: Send + Sync + 'static>(&self) -> Option<Object<T>> {
+		if self.0.data.is::<T>() {
+			Some(Object(unsafe {
+				Arc::from_raw(Arc::into_raw(self.0.clone()) as *const Inner<T>)
+			}))
+		} else {
+			None
 		}
+	}
+}
 
+impl Debug for InternalOps {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		use crate::util::PtrFormatter;
 		f.debug_struct("ObjectInfo")
-		 .field("id", &self.id)
-		 .field("env", &self.env)
-		 .field("parent", &self.parent)
 		 .field("hash", &PtrFormatter(self.hash as usize))
+		 .field("eq", &PtrFormatter(self.eq as usize))
+		 .field("debug", &PtrFormatter(self.debug as usize))
 		 .finish()
 	}
 }
@@ -124,31 +177,65 @@ impl<T: Send + Sync + ?Sized> Clone for Object<T> {
 	}
 }
 
-impl<T: Send + Sync + ?Sized> Eq for Object<T> {}
-impl<T: Send + Sync + ?Sized> PartialEq for Object<T> {
-	fn eq(&self, other: &Object<T>) -> bool {
-		self.0 == other.0
+impl Eq for AnyObject {}
+impl PartialEq for AnyObject {
+	fn eq(&self, other: &AnyObject) -> bool {
+		// NOTE: this is only used internally, and thus we don't look at user equality
+		(self.0.ops.eq)(&self.0.data, &other.0.data)
 	}
 }
 
-impl<T: Send + Sync + ?Sized> Eq for Inner<T> {}
-impl<T: Send + Sync + ?Sized> PartialEq for Inner<T> {
-	fn eq(&self, _other: &Inner<T>) -> bool {
-		unimplemented!()
+impl<T: Send + Sync + Sized + 'static> Eq for Object<T> {}
+impl<T: Send + Sync + Sized + 'static> PartialEq for Object<T> {
+	fn eq(&self, other: &Object<T>) -> bool {
+		// this is a really awkward way to do it, but whatever?
+		// especially if T is hashable on its own, this might lead to weird situations
+		self.as_any() == other.as_any()
 	}
 }
+
+impl Debug for AnyObject {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		struct DataFmtr<'a>(&'a AnyObject);
+
+		impl Debug for DataFmtr<'_> {
+			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+				((self.0).0.ops.debug)(&(self.0).0.data, f)
+			}
+		}
+
+		if f.alternate() {
+			f.debug_struct("Object")
+			 .field("map", &self.0.map)
+			 .field("info", &self.0.info)
+			 .field("data", &DataFmtr(self))
+			 .finish()
+		} else {
+			write!(f, "Object({:?})", DataFmtr(self))
+		}
+	}
+}
+
+impl<T: Send + Sync + Sized + 'static> Debug for Object<T> {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		// this is a really awkward way to do it, but whatever?
+		// especially if T is hashable on its own, this might lead to weird situations
+		Debug::fmt(&self.as_any(), f)
+	}
+}
+
 
 impl Hash for AnyObject {
 	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
-		(self.0.info.hash)(&self.0.data, h);
+		(self.0.ops.hash)(&self.0.data, h);
 	}
 }
 
-impl<T: 'static + Send + Sync + Sized> Hash for Object<T> {
+impl<T: Send + Sync + Sized + 'static> Hash for Object<T> {
 	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
 		// this is a really awkward way to do it, but whatever?
 		// especially if T is hashable on its own, this might lead to weird situations
-		(self.0.info.hash)(&self.0.data as &dyn Any, h);
+		self.as_any().hash(h)
 	}
 }
 
