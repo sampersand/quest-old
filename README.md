@@ -88,7 +88,7 @@ disp(my_car); #=> A car made by honda with 4 wheels
 
 TODO: Show examples of how to change what operators do
 
-TODO: Add a lisence and contributing file
+TODO: Add a license and contributing file
 
 
 
