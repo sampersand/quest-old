@@ -179,18 +179,27 @@ impl<T: Send + Sync + ?Sized> Clone for Object<T> {
 
 impl Eq for AnyObject {}
 impl PartialEq for AnyObject {
-	fn eq(&self, other: &AnyObject) -> bool {
-		// NOTE: this is only used internally, and thus we don't look at user equality
-		(self.0.ops.eq)(&self.0.data, &other.0.data)
+	fn eq(&self, rhs: &AnyObject) -> bool {
+		use self::types::{Variable, Boolean};
+
+		if let (Some(lhs), Some(rhs)) = (self.downcast::<Variable>(), rhs.downcast::<Variable>()) {
+			lhs.data() == rhs.data()
+		} else {
+			self.call_attr("==", &[rhs])
+				.ok()
+				.and_then(|x| x.downcast::<Boolean>())
+				.map(|obj| obj.data().is_true())
+				.unwrap_or(false)
+		}
 	}
 }
 
 impl<T: Send + Sync + Sized + 'static> Eq for Object<T> {}
 impl<T: Send + Sync + Sized + 'static> PartialEq for Object<T> {
-	fn eq(&self, other: &Object<T>) -> bool {
+	fn eq(&self, rhs: &Object<T>) -> bool {
 		// this is a really awkward way to do it, but whatever?
 		// especially if T is hashable on its own, this might lead to weird situations
-		self.as_any() == other.as_any()
+		self.as_any() == rhs.as_any()
 	}
 }
 

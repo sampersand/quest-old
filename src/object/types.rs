@@ -1,13 +1,15 @@
 mod number;
 mod variable;
 mod rustfn;
+mod boolean;
 
 mod impls;
 
 pub use self::{
 	number::Number,
 	rustfn::RustFn,
-	variable::Variable
+	variable::Variable,
+	boolean::Boolean
 };
 
 use crate::{shared::Shared, map::Map};

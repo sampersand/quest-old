@@ -58,7 +58,7 @@ impl Hash for Number {
 
 impl Display for Number {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		self.0.fmt(f)
+		Display::fmt(&self.0, f)
 	}
 }
 
