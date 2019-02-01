@@ -1,23 +1,25 @@
-mod r#type;
+mod types;
 mod map;
 
-use self::r#type::Type;
+use self::types::Type;
 use self::map::ObjectMap;
 
 use std::sync::{Arc, Weak};
 use std::any::Any;
 use crate::shared::Shared;
 use crate::map::Map;
+use std::hash::{Hash, Hasher};
+use std::fmt::{self, Debug, Formatter};
 
 #[derive(Debug)]
 pub struct Object<T: ?Sized + Send + Sync>(Arc<Inner<T>>);
 pub type AnyObject = Object<dyn Any + Send + Sync>;
 
-#[derive(Debug)]
 struct ObjectInfo {
 	id: usize,
 	env: Shared<dyn Map>,
-	parent: Option<AnyObject>
+	parent: Option<AnyObject>,
+	hash: fn(&dyn Any, &mut Hasher)
 }
 
 #[derive(Debug)]
@@ -29,10 +31,12 @@ struct Inner<T: ?Sized + Send + Sync> {
 }
 
 impl<T: Type + Sized> Object<T> {
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn new(data: T) -> Object<T> {
 		Object::_new(data, None)
 	}
 
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn new_child(data: T, parent: AnyObject) -> Object<T> {
 		Object::_new(data, Some(parent))
 	}
@@ -48,7 +52,8 @@ impl<T: Type + Sized> Object<T> {
 			info: ObjectInfo {
 				id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
 				env: crate::env::current(),
-				parent: parent
+				parent: parent,
+				hash: (|obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to hasher").hash(&mut hasher))
 			},
 			weakref: unsafe { ::std::mem::uninitialized() },
 			data: data
@@ -66,25 +71,52 @@ impl<T: Type + Sized> Object<T> {
 }
 
 impl<T: Send + Sync + ?Sized> Object<T> {
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn parent(&self) -> Option<AnyObject> {
 		self.0.info.parent.clone()
 	}
-	// pub fn id(&self) -> usize {
-	// 	self.0.info.id
-	// }
-	// pub fn env(&self) -> Shared<dyn Map> {
-	// 	self.0.info.env.clone()
-	// }
+
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
+	pub fn id(&self) -> usize {
+		self.0.info.id
+	}
+
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
+	pub fn env(&self) -> Shared<dyn Map> {
+		self.0.info.env.clone()
+	}
+
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn data(&self) -> &T {
 		&self.0.data
 	}
 }
+
 impl<T: 'static + Send + Sync + Sized> Object<T> {
+	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	fn as_any(&self) -> AnyObject {
 		Object(self.0.clone() as _)
 	}
 }
 
+impl Debug for ObjectInfo {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		struct PtrFormatter(usize);
+
+		impl Debug for PtrFormatter {
+			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+				write!(f, "{:p}", self.0 as *const ())
+			}
+		}
+
+		f.debug_struct("ObjectInfo")
+		 .field("id", &self.id)
+		 .field("env", &self.env)
+		 .field("parent", &self.parent)
+		 .field("hash", &PtrFormatter(self.hash as usize))
+		 .finish()
+	}
+}
 
 impl<T: Send + Sync + ?Sized> Clone for Object<T> {
 	fn clone(&self) -> Object<T> {
@@ -106,13 +138,28 @@ impl<T: Send + Sync + ?Sized> PartialEq for Inner<T> {
 	}
 }
 
+impl Hash for AnyObject {
+	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
+		(self.0.info.hash)(&self.0.data, h);
+	}
+}
+
+impl<T: 'static + Send + Sync + Sized> Hash for Object<T> {
+	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
+		// this is a really awkward way to do it, but whatever?
+		// especially if T is hashable on its own, this might lead to weird situations
+		(self.0.info.hash)(&self.0.data as &dyn Any, h);
+	}
+}
+
+
 impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Object<U>> for Object<T> {}
 
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	#[derive(Debug, PartialEq, Eq)]
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct MyType(i32);
 
 	impl Type for MyType {
@@ -139,7 +186,37 @@ mod tests {
 		assert_eq!(obj2.parent(), Some(obj));
 		assert_eq!(obj2.data(), &MyType(456));
 	}
+
+	#[test]
+	fn hashing() {
+		fn hash<T: Hash>(t: &T) -> u64 {
+			let mut s = std::collections::hash_map::DefaultHasher::new();
+			t.hash(&mut s);
+			s.finish()
+		}
+
+		let myt = MyType(-123_456);
+		let ref obj = Object::new(myt);
+
+		assert_eq!(hash(obj), hash(obj));
+		assert_eq!(hash(obj), hash(&obj.as_any()));
+		assert_eq!(hash(&obj.as_any()), hash(&obj.as_any()));
+	}
+
+	#[test]
+	fn equality() {
+		let ref obj1 = Object::new(MyType(234));
+		let ref obj2 = Object::new(MyType(567));
+
+		assert_eq!(obj1, &obj1.clone());
+		assert_ne!(obj1, obj2);
+
+		assert_eq!(&obj1.as_any(), &obj1.as_any().clone());
+		assert_ne!(&obj1.as_any(), &obj2.as_any());
+	}
 }
+
+
 
 
 

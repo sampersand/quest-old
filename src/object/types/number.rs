@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use crate::object::Type;
+use crate::{map::Map, shared::Shared};
 
 #[derive(Debug, PartialEq, PartialOrd, Default)]
 pub struct Number(f64);
@@ -39,6 +41,19 @@ impl From<Number> for f64 {
 impl AsRef<f64> for Number {
 	fn as_ref(&self) -> &f64 {
 		&self.0
+	}
+}
+
+lazy_static::lazy_static! {
+	pub static ref NUMBER_MAP: Shared<dyn Map> = Shared::new({
+		let x = ::std::collections::HashMap::new();
+		x
+	});
+}
+
+impl Type for  Number {
+	fn get_type_map() -> Shared<dyn Map> {
+		NUMBER_MAP.clone()
 	}
 }
 
@@ -95,11 +110,5 @@ mod tests {
 		assert_eq!(Number::_from_whole_decimal(-99999999, 99999999).as_ref(), &-99999999.99999999);
 	}
 }
-
-
-
-
-
-
 
 

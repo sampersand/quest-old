@@ -7,8 +7,9 @@ pub use self::{
 };
 
 use crate::{shared::Shared, map::Map};
+use std::hash::Hash;
 
-pub trait Type : 'static + Send + Sync {
+pub trait Type : Hash + Send + Sync + 'static {
 	fn get_type_map() -> Shared<dyn Map>;
 }
 

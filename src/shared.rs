@@ -25,3 +25,5 @@ impl<T: ?Sized> Shared<T> {
 		self.0.write()
 	}
 }
+
+impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Shared<U>> for Shared<T> {}

@@ -5,9 +5,8 @@ authors = ["sam <westerhack@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["single-threaded"]
-single-threaded = []
-fine-debug = []
+default = ["ignore-unused"]
+ignore-unused = []
 
 [dependencies]
 lazy_static = "1.1.0"
