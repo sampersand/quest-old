@@ -1,7 +1,24 @@
-#![cfg_attr(test, allow(unused))]
+#![allow(unused)]
+#![cfg_attr(not(debug_assertions), deny(unreachable_code))]
+#![feature(coerce_unsized, unsize, transpose_result, try_trait)]
 
-#![feature(unsize, coerce_unsized)]
+#[macro_use]
+extern crate log;
+
+#[macro_use]
+mod macros;
+
+pub mod parse;
 mod object;
-mod map;
 mod shared;
 mod env;
+mod collections;
+mod err;
+
+pub use self::{
+	shared::Shared,
+	collections::Mapping,
+	object::{Object, IntoObject},
+	env::Environment,
+	err::{Result, Error}
+};
