@@ -4,7 +4,7 @@ mod map;
 use self::types::Type;
 use self::map::ObjectMap;
 
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, RwLock, Weak};
 use std::any::Any;
 use crate::shared::Shared;
 use crate::map::Map;
@@ -17,7 +17,6 @@ pub type AnyObject = Object<dyn Any + Send + Sync>;
 
 struct InternalOps {
 	hash: fn(&dyn Any, &mut Hasher),
-	eq: fn(&dyn Any, &dyn Any) -> bool,
 	debug: fn(&dyn Any, &mut Formatter) -> fmt::Result
 }
 
@@ -32,8 +31,8 @@ struct Inner<T: ?Sized + Send + Sync> {
 	map: Shared<ObjectMap>,
 	info: ObjectInfo,
 	ops: InternalOps,
-	weakref: Weak<Inner<dyn Any + Send + Sync>>,
-	data: T,
+	weakref: Weak<Inner<dyn Any + Send + Sync>>, // is this required?
+	data: RwLock<T>,
 }
 
 impl<T: Type + Sized> Object<T> {
@@ -63,11 +62,10 @@ impl<T: Type + Sized> Object<T> {
 			},
 			ops: InternalOps {
 				hash: |obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to `hasher`").hash(&mut hasher),
-				eq: |obj, rhs| Any::downcast_ref::<T>(rhs).map(|rhs| Any::downcast_ref::<T>(obj).expect("bad obj passed to `eq`") == rhs).unwrap_or(false),
 				debug: |obj, f| Debug::fmt(Any::downcast_ref::<T>(obj).expect("bad obj passed to `fmt`"), f)
 			},
 			weakref: unsafe { std::mem::uninitialized() },
-			data: data
+			data: RwLock::new(data)
 		});
 
 		let mut obj = Object(inner);
@@ -98,7 +96,7 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	}
 
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
-	pub fn data(&self) -> &T {
+	pub fn data(&self) -> &RwLock<T> {
 		&self.0.data
 	}
 }
@@ -123,7 +121,7 @@ impl AnyObject {
 			.ok_or_else(|| Error::AttrMissing { obj: self.clone(), attr: attr.clone()})?;
 
 		match val.downcast::<types::RustFn>() {
-			Some(rustfn) => rustfn.data().call(self, args),
+			Some(rustfn) => rustfn.data().read().expect("err when calling rustfn").call(self, args),
 			None => {
 				let mut self_args = Vec::with_capacity(args.len() + 1);
 				self_args.push(self);
@@ -150,7 +148,7 @@ impl AnyObject {
 	}
 
 	pub fn downcast<T: Send + Sync + 'static>(&self) -> Option<Object<T>> {
-		if self.0.data.is::<T>() {
+		if self.0.data.read().unwrap().is::<T>() {
 			Some(Object(unsafe {
 				Arc::from_raw(Arc::into_raw(self.0.clone()) as *const Inner<T>)
 			}))
@@ -165,7 +163,6 @@ impl Debug for InternalOps {
 		use crate::util::PtrFormatter;
 		f.debug_struct("ObjectInfo")
 		 .field("hash", &PtrFormatter(self.hash as usize))
-		 .field("eq", &PtrFormatter(self.eq as usize))
 		 .field("debug", &PtrFormatter(self.debug as usize))
 		 .finish()
 	}
@@ -183,12 +180,14 @@ impl PartialEq for AnyObject {
 		use self::types::{Variable, Boolean};
 
 		if let (Some(lhs), Some(rhs)) = (self.downcast::<Variable>(), rhs.downcast::<Variable>()) {
-			lhs.data() == rhs.data()
+			let lhs = lhs.data().read().expect("TODO: msg");
+			let rhs = rhs.data().read().expect("TODO: msg");
+			*lhs == *rhs
 		} else {
 			self.call_attr("==", &[rhs])
 				.ok()
 				.and_then(|x| x.downcast::<Boolean>())
-				.map(|obj| obj.data().is_true())
+				.map(|obj| obj.data().read().expect("TODO: msg").is_true())
 				.unwrap_or(false)
 		}
 	}
@@ -209,7 +208,8 @@ impl Debug for AnyObject {
 
 		impl Debug for DataFmtr<'_> {
 			fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-				((self.0).0.ops.debug)(&(self.0).0.data, f)
+				let data = self.0.data().read().expect("read err in DataFmtr::fmt");
+				((self.0).0.ops.debug)(&*data, f)
 			}
 		}
 
@@ -235,13 +235,14 @@ impl<T: Send + Sync + Sized + 'static> Debug for Object<T> {
 
 
 impl Hash for AnyObject {
-	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
-		(self.0.ops.hash)(&self.0.data, h);
+	fn hash<H: Hasher>(&self, h: &mut H) {
+		let data = self.data().read().expect("read error in AnyObject::hash");
+		(self.0.ops.hash)(&*data, h);
 	}
 }
 
 impl<T: Send + Sync + Sized + 'static> Hash for Object<T> {
-	fn hash<'a, H: Hasher>(&self, h: &'a mut H) {
+	fn hash<H: Hasher>(&self, h: &mut H) {
 		// this is a really awkward way to do it, but whatever?
 		// especially if T is hashable on its own, this might lead to weird situations
 		self.as_any().hash(h)
@@ -274,13 +275,13 @@ mod tests {
 	fn new() {
 		let obj: Object<MyType> = Object::new(MyType(123));
 		assert_eq!(obj.parent(), None);
-		assert_eq!(obj.data(), &MyType(123));
+		assert_eq!(*obj.data().read().unwrap(), MyType(123));
 
 		let obj = obj.as_any();
 		let obj2: Object<MyType> = Object::new_child(MyType(456), obj.clone());
 
 		assert_eq!(obj2.parent(), Some(obj));
-		assert_eq!(obj2.data(), &MyType(456));
+		assert_eq!(*obj2.data().read().unwrap(), MyType(456));
 	}
 
 	#[test]

@@ -1,6 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use crate::object::Object;
+use std::ops::Deref;
 
 #[derive(Debug, PartialEq, PartialOrd, Default)]
 pub struct Number(f64);
@@ -49,6 +50,12 @@ impl AsRef<f64> for Number {
 	}
 }
 
+impl Deref for Number {
+	type Target = f64;
+	fn deref(&self) -> &f64 {
+		&self.0
+	}
+}
 
 impl Hash for Number {
 	fn hash<H: Hasher>(&self, h: &mut H) {
@@ -61,6 +68,67 @@ impl Display for Number {
 		Display::fmt(&self.0, f)
 	}
 }
+
+macro_rules! f64_func {
+	(math $oper:tt) => { |num, args| {
+		let rhs_ref = getarg!(args[0]: Number)?;
+		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
+		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
+		Ok(Object::new_number(**lhs $oper **rhs))
+	}};
+	(logic $oper:tt) => { |num, args| {
+		let rhs_ref = getarg!(args[0]: Number)?;
+		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
+		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
+		Ok(Object::new_boolean(**lhs $oper **rhs))
+	}};
+
+	(integer $oper:tt) => {
+		unimplemented!()
+	}
+}
+
+impl_type! { for Number;
+	"+" => f64_func!(math +),
+	"-" => f64_func!(math -),
+	"*" => f64_func!(math *),
+	"/" => f64_func!(math /),
+	"%" => f64_func!(math %),
+	"**" => |num, args| {
+		let rhs_ref = getarg!(args[0]: Number)?;
+		let lhs = num.data().read().expect("num read error in Number::**");
+		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
+		Ok(Object::new_number(lhs.powf(**rhs)))
+	},
+	"==" => f64_func!(logic ==),
+	"!=" => f64_func!(logic !=),
+	"<=" => f64_func!(logic <=),
+	"<" => f64_func!(logic <),
+	">=" => f64_func!(logic >=),
+	">" => f64_func!(logic >),
+	"-@" => |num, _| Ok(Object::new_number(-**num.data().read().expect("read error in Number::-@"))),
+}
+
+// fn number_add(num: &Object<Number>, args: &[&AnyObject]) -> Result<AnyObject> {
+// 	let arg = args.get(0).unwrap().downcast::<Number>().unwrap();
+// 	Ok(Object::new_number(num.data().as_ref() + arg.data().as_ref()))
+// }
+
+// lazy_static::lazy_static! {
+// 	pub static ref NUMBER_MAP: Shared<dyn Map> = Shared::new({
+// 		let mut map = HashMap::<AnyObject, AnyObject>::new();
+// 		map.insert(Object::new_variable("+"), Object::new_named_rustfn("+", number_add));
+// 		map
+// 	});
+// }
+
+// impl Type for  Number {
+// 	fn get_type_map() -> Shared<dyn Map> {
+// 		NUMBER_MAP.clone()
+// 	}
+// }
+
+
 
 #[cfg(test)]
 mod tests {

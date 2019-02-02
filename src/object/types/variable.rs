@@ -1,6 +1,10 @@
 use std::sync::RwLock;
-use crate::object::Object;
-use std::collections::HashSet;
+use crate::object::{Object, Type};
+use std::collections::{HashSet, HashMap};
+use crate::{map::Map, shared::Shared};
+use lazy_static::lazy_static;
+
+
 
 lazy_static::lazy_static! {
 	static ref ID_STRINGS: RwLock<HashSet<&'static str>> = RwLock::new(HashSet::new());
@@ -59,6 +63,10 @@ impl From<String> for Variable {
 		}
 	}
 }
+
+impl_type! { for Variable; }
+
+
 
 #[cfg(test)]
 mod tests {
