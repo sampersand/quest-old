@@ -1,12 +1,11 @@
 #[macro_use]
 mod macros;
 
+mod basic;
 mod number;
 mod variable;
 mod rustfn;
 mod boolean;
-
-mod impls;
 
 pub use self::{
 	number::Number,

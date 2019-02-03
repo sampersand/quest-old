@@ -2,14 +2,18 @@ use std::fmt::Debug;
 use crate::object::AnyObject;
 
 pub trait Map : Debug + Send + Sync {
+	#[must_use]
 	fn get(&self, key: &AnyObject) -> Option<AnyObject>;
 	fn set(&mut self, key: AnyObject, val: AnyObject); // we don't care what is returned
 	fn del(&mut self, key: &AnyObject) -> Option<AnyObject>;
+	fn len(&self) -> usize;
 
 	#[inline]
+	#[must_use]
 	fn has(&self, key: &AnyObject) -> bool {
 		self.get(key).is_some()
 	}
+
 }
 
 use std::collections::HashMap;
@@ -33,5 +37,10 @@ impl Map for HashMap<AnyObject, AnyObject> {
 	#[inline]
 	fn has(&self, key: &AnyObject) -> bool {
 		self.contains_key(key)
+	}
+
+	#[inline]
+	fn len(&self) -> usize {
+		self.len()
 	}
 }

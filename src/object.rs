@@ -38,15 +38,15 @@ struct Inner<T: ?Sized + Send + Sync> {
 impl<T: Type + Sized> Object<T> {
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn new(data: T) -> Object<T> {
-		Object::_new(data, None)
+		Object::_new(data, None, crate::env::current())
 	}
 
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn new_child(data: T, parent: AnyObject) -> Object<T> {
-		Object::_new(data, Some(parent))
+		Object::_new(data, Some(parent), crate::env::current())
 	}
 
-	fn _new(data: T, parent: Option<AnyObject>) -> Object<T> {
+	fn _new(data: T, parent: Option<AnyObject>, env: Shared<dyn Map>) -> Object<T> {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 
 		lazy_static::lazy_static! {
@@ -57,7 +57,7 @@ impl<T: Type + Sized> Object<T> {
 			map: Shared::new(ObjectMap::from_type::<T>()),
 			info: ObjectInfo {
 				id: ID_COUNTER.fetch_add(1, Ordering::Relaxed),
-				env: crate::env::current(),
+				env: env,
 				parent: parent,
 			},
 			ops: InternalOps {
@@ -79,6 +79,16 @@ impl<T: Type + Sized> Object<T> {
 	}
 }
 
+impl<T: Type + Clone + Sized> Object<T> {
+	pub fn duplicate(&self) -> Object<T> {
+		Object::_new(
+			self.0.data.read().expect("read err in Object::duplicate").clone(),
+			self.0.info.parent.clone(),
+			self.0.info.env.clone()
+		)
+	}
+}
+
 impl<T: Send + Sync + ?Sized> Object<T> {
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn parent(&self) -> Option<AnyObject> {
@@ -91,13 +101,17 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	}
 
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
-	pub fn env(&self) -> Shared<dyn Map> {
-		self.0.info.env.clone()
+	pub fn env(&self) -> &Shared<dyn Map> {
+		&self.0.info.env
 	}
 
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn data(&self) -> &RwLock<T> {
 		&self.0.data
+	}
+
+	pub fn _map(&self) -> &Shared<ObjectMap> {
+		&self.0.map
 	}
 }
 
@@ -184,11 +198,16 @@ impl PartialEq for AnyObject {
 			let rhs = rhs.data().read().expect("TODO: msg");
 			*lhs == *rhs
 		} else {
-			self.call_attr("==", &[rhs])
-				.ok()
-				.and_then(|x| x.downcast::<Boolean>())
-				.map(|obj| obj.data().read().expect("TODO: msg").is_true())
-				.unwrap_or(false)
+			let res = self.call_attr("==", &[rhs]);
+			println!("{:?}", res);
+			if let Ok(equality) = res {
+				equality.to_boolean()
+					.ok()
+					.map(|x| x.data().read().expect("read err in AnyObject::==").is_true())
+					.unwrap_or(false)
+			} else {
+				self.id() == rhs.id()
+			}
 		}
 	}
 }
@@ -256,12 +275,14 @@ impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use std::collections::HashMap;
+
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct MyType(i32);
 
 	impl Type for MyType {
 		fn get_type_map() -> Shared<dyn Map> {
-			unimplemented!("TODO: type for MyType")
+			Shared::new(HashMap::new())
 		}
 	}
 
@@ -282,6 +303,22 @@ mod tests {
 
 		assert_eq!(obj2.parent(), Some(obj));
 		assert_eq!(*obj2.data().read().unwrap(), MyType(456));
+	}
+
+	#[test]
+	fn duplicate(){
+		let parent = Object::new(MyType(0));
+		let obj = Object::new_child(MyType(112), parent.clone());
+		let dup = obj.duplicate();
+
+		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
+		assert_ne!(&*obj.data().read().unwrap() as *const _, &*dup.data().read().unwrap() as *const _);
+
+		assert_eq!(obj.parent().unwrap().id(), parent.id());
+		assert_eq!(dup.parent().unwrap().id(), parent.id());
+		assert_ne!(obj.id(), dup.id());
+
+		assert_ne!(&*obj.0.map.read().unwrap() as *const _, &*dup.0.map.read().unwrap() as *const _);
 	}
 
 	#[test]

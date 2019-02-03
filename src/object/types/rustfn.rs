@@ -36,6 +36,25 @@ impl RustFn {
 		}
 	}
 
+	pub fn new_untyped<F>(func: F) -> RustFn
+			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
+			      F: Send + Sync + 'static {
+		RustFn::_new_untyped(None, func)
+	}
+
+	pub fn new_untyped_named<F>(name: &'static str, func: F) -> RustFn
+			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
+			      F: Send + Sync + 'static {
+		RustFn::_new_untyped(Some(name), func)
+	}
+
+	fn _new_untyped<F>(name: Option<&'static str>, func: F) -> RustFn
+			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
+			      F: Send + Sync + 'static {
+		RustFn { name, func: Box::new(func) }
+	}
+
+
 	pub fn name(&self) -> Option<&'static str> {
 		self.name
 	}
@@ -64,7 +83,7 @@ impl Object<RustFn> {
 impl Eq for RustFn {}
 impl PartialEq for RustFn {
 	fn eq(&self, other: &RustFn) -> bool {
-		self.name == other.name && std::ptr::eq(&self.func, &other.func)
+		self.name == other.name && std::ptr::eq(&*self.func, &*other.func)
 	}
 }
 
@@ -84,6 +103,9 @@ impl Debug for RustFn {
 	}
 }
 
+impl_type! { for RustFn; }
+
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -94,18 +116,26 @@ mod tests {
 		assert_eq!(RustFn::new::<_, !>(|_, _| unreachable!()).name(), None);
 		assert_eq!(RustFn::new_named::<_, !>("hi there", |_, _| unreachable!()).name(), Some("hi there"));
 
+		// let f: fn(&Object<!>, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
+		// assert_eq!(RustFn::new::<_, !>(f), RustFn::new::<_,!>(f));
+	}
 
-		let f: fn(&Object<!>, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
-		assert_eq!(RustFn::new::<_, !>(f), RustFn::new::<_,!>(f));
+	#[test]
+	fn untyped() {
+		assert_eq!(RustFn::new_untyped(|_, _| unreachable!()).name(), None);
+		assert_eq!(RustFn::new_untyped_named("hi there", |_, _| unreachable!()).name(), Some("hi there"));
+
+		// let f: fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
+		// assert_eq!(RustFn::new_untyped(f), RustFn::new_untyped(f));
 	}
 
 	#[test]
 	fn call_valid() {
-		let func = RustFn::new::<_, Number>(|num, _| Ok(Object::new_number(num.data().as_ref() + 1.0)));
+		let func = RustFn::new::<_, Number>(|num, _| Ok(Object::new_number(**num.data().read().unwrap() + 1.0)));
 
 		assert_eq!(
 			&func.call(&Object::new_number(123.0).as_any(), &[]).unwrap(),
-			&Object::new_number(123.4).as_any()
+			&Object::new_number(124.0).as_any()
 		);
 	}
 
@@ -126,6 +156,23 @@ mod tests {
 			Error::__Testing => {},
 			other => panic!("Unexpected error returned: {:?}", other)
 		}
+	}
+
+	#[test]
+	fn call_untyped() {
+		let func = RustFn::new_untyped(|val, _| {
+			Ok(Object::new_boolean(val.data().read().unwrap().is::<Number>()))
+		});
+
+		assert_eq!(
+			&func.call(&Object::new_number(123.0).as_any(), &[]).unwrap(),
+			&Object::new_boolean(true).as_any()
+		);
+
+		assert_eq!(
+			&func.call(&Object::new_variable("A").as_any(), &[]).unwrap(),
+			&Object::new_boolean(false).as_any()
+		);
 	}
 }
 

@@ -69,6 +69,10 @@ impl Map for ObjectMap {
 	fn has(&self, key: &AnyObject) -> bool {
 		self.access_map(|map| map.read().expect("Shared read failed in `get`").has(key))
 	}	
+
+	fn len(&self) -> usize {
+		self.access_map(|map| map.read().expect("err in reading ObjectMap::len").len())
+	}
 }
 
 
@@ -77,16 +81,54 @@ impl Map for ObjectMap {
 mod tests {
 use super::*;
 	use std::collections::HashMap;
-	use crate::object::types::Number;
+	use crate::object::Object;
+	use std::any::Any;
+
+	#[derive(Debug, PartialEq, Hash)]
+	struct MyType;
+
+	#[derive(Debug, PartialEq, Eq, Hash)]
+	struct MyInnerType;
+	impl Type for MyInnerType {
+		fn get_type_map() -> Shared<dyn Map> { unreachable!() }
+	}
+
+	impl Type for MyType {
+		fn get_type_map() -> Shared<dyn Map> {
+			Shared::new({
+				let mut map = HashMap::<AnyObject, AnyObject>::new();
+				map.insert(Object::new(MyInnerType), Object::new(MyInnerType));
+				map
+			})
+		}
+	}
 
 	#[test]
 	fn new() {
 		assert!(!ObjectMap::from_func(|| unreachable!()).is_initialized());
 		let hash_map: HashMap<AnyObject, AnyObject> = HashMap::new();
 		assert!(ObjectMap::initialized(Shared::new(hash_map.clone()) as _).is_initialized());
-		assert!(!ObjectMap::from_type::<Number>().is_initialized());
+		assert!(!ObjectMap::from_type::<MyType>().is_initialized());
 	}
 
-	// #[test]
+	#[test]
+	fn map_is_created() {
+		let m = ObjectMap::from_type::<MyType>();
+
+		assert!(!m.is_initialized());
+		m.get(&Object::new(MyType).as_any());
+		assert!(m.is_initialized());
+		let inner = m.0.read().unwrap();
+		match &*inner {
+			MapType::Uninit(_) => unreachable!(),
+			MapType::Map(map) => assert_eq!(map.read().unwrap().len(), 1)
+		}
+		drop(inner);
+	}
 }
+
+
+
+
+
 

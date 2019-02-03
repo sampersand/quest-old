@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::object::Object;
 use std::ops::Deref;
 
-#[derive(Debug, PartialEq, PartialOrd, Default)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Default)]
 pub struct Number(f64);
 
 impl Number {
@@ -78,6 +78,7 @@ macro_rules! f64_func {
 	}};
 	(logic $oper:tt) => { |num, args| {
 		let rhs_ref = getarg!(args[0]: Number)?;
+		println!("number.== was called: {:?}, {:?}", num, rhs_ref);
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
 		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_boolean(**lhs $oper **rhs))
@@ -89,6 +90,8 @@ macro_rules! f64_func {
 }
 
 impl_type! { for Number;
+	"@bool" => |num, _| Ok(Object::new_boolean(*num.data().read().expect("read error in Number::@bool").as_ref() != 0.0)),
+
 	"+" => f64_func!(math +),
 	"-" => f64_func!(math -),
 	"*" => f64_func!(math *),
@@ -107,6 +110,7 @@ impl_type! { for Number;
 	">=" => f64_func!(logic >=),
 	">" => f64_func!(logic >),
 	"-@" => |num, _| Ok(Object::new_number(-**num.data().read().expect("read error in Number::-@"))),
+	"+@" => |num, _| Ok(num.duplicate())
 }
 
 // fn number_add(num: &Object<Number>, args: &[&AnyObject]) -> Result<AnyObject> {
@@ -127,7 +131,6 @@ impl_type! { for Number;
 // 		NUMBER_MAP.clone()
 // 	}
 // }
-
 
 
 #[cfg(test)]
@@ -170,6 +173,12 @@ mod tests {
 		assert_eq!(Number::_from_whole_decimal(-99999999, 99999999).as_ref(), &-99999999.99999999);
 	}
 
+
+	#[test]
+	fn equality() {
+		assert_eq!(Number::new(0.0), Number::new(0.0));
+		assert_eq!(Number::new(123.456), Number::new(123.456));
+	}
 
 	#[test]
 	fn new_number() {

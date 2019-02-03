@@ -1,6 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use crate::object::Object;
+use crate::object::{Object, AnyObject};
+use crate::err::Result;
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boolean(bool);
@@ -22,6 +24,13 @@ impl Object<Boolean> {
 	}
 }
 
+impl AnyObject {
+	pub fn to_boolean(&self) -> Result<Object<Boolean>> {
+		self.call_attr("@bool", &[])?
+			.downcast_or_err::<Boolean>()
+	}
+}
+
 impl From<bool> for Boolean {
 	fn from(boolean: bool) -> Boolean {
 		Boolean::new(boolean)
@@ -31,6 +40,13 @@ impl From<bool> for Boolean {
 impl From<Boolean> for bool {
 	fn from(boolean: Boolean) -> bool {
 		boolean.0
+	}
+}
+
+impl Deref for Boolean {
+	type Target = bool;
+	fn deref(&self) -> &bool {
+		&self.0
 	}
 }
 
@@ -45,6 +61,17 @@ impl Display for Boolean {
 		Display::fmt(&self.0, f)
 	}
 }
+
+impl_type! { for Boolean;
+	"@bool" => |obj, _| Ok(Object::new_boolean(obj.data().read().expect("read err in Boolean::@bool").is_true())),
+	"==" => |obj, args| {
+		let rhs_ref = getarg!(args[0]: Boolean)?;
+		let this = obj.data().read().expect("read err in Boolean::==") ;
+		let rhs = rhs_ref.data().read().expect("read err in Boolean::==");
+		Ok(Object::new_boolean(*this == *rhs))
+	}
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -61,6 +88,16 @@ mod tests {
 	fn new_boolean() {
 		assert_eq!(Object::new(Boolean::new(true)), Object::new_boolean(true));
 		assert_eq!(Object::new(Boolean::new(false)), Object::new_boolean(false));
+	}
+
+	#[test]
+	fn to_boolean() {
+		assert_eq!(**Object::new_boolean(true).as_any().to_boolean().unwrap().data().read().unwrap(), true);
+		assert_eq!(**Object::new_boolean(false).as_any().to_boolean().unwrap().data().read().unwrap(), false);
+
+		// TODO: make `MyStruct` here so it doesn't rely upon number
+		assert_eq!(**Object::new_number(0.0).as_any().to_boolean().unwrap().data().read().unwrap(), false);
+		assert_eq!(**Object::new_number(1.0).as_any().to_boolean().unwrap().data().read().unwrap(), true);
 	}
 
 
@@ -82,6 +119,14 @@ mod tests {
 	fn as_ref() {
 		assert_eq!(Boolean::new(false).as_ref(), &false);
 		assert_eq!(Boolean::new(true).as_ref(), &true);
+	}
+
+	#[test]
+	fn equality() {
+		assert_eq!(Boolean::new(true), Boolean::new(true));
+		assert_eq!(Boolean::new(false), Boolean::new(false));
+		assert_ne!(Boolean::new(false), Boolean::new(true));
+		assert_ne!(Boolean::new(true), Boolean::new(false));
 	}
 }
 
