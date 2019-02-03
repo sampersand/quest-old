@@ -1,6 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use crate::object::Object;
+use crate::object::{Object, AnyObject};
+use crate::err::Result;
 use std::ops::Deref;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Default)]
@@ -31,6 +32,14 @@ impl Object<Number> {
 		Object::new(Number::new(num))
 	}
 }
+
+impl AnyObject {
+	pub fn to_number(&self) -> Result<Object<Number>> {
+		self.call_attr("@num", &[])?
+			.downcast_or_err::<Number>()
+	}
+}
+
 
 impl From<f64> for Number {
 	fn from(num: f64) -> Number {
@@ -71,13 +80,13 @@ impl Display for Number {
 
 macro_rules! f64_func {
 	(math $oper:tt) => { |num, args| {
-		let rhs_ref = getarg!(args[0]: Number)?;
+		let rhs_ref = getarg!(args[0] @ to_number)?;
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
 		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_number(**lhs $oper **rhs))
 	}};
 	(logic $oper:tt) => { |num, args| {
-		let rhs_ref = getarg!(args[0]: Number)?;
+		let rhs_ref = getarg!(args[0] @ to_number)?;
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
 		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_boolean(**lhs $oper **rhs))
@@ -90,14 +99,14 @@ macro_rules! f64_func {
 
 impl_type! { for Number;
 	"@bool" => |num, _| Ok(Object::new_boolean(*num.data().read().expect("read error in Number::@bool").as_ref() != 0.0)),
-
+	"@num" => |num, _| Ok(Object::new_number(**num.data().read().expect("read erro rin Number::@num"))),
 	"+" => f64_func!(math +),
 	"-" => f64_func!(math -),
 	"*" => f64_func!(math *),
 	"/" => f64_func!(math /),
 	"%" => f64_func!(math %),
 	"**" => |num, args| {
-		let rhs_ref = getarg!(args[0]: Number)?;
+		let rhs_ref = getarg!(args[0] @ to_number)?;
 		let lhs = num.data().read().expect("num read error in Number::**");
 		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
 		Ok(Object::new_number(lhs.powf(**rhs)))
@@ -183,4 +192,15 @@ mod tests {
 	fn new_number() {
 		assert_eq!(Object::new(Number::new(123.456)), Object::new_number(123.456));
 	}
+
+	#[test]
+	fn to_number() -> Result<()> {
+		assert_eq!(**Object::new_number(1234.0).as_any().to_number()?.data().read().unwrap(), 1234.0);
+		assert_eq!(**Object::new_number(1.0).as_any().to_number()?.data().read().unwrap(), 1.0);
+		assert!(Object::new_number(std::f64::INFINITY).as_any().to_number()?.data().read().unwrap().is_infinite());
+		assert!(Object::new_number(std::f64::NAN).as_any().to_number()?.data().read().unwrap().is_nan());
+		
+		Ok(())
+	}
+
 }

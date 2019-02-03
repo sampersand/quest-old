@@ -2,6 +2,9 @@ macro_rules! getarg {
 	($args:ident[$pos:expr]: $type:ty) => {
 		getarg!($args[$pos]).and_then(|obj| obj.downcast_or_err::<$type>())
 	};
+	($args:ident[$pos:expr] @ $conv_func:ident) => {
+		getarg!($args[$pos]).and_then(|obj| obj.$conv_func())
+	};
 
 	($args:ident[$pos:expr]) => {
 		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::err::Error::MissingArgument {

@@ -68,15 +68,61 @@ impl Display for Boolean {
 
 impl_type! { for Boolean;
 	"@bool" => |obj, _| Ok(Object::new_boolean(obj.data().read().expect("read err in Boolean::@bool").is_true())),
+	"@num" => |obj, _| Ok(Object::new_number(if obj.is_true() { 1.0 } else { 0.0 })),
 	"==" => |obj, args| {
-		let rhs_ref = getarg!(args[0]: Boolean)?;
-		let this = obj.data().read().expect("read err in Boolean::==") ;
-		let rhs = rhs_ref.data().read().expect("read err in Boolean::==");
-		Ok(Object::new_boolean(*this == *rhs))
+		Ok(Object::new_boolean(obj.is_true() == getarg!(args[0] @ to_boolean)?.is_true()))
 	},
-	"!" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true()))
+	"!" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true())),
+	"^" => |obj, args| Ok(Object::new_boolean(obj.is_true() ^ getarg!(args[0] @ to_boolean)?.is_true())),
+	"*" => |obj, args| Ok(Object::new_boolean(obj.is_true() & getarg!(args[0] @ to_boolean)?.is_true())),
+	"|" => |obj, args| Ok(Object::new_boolean(obj.is_true() | getarg!(args[0] @ to_boolean)?.is_true()))
 }
 
+#[cfg(test)]
+mod type_tests {
+	use super::*;
+	use crate::object::types::Number;
+
+	#[test]
+	fn at_bool() -> Result<()> {
+		let obj = Object::new_boolean(true);
+		let dup = obj.call_attr("@bool", &[])?.downcast_or_err::<Boolean>()?;
+		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
+		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		Ok(())
+	}
+
+	#[test]
+	fn at_num() -> Result<()> {
+		assert_eq!(**Object::new_boolean(true).call_attr("@num", &[])?.downcast_or_err::<Number>()?.data().read().unwrap(), 1.0);
+		assert_eq!(**Object::new_boolean(false).call_attr("@num", &[])?.downcast_or_err::<Number>()?.data().read().unwrap(), 0.0);
+		Ok(())
+	}
+
+	#[test]
+	fn equality() -> Result<()> {
+		assert!(!Object::new_boolean(true).call_attr("==", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert!(Object::new_boolean(true).call_attr("==", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		Ok(())
+	}
+
+	#[test]
+	fn negate() -> Result<()> {
+		assert!(!Object::new_boolean(true).call_attr("!", &[])?.downcast_or_err::<Boolean>()?.is_true());
+		assert!(Object::new_boolean(false).call_attr("!", &[])?.downcast_or_err::<Boolean>()?.is_true());
+		Ok(())
+	}
+
+	#[test]
+	fn xor() -> Result<()> {
+		assert!(Object::new_boolean(true).call_attr("^", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert!(Object::new_boolean(false).call_attr("^", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert!(!Object::new_boolean(true).call_attr("^", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert!(!Object::new_boolean(false).call_attr("^", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		Ok(())
+	}
+
+}
 
 #[cfg(test)]
 mod tests {
@@ -96,13 +142,15 @@ mod tests {
 	}
 
 	#[test]
-	fn to_boolean() {
-		assert_eq!(**Object::new_boolean(true).as_any().to_boolean().unwrap().data().read().unwrap(), true);
-		assert_eq!(**Object::new_boolean(false).as_any().to_boolean().unwrap().data().read().unwrap(), false);
+	fn to_boolean() -> Result<()> {
+		assert_eq!(**Object::new_boolean(true).as_any().to_boolean()?.data().read().unwrap(), true);
+		assert_eq!(**Object::new_boolean(false).as_any().to_boolean()?.data().read().unwrap(), false);
 
 		// TODO: make `MyStruct` here so it doesn't rely upon number
-		assert_eq!(**Object::new_number(0.0).as_any().to_boolean().unwrap().data().read().unwrap(), false);
-		assert_eq!(**Object::new_number(1.0).as_any().to_boolean().unwrap().data().read().unwrap(), true);
+		assert_eq!(**Object::new_number(0.0).as_any().to_boolean()?.data().read().unwrap(), false);
+		assert_eq!(**Object::new_number(1.0).as_any().to_boolean()?.data().read().unwrap(), true);
+		
+		Ok(())
 	}
 
 

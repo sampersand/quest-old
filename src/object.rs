@@ -110,7 +110,8 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 		&self.0.data
 	}
 
-	pub fn _map(&self) -> &Shared<ObjectMap> {
+	#[cfg(test)]
+	pub fn _map_only_for_testing(&self) -> &Shared<ObjectMap> {
 		&self.0.map
 	}
 
@@ -306,7 +307,15 @@ mod tests {
 
 	impl Type for MyType {
 		fn get_type_map() -> Shared<dyn Map> {
-			Shared::new(HashMap::new())
+			let mut m = HashMap::<AnyObject, AnyObject>::new();
+			m.insert(Object::new_variable("==").as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
+				Ok(Object::new_boolean(
+					arg[0].downcast::<MyType>().map(|x| 
+						*obj.data().read().unwrap() == *x.data().read().unwrap()
+					).unwrap_or(false)
+				))
+			}));
+			Shared::new(m)
 		}
 	}
 

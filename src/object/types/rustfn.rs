@@ -142,13 +142,11 @@ mod tests {
 	}
 
 	#[test]
-	fn call_valid() {
+	fn call_valid() -> Result<()> {
 		let func = RustFn::new::<_, Number>(|num, _| Ok(Object::new_number(**num.data().read().unwrap() + 1.0)));
 
-		assert_eq!(
-			&func.call(&Object::new_number(123.0).as_any(), &[]).unwrap(),
-			&Object::new_number(124.0).as_any()
-		);
+		assert_eq!(&func.call(&Object::new_number(123.0).as_any(), &[])?, &Object::new_number(124.0).as_any());
+		Ok(())
 	}
 
 	#[test]
@@ -171,20 +169,15 @@ mod tests {
 	}
 
 	#[test]
-	fn call_untyped() {
+	fn call_untyped() -> Result<()> {
 		let func = RustFn::new_untyped(|val, _| {
 			Ok(Object::new_boolean(val.data().read().unwrap().is::<Number>()))
 		});
 
-		assert_eq!(
-			&func.call(&Object::new_number(123.0).as_any(), &[]).unwrap(),
-			&Object::new_boolean(true).as_any()
-		);
+		assert_eq!(&func.call(&Object::new_number(123.0).as_any(), &[])?, &Object::new_boolean(true).as_any());
+		assert_eq!(&func.call(&Object::new_variable("A").as_any(), &[])?, &Object::new_boolean(false).as_any());
 
-		assert_eq!(
-			&func.call(&Object::new_variable("A").as_any(), &[]).unwrap(),
-			&Object::new_boolean(false).as_any()
-		);
+		Ok(())
 	}
 }
 

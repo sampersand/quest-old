@@ -1,12 +1,13 @@
 use std::sync::RwLock;
-use crate::object::{Object, Type};
+use crate::object::{Object, AnyObject, Type};
 use std::collections::{HashSet, HashMap};
 use crate::{map::Map, shared::Shared};
+use std::ops::Deref;
+use crate::err::Result;
 use lazy_static::lazy_static;
 
 
-
-lazy_static::lazy_static! {
+lazy_static! {
 	static ref ID_STRINGS: RwLock<HashSet<&'static str>> = RwLock::new(HashSet::new());
 }
 
@@ -26,6 +27,21 @@ impl Object<Variable> {
 		Object::new(Variable::new(id))
 	}
 }
+
+impl AnyObject {
+	pub fn to_variable(&self) -> Result<Object<Variable>> {
+		self.call_attr("@var", &[])?
+			.downcast_or_err::<Variable>()
+	}
+}
+
+impl Deref for Variable {
+	type Target = &'static str;
+	fn deref(&self) -> &&'static str {
+		&self.0
+	}
+}
+
 
 
 impl From<Variable> for &'static str {
@@ -64,7 +80,9 @@ impl From<String> for Variable {
 	}
 }
 
-impl_type! { for Variable; }
+impl_type! { for Variable;
+	"@var" => |obj, _| Ok(Object::new_variable(**obj.data().read().expect("read err in Variable::@var"))),
+}
 
 
 
@@ -101,5 +119,14 @@ mod tests {
 	#[test]
 	fn new_variable() {
 		assert_eq!(Object::new(Variable::new("quest is fun")), Object::new_variable("quest is fun"));
+	}
+
+	#[test]
+	fn to_variable() -> Result<()> {
+		assert_eq!(**Object::new_variable("abc").as_any().to_variable()?.data().read().unwrap(), "abc");
+		assert_eq!(**Object::new_variable("").as_any().to_variable()?.data().read().unwrap(), "");
+		assert_eq!(**Object::new_variable("I ❤️ 🚀, they r cool").as_any().to_variable()?.data().read().unwrap(), "I ❤️ 🚀, they r cool");
+		
+		Ok(())
 	}
 }
