@@ -133,12 +133,12 @@ impl_type! { for Number;
 		let lhs = **obj.data().read().expect("obj read error in Number::**");
 		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
 
-		Ok(Object::new_number(match lhs.partial_cmp(&*rhs) {
-			None => std::f64::NAN,
-			Some(Ordering::Less) => -1.0,
-			Some(Ordering::Equal) => 0.0,
-			Some(Ordering::Greater) => 1.0
-		}))
+		Ok(match lhs.partial_cmp(&*rhs) {
+			None => Object::new_null(),
+			Some(Ordering::Less) => Object::new_number(-1.0),
+			Some(Ordering::Equal) => Object::new_number(0.0),
+			Some(Ordering::Greater) => Object::new_number(1.0)
+		})
 	},
 
 	"-@" => |obj, _| Ok(Object::new_number(-**obj.data().read().expect("read error in Number::-@"))),
@@ -423,9 +423,9 @@ mod fn_tests {
 			(1.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr("<=>", &[&n!(9.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(NAN).call_attr("<=>", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(NEG_INFINITY).call_attr("<=>", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr("<=>", &[&n!(9.0)])?.is_null());
+		assert!(n!(NAN).call_attr("<=>", &[&n!(NAN)])?.is_null());
+		assert!(n!(NEG_INFINITY).call_attr("<=>", &[&n!(NAN)])?.is_null());
 
 
 		// check to see if too few args are passed it handles it right
