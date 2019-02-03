@@ -198,9 +198,7 @@ impl PartialEq for AnyObject {
 			let rhs = rhs.data().read().expect("TODO: msg");
 			*lhs == *rhs
 		} else {
-			let res = self.call_attr("==", &[rhs]);
-			println!("{:?}", res);
-			if let Ok(equality) = res {
+			if let Ok(equality) = self.call_attr("==", &[rhs]) {
 				equality.to_boolean()
 					.ok()
 					.map(|x| x.data().read().expect("read err in AnyObject::==").is_true())

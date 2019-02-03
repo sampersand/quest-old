@@ -58,7 +58,7 @@ impl Map for ObjectMap {
 		self.access_map(|map| map.read().expect("Shared read failed in `get`").get(key))
 	}
 
-	fn set(&mut self, key: AnyObject, val: AnyObject) {
+	fn set(&mut self, key: AnyObject, val: AnyObject) -> Option<AnyObject> {
 		self.access_map(|map| map.write().expect("Shared write failed in `get`").set(key, val))
 	}
 

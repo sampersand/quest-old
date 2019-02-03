@@ -24,6 +24,10 @@ impl<T: ?Sized> Shared<T> {
 	pub fn write(&self) -> LockResult<impl DerefMut<Target=T> + '_> {
 		self.0.write()
 	}
+
+	pub fn ptr_eq(&self, other: &Shared<T>) -> bool {
+		Arc::ptr_eq(&self.0, &other.0)
+	}
 }
 
 impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Shared<U>> for Shared<T> {}

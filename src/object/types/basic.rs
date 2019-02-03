@@ -12,8 +12,8 @@ lazy_static! {
 		map.insert(
 			Object::new_variable("=="),
 			Object::new(crate::object::types::RustFn::new_untyped(|val, args| {
-			unimplemented!()
-		})));
+				Ok(Object::new_boolean(val.id() == getarg!(args[0])?.id()))
+			})));
 		map
 	});
 }

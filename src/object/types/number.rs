@@ -78,7 +78,6 @@ macro_rules! f64_func {
 	}};
 	(logic $oper:tt) => { |num, args| {
 		let rhs_ref = getarg!(args[0]: Number)?;
-		println!("number.== was called: {:?}, {:?}", num, rhs_ref);
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
 		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_boolean(**lhs $oper **rhs))

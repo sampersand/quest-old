@@ -1,10 +1,13 @@
+mod parentmap;
+pub use self::parentmap::ParentMap;
+
 use std::fmt::Debug;
 use crate::object::AnyObject;
 
 pub trait Map : Debug + Send + Sync {
 	#[must_use]
 	fn get(&self, key: &AnyObject) -> Option<AnyObject>;
-	fn set(&mut self, key: AnyObject, val: AnyObject); // we don't care what is returned
+	fn set(&mut self, key: AnyObject, val: AnyObject) -> Option<AnyObject>; // we don't care what is returned
 	fn del(&mut self, key: &AnyObject) -> Option<AnyObject>;
 	fn len(&self) -> usize;
 
@@ -14,6 +17,10 @@ pub trait Map : Debug + Send + Sync {
 		self.get(key).is_some()
 	}
 
+	#[inline]
+	fn is_empty(&self) -> bool {
+		self.len() == 0
+	}
 }
 
 use std::collections::HashMap;
@@ -25,8 +32,8 @@ impl Map for HashMap<AnyObject, AnyObject> {
 	}
 
 	#[inline]
-	fn set(&mut self, key: AnyObject, val: AnyObject) {
-		self.insert(key, val);
+	fn set(&mut self, key: AnyObject, val: AnyObject) -> Option<AnyObject> {
+		self.insert(key, val)
 	}
 
 	#[inline]
