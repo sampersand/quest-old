@@ -79,13 +79,35 @@ impl_type! { for Boolean;
 }
 
 #[cfg(test)]
-mod type_tests {
+mod fn_tests {
 	use super::*;
 	use crate::object::types::Number;
+	use crate::err::Error;
+
+	macro_rules! b {
+		($bool:expr) => (Object::new_boolean($bool).as_any())
+	}
+
+	macro_rules! assert_bool_call_eq {
+		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
+			$(
+				assert_eq!(**b!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+			)*
+		}
+	}
+
 
 	#[test]
 	fn at_bool() -> Result<()> {
+		assert_bool_call_eq!("@bool" Boolean;
+			(true, []) => true,
+			(false, []) => false,
+			(true, [&b!(false)]) => true // ensure extra args are ignored
+		);
+
+
 		let obj = Object::new_boolean(true);
+		// todo: ensure extra args are ignored
 		let dup = obj.call_attr("@bool", &[])?.downcast_or_err::<Boolean>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
@@ -94,31 +116,61 @@ mod type_tests {
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert_eq!(**Object::new_boolean(true).call_attr("@num", &[])?.downcast_or_err::<Number>()?.data().read().unwrap(), 1.0);
-		assert_eq!(**Object::new_boolean(false).call_attr("@num", &[])?.downcast_or_err::<Number>()?.data().read().unwrap(), 0.0);
+		assert_bool_call_eq!("@num" Number; 
+			(true, []) => 1.0,
+			(false, []) => 0.0,
+			(true, [&b!(false)]) => 1.0 // ensure extra args are ignored
+		);
+
 		Ok(())
 	}
 
 	#[test]
 	fn equality() -> Result<()> {
-		assert!(!Object::new_boolean(true).call_attr("==", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
-		assert!(Object::new_boolean(true).call_attr("==", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert_bool_call_eq!("==" Boolean; 
+			(true, [&b!(true)]) => true,
+			(true, [&b!(false)]) => false,
+			(false, [&b!(true)]) => false,
+			(false, [&b!(false)]) => true,
+			(false, [&b!(false), &b!(true)]) => true // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match b!(true).call_attr("==", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!("got bad err")
+		};
+
 		Ok(())
 	}
 
 	#[test]
 	fn negate() -> Result<()> {
-		assert!(!Object::new_boolean(true).call_attr("!", &[])?.downcast_or_err::<Boolean>()?.is_true());
-		assert!(Object::new_boolean(false).call_attr("!", &[])?.downcast_or_err::<Boolean>()?.is_true());
+		assert_bool_call_eq!("!" Boolean;
+			(true, []) => false,
+			(false, []) => true,
+			(true, [&b!(false)]) => false // ensure extra args are ignored
+		);
+
 		Ok(())
 	}
 
 	#[test]
 	fn xor() -> Result<()> {
-		assert!(Object::new_boolean(true).call_attr("^", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
-		assert!(Object::new_boolean(false).call_attr("^", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
-		assert!(!Object::new_boolean(true).call_attr("^", &[&Object::new_boolean(true).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
-		assert!(!Object::new_boolean(false).call_attr("^", &[&Object::new_boolean(false).as_any()])?.downcast_or_err::<Boolean>()?.is_true());
+		assert_bool_call_eq!("^" Boolean; 
+			(true, [&b!(true)]) => false,
+			(true, [&b!(false)]) => true,
+			(false, [&b!(true)]) => true,
+			(false, [&b!(false)]) => false,
+			(false, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match b!(true).call_attr("^", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!("got bad err")
+		};
+
 		Ok(())
 	}
 

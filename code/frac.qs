@@ -1,3 +1,6 @@
+#!/bin/quest
+# this is a quest source file
+# make this file "frac.qs"
 `Frac` = {
 	`init` = {
 		`$this` = {
@@ -28,3 +31,5 @@
 `f` = (Frac :: `init`):(2 5 $stack);
 
 disp:(f + 3, $stack);
+
+a => b[\s]

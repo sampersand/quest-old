@@ -11,7 +11,7 @@ lazy_static! {
 	static ref ID_STRINGS: RwLock<HashSet<&'static str>> = RwLock::new(HashSet::new());
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Variable(&'static str);
 
 impl Variable {
@@ -24,7 +24,10 @@ impl Variable {
 
 impl Object<Variable> {
 	pub fn new_variable(id: &'static str) -> Object<Variable> {
-		Object::new(Variable::new(id))
+		Object::new(Variable::from(id))
+	}
+	pub fn new_variable_from_string(id: String) -> Object<Variable> {
+		Object::new(Variable::from(id))
 	}
 }
 
@@ -108,6 +111,7 @@ mod tests {
 		assert_eq!(Variable::from("I ❤️ 🚀, they r cool").as_ref(), &"I \u{2764}\u{fe0f} \u{1f680}, they r cool");
 		assert_eq!(Variable::from("Ɣ㠨𥊗").as_ref(), &"\u{194}㠨\u{25297}");
 	}
+
 	#[test]
 	fn from_string() {
 		assert_eq!(Variable::from("lol".to_string()).as_ref(), &"lol");

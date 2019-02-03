@@ -6,13 +6,16 @@ mod number;
 mod variable;
 mod rustfn;
 mod boolean;
+mod text;
+
 pub(super) mod pristine;
 
 pub use self::{
 	number::Number,
 	rustfn::RustFn,
 	variable::Variable,
-	boolean::Boolean
+	boolean::Boolean,
+	text::Text
 };
 
 use crate::{shared::Shared, map::Map};

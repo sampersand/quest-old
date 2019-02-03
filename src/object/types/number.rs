@@ -121,24 +121,385 @@ impl_type! { for Number;
 	"+@" => |num, _| Ok(num.duplicate())
 }
 
-// fn number_add(num: &Object<Number>, args: &[&AnyObject]) -> Result<AnyObject> {
-// 	let arg = args.get(0).unwrap().downcast::<Number>().unwrap();
-// 	Ok(Object::new_number(num.data().as_ref() + arg.data().as_ref()))
-// }
+#[cfg(test)]
+mod fn_tests {
+	use super::*;
+	use crate::object::types::Boolean;
+	use crate::err::Error;
+	use std::f64::{INFINITY, NEG_INFINITY, NAN, consts::{PI, E}};
 
-// lazy_static::lazy_static! {
-// 	pub static ref NUMBER_MAP: Shared<dyn Map> = Shared::new({
-// 		let mut map = HashMap::<AnyObject, AnyObject>::new();
-// 		map.insert(Object::new_variable("+"), Object::new_named_rustfn("+", number_add));
-// 		map
-// 	});
-// }
+	macro_rules! n {
+		($num:expr) => (Object::new_number($num).as_any())
+	}
 
-// impl Type for  Number {
-// 	fn get_type_map() -> Shared<dyn Map> {
-// 		NUMBER_MAP.clone()
-// 	}
-// }
+	macro_rules! assert_num_call_eq {
+		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
+			$(
+				assert_eq!(**n!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+			)*
+		}
+	}
+
+	#[test]
+	fn at_bool() -> Result<()> {
+		assert_num_call_eq!("@bool" Boolean;
+			(0.0, []) => false,
+			(-0.0, []) => false,
+			(13.4, []) => true,
+			(INFINITY, []) => true,
+			(PI, []) => true,
+			(E, []) => true,
+			(-123.0, []) => true,
+			(12e49, [&n!(34.0)]) => true //  ensure extra args are ignored
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn at_num() -> Result<()> {
+		assert_num_call_eq!("@num" Number; 
+			(13.4, []) => 13.4,
+			(INFINITY, []) => INFINITY,
+			(PI, []) => PI,
+			(E, []) => E,
+			(-123.0, []) => -123.0,
+			(12.0, [&n!(34.0)]) => 12.0 //  ensure extra args are ignored
+		);
+
+		// make sure that it acutally duplicates the map
+		let obj = Object::new_number(12.45);
+		let dup = obj.call_attr("@num", &[])?.downcast_or_err::<Number>()?;
+		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
+		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		Ok(())
+	}
+
+	#[test]
+	fn add() -> Result<()> {
+		assert_num_call_eq!("+" Number;
+			(13.4, [&n!(-4.0)]) => 9.4,
+			(PI, [&n!(PI)]) => 2f64 * PI,
+			(E, [&n!(E)]) => 2f64 * E,
+			(8e9, [&n!(1e9), &n!(PI)]) => 9e9 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("+", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("+", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+		assert!(n!(INFINITY).call_attr("+", &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("+", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+	
+
+	#[test]
+	fn sub() -> Result<()> {
+		assert_num_call_eq!("-" Number;
+			(13.4, [&n!(-4.0)]) => 17.4,
+			(PI, [&n!(PI)]) => 0.0,
+			(E, [&n!(PI)]) => E - PI,
+			(9e9, [&n!(1e9), &n!(PI)]) => 8e9 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("-", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("-", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("-", &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("-", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+	
+	#[test]
+	fn mul() -> Result<()> {
+		assert_num_call_eq!("*" Number;
+			(13.4, [&n!(-4.0)]) => -53.6,
+			(PI, [&n!(PI)]) => PI * PI,
+			(E, [&n!(-1e-4)]) => E * -1e-4,
+			(9e3, [&n!(8e3), &n!(PI)]) => 7.2e7 // ensure extra args are ignored
+		);
+
+
+		assert!(n!(NAN).call_attr("*", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("*", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+		assert!(n!(INFINITY).call_attr("*", &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("*", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+	
+
+	#[test]
+	fn div() -> Result<()> {
+		assert_num_call_eq!("/" Number;
+			(13.4, [&n!(-4.0)]) => -3.35,
+			(PI, [&n!(E)]) => PI / E,
+			(9e7, [&n!(-8e-2)]) => -1.125e9,
+			(4.0, [&n!(1.0), &n!(PI)]) => 4.0 // ensure extra args are ignored
+		);
+
+		// make sure to test for negative stuff here
+		assert!(n!(1.0).call_attr("/", &[&n!(0.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+
+		assert!(n!(NAN).call_attr("/", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("/", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("/", &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("/", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+	
+
+	#[test]
+	fn r#mod() -> Result<()> {
+		// Note: Rust implements negative modulos differently than other languages:
+		// n % d == n - (n/d).to_integer() * d
+		assert_num_call_eq!("%" Number;
+			(13.5, [&n!(-4.0)]) => 1.5, 
+			(13.4, [&n!(3.1)]) => 1.0,
+			(PI, [&n!(E)]) => PI % E,
+			(9e19, [&n!(9.0)]) => 0.0,
+			(-1234.0, [&n!(39.0), &n!(PI)]) => -25.0 // ensure extra args are ignored
+		);
+
+		assert!(n!(1.0).call_attr("%", &[&n!(0.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		assert!(n!(NAN).call_attr("%", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("%", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(INFINITY).call_attr("%", &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("%", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+	
+	#[test]
+	fn pow() -> Result<()> {
+		assert_num_call_eq!("**" Number;
+			(13.5, [&n!(4.0)]) => 33215.0625, 
+			(64.0, [&n!(0.5)]) => 8.0,
+			(-0.05, [&n!(-1.0)]) => -20.0,
+			(9e9, [&n!(2.0)]) => 8.1e19,
+			(NAN, [&n!(0.0)]) => 1.0,
+			(INFINITY, [&n!(0.0)]) => 1.0,
+			(1234.0, [&n!(NEG_INFINITY)]) => 0.0,
+			(1234.0, [&n!(INFINITY)]) => INFINITY,
+			(12.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("**", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr("**", &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NEG_INFINITY).call_attr("**", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("**", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+
+	#[test]
+	fn equality() -> Result<()> {
+		assert_num_call_eq!("==" Boolean;
+			(13.5, [&n!(13.5)]) => true, 
+			(-123.0, [&n!(-123.0)]) => true,
+			(-0.0, [&n!(0.0)]) => true,
+			(9.123e9, [&n!(-9.123e9)]) => false,
+			(INFINITY, [&n!(INFINITY)]) => true,
+			(INFINITY, [&n!(NEG_INFINITY)]) => false,
+			(NAN, [&n!(NAN)]) => false,
+			(1.0, [&n!(1.0), &n!(2.0)]) => true // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("==", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn not_equal() -> Result<()> {
+		assert_num_call_eq!("!=" Boolean;
+			(13.5, [&n!(13.5)]) => false, 
+			(-123.0, [&n!(-123.0)]) => false,
+			(-0.0, [&n!(0.0)]) => false,
+			(9.123e9, [&n!(-9.123e9)]) => true,
+			(INFINITY, [&n!(INFINITY)]) => false,
+			(INFINITY, [&n!(NEG_INFINITY)]) => true,
+			(NAN, [&n!(NAN)]) => true,
+			(1.0, [&n!(1.0), &n!(2.0)]) => false // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("==", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn less_than() -> Result<()> {
+		assert_num_call_eq!("<" Boolean;
+			(13.5, [&n!(4.0)]) => false, 
+			(0.5, [&n!(64.0)]) => true,
+			(-0.05, [&n!(-1.0)]) => false,
+			(2.0, [&n!(9e9)]) => true,
+			(9e9, [&n!(9e9)]) => false,
+			(NAN, [&n!(9.0)]) => false,
+			(NAN, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(INFINITY)]) => true,
+			(1.0, [&n!(0.0), &n!(PI)]) => false // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("<", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn less_than_eq() -> Result<()> {
+		assert_num_call_eq!("<=" Boolean;
+			(13.5, [&n!(4.0)]) => false, 
+			(0.5, [&n!(64.0)]) => true,
+			(-0.05, [&n!(-1.0)]) => false,
+			(2.0, [&n!(9e9)]) => true,
+			(9e9, [&n!(9e9)]) => true,
+			(NAN, [&n!(9.0)]) => false,
+			(NAN, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(INFINITY)]) => true,
+			(NEG_INFINITY, [&n!(NEG_INFINITY)]) => true,
+			(1.0, [&n!(1.0), &n!(-PI)]) => true // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("<=", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+
+	#[test]
+	fn greater_than() -> Result<()> {
+		assert_num_call_eq!(">" Boolean;
+			(13.5, [&n!(4.0)]) => true, 
+			(0.5, [&n!(64.0)]) => false,
+			(-0.05, [&n!(-1.0)]) => true,
+			(9e9, [&n!(2.0)]) => true,
+			(9e9, [&n!(9e9)]) => false,
+			(NAN, [&n!(9.0)]) => false,
+			(NAN, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(INFINITY)]) => false,
+			(1.0, [&n!(0.0), &n!(PI)]) => true // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr(">", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn greater_than_eq() -> Result<()> {
+		assert_num_call_eq!(">=" Boolean;
+			(13.5, [&n!(4.0)]) => true, 
+			(0.5, [&n!(64.0)]) => false,
+			(-0.05, [&n!(-1.0)]) => true,
+			(9e9, [&n!(2.0)]) => true,
+			(9e9, [&n!(9e9)]) => true,
+			(NAN, [&n!(9.0)]) => false,
+			(NAN, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(NAN)]) => false,
+			(NEG_INFINITY, [&n!(INFINITY)]) => false,
+			(1.0, [&n!(0.0), &n!(PI)]) => true // ensure extra args are ignored
+		);
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr(">=", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn neg_unary() -> Result<()> {
+		assert_num_call_eq!("-@" Number;
+			(13.5, []) => -13.5, 
+			(-PI, []) => PI,
+			(0.0, []) => 0.0,
+			(9e9, []) => -9e9,
+			(NEG_INFINITY, []) => INFINITY,
+			(INFINITY, []) => NEG_INFINITY,
+			(1.0, [&n!(PI)]) => -1.0 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("-@", &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		Ok(())
+	}
+
+	#[test]
+	fn pos_unary() -> Result<()> {
+		assert_num_call_eq!("+@" Number;
+			(13.5, []) => 13.5, 
+			(-PI, []) => -PI,
+			(0.0, []) => 0.0,
+			(9e9, []) => 9e9,
+			(NEG_INFINITY, []) => NEG_INFINITY,
+			(INFINITY, []) => INFINITY,
+			(1.0, [&n!(PI)]) => 1.0 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("+@", &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+		Ok(())
+	}
+}
 
 
 #[cfg(test)]
