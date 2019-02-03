@@ -15,7 +15,7 @@ macro_rules! impl_type {
 	(@insert_ele; $type:ty, $map:ident $name:literal $func:expr) => {
 		// this will fail if $name is a number, but i cant check for it, so whatever
 		assert!(
-			$map.insert(
+			$map.set(
 				$crate::object::Object::new_variable($name),
 				$crate::object::Object::new_named_rustfn::<_, $type>(
 					concat!(stringify!($type), "::", $name),
@@ -34,6 +34,7 @@ macro_rules! impl_type {
 		lazy_static::lazy_static! {
 			pub static ref OBJECT_MAP: $crate::shared::Shared<dyn $crate::map::Map> = $crate::shared::Shared::new({
 				let mut map = $map;
+				use crate::map::Map;
 				$(impl_type!(@insert_ele; $type, map $name $func);)*
 				map
 			});
@@ -52,7 +53,7 @@ macro_rules! impl_type {
 
 	(for $type:ty; $($name:tt => $func:expr),*) => {
 		impl_type!(for $type,
-			map std::collections::HashMap::<$crate::object::AnyObject, $crate::object::AnyObject>::new();
+			map $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
 			$($name => $func),*
 		);
 	};

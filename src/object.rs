@@ -194,18 +194,15 @@ impl PartialEq for AnyObject {
 		use self::types::{Variable, Boolean};
 
 		if let (Some(lhs), Some(rhs)) = (self.downcast::<Variable>(), rhs.downcast::<Variable>()) {
-			let lhs = lhs.data().read().expect("TODO: msg");
-			let rhs = rhs.data().read().expect("TODO: msg");
+			let lhs = lhs.data().read().expect("lhs read err in AnyObject::==");
+			let rhs = rhs.data().read().expect("rhs read err in AnyObject::==");
 			*lhs == *rhs
 		} else {
-			if let Ok(equality) = self.call_attr("==", &[rhs]) {
-				equality.to_boolean()
-					.ok()
-					.map(|x| x.data().read().expect("read err in AnyObject::==").is_true())
-					.unwrap_or(false)
-			} else {
-				self.id() == rhs.id()
-			}
+			self.call_attr("==", &[rhs])
+				.ok()
+				.and_then(|x| x.to_boolean().ok())
+				.map(|x| x.data().read().expect("read err in AnyObject::==").is_true())
+				.unwrap_or(false)
 		}
 	}
 }

@@ -10,7 +10,7 @@ lazy_static! {
 	pub static ref BASIC_MAP: Shared<dyn Map> = Shared::new({
 		let mut map = HashMap::<AnyObject, AnyObject>::new();
 		map.insert(
-			Object::new_variable("=="),
+			Object::new_variable("==="),
 			Object::new(crate::object::types::RustFn::new_untyped(|val, args| {
 				Ok(Object::new_boolean(val.id() == getarg!(args[0])?.id()))
 			})));
