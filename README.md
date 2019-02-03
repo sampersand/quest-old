@@ -1,3 +1,5 @@
+(Note: the version I'm working on is under the branch `restart`)
+
 # What is Quest
 Quest is a runtime language designed with maximum extensiblity in mind. The language is based entirely around key-value pairs to allow for redefinition of every part of the language, including the parser.
 
