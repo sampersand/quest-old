@@ -113,6 +113,11 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	pub fn _map(&self) -> &Shared<ObjectMap> {
 		&self.0.map
 	}
+
+
+	pub fn duplicate_add_parent(&self, parent: AnyObject) -> Object<T> {
+		unimplemented!()
+	}
 }
 
 impl<T: Send + Sync + Sized + 'static> Object<T> {
@@ -143,9 +148,7 @@ impl AnyObject {
 			}
 		}
 	}
-}
 
-impl AnyObject {
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
 		if let Some(var) = attr.downcast::<self::types::Variable>() {
 			if *var.data().read().expect("read err in AnyObject::get").as_ref() == "::" {
@@ -287,7 +290,10 @@ impl<T: Send + Sync + Sized + 'static> Hash for Object<T> {
 }
 
 
-impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Object<U>> for Object<T> {}
+use std::{marker::Unsize, ops::CoerceUnsized};
+impl<T: Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> CoerceUnsized<Object<U>> for Object<T> {}
+// impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Object<U>> for Object<T> {}
+
 
 
 #[cfg(test)]

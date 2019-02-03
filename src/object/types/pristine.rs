@@ -18,13 +18,10 @@ lazy_static! {
 		"__env__" => |obj, _| Ok(unimplemented!("map objects")),
 
 		// there isn't actually a '::' thing here because it's not accessible ever
+		// although it might be useful for things like `.?`
 
 		"." => |obj, args| {
-			/* i'm not sure how to get this to work */
-			// we duplicate the object we get, then return that as a child
-			// let val = obj.get(getarg!(args[0])?)?.duplicate();
-			// Ok(Object::new_child(obj.))
-			unimplemented!()
+			Ok(obj.get(getarg!(args[0])?)?.duplicate_add_parent(obj.clone()))
 		},
 
 		".=" => |obj, args| {
@@ -34,8 +31,6 @@ lazy_static! {
 
 		".~" => |obj, args| obj.del(getarg!(args[0])?),
 		".?" => |obj, args| Ok(Object::new_boolean(obj.has(getarg!(args[0])?)))
-		// "::" => |obj, args| GETTER.call_attr
-		// GETTER.call_attr("()", obj.get(getarg!(args[0])?)
 	};
 }
 
