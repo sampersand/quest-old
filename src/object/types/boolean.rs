@@ -69,10 +69,13 @@ impl Display for Boolean {
 impl_type! { for Boolean;
 	"@bool" => |obj, _| Ok(Object::new_boolean(obj.data().read().expect("read err in Boolean::@bool").is_true())),
 	"@num" => |obj, _| Ok(Object::new_number(if obj.is_true() { 1.0 } else { 0.0 })),
+	"@text" => |obj, _| Ok(Object::new_text(obj.is_true().to_string())),
+
+	"!" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true())),
 	"==" => |obj, args| {
 		Ok(Object::new_boolean(obj.is_true() == getarg!(args[0] @ to_boolean)?.is_true()))
 	},
-	"!" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true())),
+
 	"^" => |obj, args| Ok(Object::new_boolean(obj.is_true() ^ getarg!(args[0] @ to_boolean)?.is_true())),
 	"*" => |obj, args| Ok(Object::new_boolean(obj.is_true() & getarg!(args[0] @ to_boolean)?.is_true())),
 	"|" => |obj, args| Ok(Object::new_boolean(obj.is_true() | getarg!(args[0] @ to_boolean)?.is_true()))
@@ -81,7 +84,7 @@ impl_type! { for Boolean;
 #[cfg(test)]
 mod fn_tests {
 	use super::*;
-	use crate::object::types::Number;
+	use crate::object::types::{Number, Text};
 	use crate::err::Error;
 
 	macro_rules! b {
@@ -105,12 +108,22 @@ mod fn_tests {
 			(true, [&b!(false)]) => true // ensure extra args are ignored
 		);
 
-
+		// ensnure that the map isn't the same object
 		let obj = Object::new_boolean(true);
-		// todo: ensure extra args are ignored
 		let dup = obj.call_attr("@bool", &[])?.downcast_or_err::<Boolean>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		Ok(())
+	}
+
+	#[test]
+	fn at_text() -> Result<()> {
+		assert_bool_call_eq!("@text" Text; 
+			(true, []) => *"true",
+			(false, []) => *"false",
+			(true, [&b!(false)]) => *"true" // ensure extra args are ignored
+		);
+
 		Ok(())
 	}
 

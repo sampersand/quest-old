@@ -61,13 +61,25 @@ impl AsRef<str> for Text {
 
 
 impl_type! { for Text;
+	"@text" => |obj, _| Ok(Object::new_text(obj.data().read().expect("read err in Text::@text").as_ref().to_string())),
 	"@var" => |obj, _| Ok(Object::new_variable_from_string(obj.data().read().expect("read err in Text::@var").as_ref().to_string())),
-	"@text" => |obj, _| Ok(Object::new_text(obj.data().read().expect("read err in Text::@var").as_ref().to_string())),
+	"@bool" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Text::@bool").is_empty())),
+	"@num" => |obj, _| Ok(Object::new(super::Number::parse_str(&obj.data().read().expect("read err in Text::@bool"))?).as_any()),
+
+	"()" => |_, _| unimplemented!("()"),
+	"eval" => |_, _| unimplemented!("This will be 'evaluate this text', possibly with new environment"),
+
 	"==" => |obj, args| {
 		Ok(Object::new_boolean(*obj.data().read().expect("read err in Text::==") == *getarg!(args[0] @ to_text)?.data().read().expect("read err in Text::==")))
 	},
+	"+" => |_, _| unimplemented!("+"),
+	"*" => |_, _| unimplemented!("*"),
 
-	// "@text" => |obj, _| Ok(Object::new_text(obj.data().read().expect("read err in Text::@var").as_ref().clone())),
+	"len" => |_, _| unimplemented!("len"),
+	"[]" => |_, _| unimplemented!("[]"),
+	"[]=" => |_, _| unimplemented!("[]="),
+	"[]~" => |_, _| unimplemented!("[]~"),
+	"[]?" => |_, _| unimplemented!("[]?"),
 }
 
 

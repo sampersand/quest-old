@@ -25,6 +25,13 @@ impl Number {
 			Number(whole + decimal)
 		}
 	}
+
+	pub fn parse_str(text: &str) -> Result<Number> {
+		// BadArgument
+		unimplemented!("Number::parse_str")
+	}
+	// "@num" => |obj, _| Number::parse_str(&obj.data().read().expect("read err in Text::@bool")).map(Object::new),
+
 }
 
 impl Object<Number> {
@@ -99,32 +106,49 @@ macro_rules! f64_func {
 
 impl_type! { for Number;
 	"@bool" => |num, _| Ok(Object::new_boolean(*num.data().read().expect("read error in Number::@bool").as_ref() != 0.0)),
-	"@num" => |num, _| Ok(Object::new_number(**num.data().read().expect("read erro rin Number::@num"))),
+	"@num" => |num, _| Ok(Object::new_number(**num.data().read().expect("read error in Number::@num"))),
+	"@text" => |num, _| Ok(Object::new_text(num.data().read().expect("read error in Number::@text").as_ref().to_string())),
+
 	"+" => f64_func!(math +),
 	"-" => f64_func!(math -),
 	"*" => f64_func!(math *),
 	"/" => f64_func!(math /),
 	"%" => f64_func!(math %),
-	"**" => |num, args| {
+	"**" => |obj, args| {
 		let rhs_ref = getarg!(args[0] @ to_number)?;
-		let lhs = num.data().read().expect("num read error in Number::**");
+		let lhs = obj.data().read().expect("obj read error in Number::**");
 		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
 		Ok(Object::new_number(lhs.powf(**rhs)))
 	},
+
 	"==" => f64_func!(logic ==),
 	"!=" => f64_func!(logic !=),
 	"<=" => f64_func!(logic <=),
 	"<" => f64_func!(logic <),
 	">=" => f64_func!(logic >=),
 	">" => f64_func!(logic >),
-	"-@" => |num, _| Ok(Object::new_number(-**num.data().read().expect("read error in Number::-@"))),
-	"+@" => |num, _| Ok(num.duplicate())
+	"<=>" => |obj, args| {
+		use std::cmp::{Ordering, Ord};
+		let rhs_ref = getarg!(args[0] @ to_number)?;
+		let lhs = **obj.data().read().expect("obj read error in Number::**");
+		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
+
+		Ok(Object::new_number(match lhs.partial_cmp(&*rhs) {
+			None => std::f64::NAN,
+			Some(Ordering::Less) => -1.0,
+			Some(Ordering::Equal) => 0.0,
+			Some(Ordering::Greater) => 1.0
+		}))
+	},
+
+	"-@" => |obj, _| Ok(Object::new_number(-**obj.data().read().expect("read error in Number::-@"))),
+	"+@" => |obj, _| Ok(obj.duplicate()),
 }
 
 #[cfg(test)]
 mod fn_tests {
 	use super::*;
-	use crate::object::types::Boolean;
+	use crate::object::types::{Boolean, Text};
 	use crate::err::Error;
 	use std::f64::{INFINITY, NEG_INFINITY, NAN, consts::{PI, E}};
 
@@ -152,6 +176,25 @@ mod fn_tests {
 			(-123.0, []) => true,
 			(12e49, [&n!(34.0)]) => true //  ensure extra args are ignored
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn at_text() -> Result<()> {
+		assert_num_call_eq!("@text" Text;
+			(0.0, []) => *"0",
+			(1.0, []) => *"1",
+			(-1.0, []) => *"-1",
+			(123.4, []) => *"123.4",
+			(-1.23, []) => *"-1.23",
+			(NAN, []) => *"NaN",
+			(INFINITY, []) => *"inf",
+			(NEG_INFINITY, []) => *"-inf",
+			(-999.0, [&n!(12.0)]) => *"-999" // ensure extra args are ignored
+		);
+
+		// Note: There isn't a specified way large numbers (eg `1e9`) will be displayed
+		// Also of note: There isn't a specified length of characters for `E` or `PI`.
 		Ok(())
 	}
 
@@ -361,6 +404,32 @@ mod fn_tests {
 
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("==", &[]).unwrap_err() {
+			Error::MissingArgument { pos: 0, .. } => {},
+			_ => panic!()
+		}
+
+		Ok(())
+	}
+
+	#[test]
+	fn cmp() -> Result<()> {
+		assert_num_call_eq!("<=>" Number;
+			(13.5, [&n!(4.0)]) => 1.0, 
+			(0.5, [&n!(64.0)]) => -1.0,
+			(-0.05, [&n!(-1.0)]) => 1.0,
+			(2.0, [&n!(9e9)]) => -1.0,
+			(9e9, [&n!(9e9)]) => 0.0,
+			(NEG_INFINITY, [&n!(INFINITY)]) => -1.0,
+			(1.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
+		);
+
+		assert!(n!(NAN).call_attr("<=>", &[&n!(9.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr("<=>", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NEG_INFINITY).call_attr("<=>", &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+
+
+		// check to see if too few args are passed it handles it right
+		match n!(4.0).call_attr("<=>", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
 			_ => panic!()
 		}
