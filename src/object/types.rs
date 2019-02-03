@@ -7,6 +7,7 @@ mod variable;
 mod rustfn;
 mod boolean;
 mod text;
+mod null;
 
 pub(super) mod pristine;
 
@@ -15,7 +16,8 @@ pub use self::{
 	rustfn::RustFn,
 	variable::Variable,
 	boolean::Boolean,
-	text::Text
+	text::Text,
+	null::Null
 };
 
 use crate::{shared::Shared, map::Map};
