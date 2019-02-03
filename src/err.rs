@@ -8,4 +8,5 @@ pub enum Error {
 	__Testing
 }
 
+#[must_use]
 pub type Result<T> = std::result::Result<T, Error>;

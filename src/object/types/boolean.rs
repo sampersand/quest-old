@@ -22,6 +22,10 @@ impl Object<Boolean> {
 	pub fn new_boolean(boolean: bool) -> Object<Boolean> {
 		Object::new(Boolean::new(boolean))
 	}
+
+	pub fn is_true(&self) -> bool {
+		self.data().read().expect("read error in Object::is_true").is_true()
+	}
 }
 
 impl AnyObject {
@@ -69,7 +73,8 @@ impl_type! { for Boolean;
 		let this = obj.data().read().expect("read err in Boolean::==") ;
 		let rhs = rhs_ref.data().read().expect("read err in Boolean::==");
 		Ok(Object::new_boolean(*this == *rhs))
-	}
+	},
+	"!" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true()))
 }
 
 

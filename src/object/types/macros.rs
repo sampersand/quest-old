@@ -4,15 +4,42 @@ macro_rules! getarg {
 	};
 
 	($args:ident[$pos:expr]) => {
-		$args.get($pos).ok_or_else(|| $crate::err::Error::MissingArgument {
+		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::err::Error::MissingArgument {
 			pos: $pos,
 			args: $args.iter().map(|x| (*x).clone()).collect()
 		})
 	}
 }
 
-macro_rules! impl_type {
-	(@insert_ele; $type:ty, $map:ident $name:literal $func:expr) => {
+macro_rules! object_map {
+	(UNTYPED $prefix:literal, $map:expr; $($name:tt => $func:expr,)*) => (
+		object_map!(UNTYPED $prefix, $map; $($name => $func),*)
+	);
+
+	(UNTYPED $prefix:literal, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
+		let mut map = $map;
+		use $crate::map::Map;
+		$(object_map!(@UNTYPED $prefix; map $name $func);)*
+		map
+	})};
+
+	(TYPED $type:ty, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
+		let mut map = $map;
+		use $crate::map::Map;
+		$(object_map!(@TYPED $type; map $name $func);)*
+		map
+	})};
+
+	(@UNTYPED $prefix:literal; $map:ident $name:literal $func:expr) => {
+		assert!(
+			$map.set(
+				$crate::object::Object::new_variable($name),
+				$crate::object::Object::new_named_untyped_rustfn(concat!($prefix, "::", $name), $func)
+			).is_none()
+		);
+	};
+
+	(@TYPED $type:ty; $map:ident $name:literal $func:expr) => {
 		// this will fail if $name is a number, but i cant check for it, so whatever
 		assert!(
 			$map.set(
@@ -26,18 +53,16 @@ macro_rules! impl_type {
 		);
 	};
 
-	(@insert_ele; $type:ty, $_map:ident $invalid:tt $_func:expr) => {
+	(@TYPED $type:ty; $_map:ident $invalid:tt $_func:expr) => {
 		compile_error!(concat!("Invalid type name encountered: `" stringify!($type), "::", stringify!($invalid), "`"))
 	};
+}
 
-	(for $type:ty, map $map:expr; $($name:tt => $func:expr),*) => {
+macro_rules! impl_type {
+	(for $type:ty, $map:expr; $($impl:tt)*) => {
 		lazy_static::lazy_static! {
-			pub static ref OBJECT_MAP: $crate::shared::Shared<dyn $crate::map::Map> = $crate::shared::Shared::new({
-				let mut map = $map;
-				use crate::map::Map;
-				$(impl_type!(@insert_ele; $type, map $name $func);)*
-				map
-			});
+			pub static ref OBJECT_MAP: $crate::shared::Shared<dyn $crate::map::Map> = 
+				object_map!(TYPED $type, $map; $($impl)*);
 		}
 
 		impl $crate::object::types::Type for $type {
@@ -47,13 +72,13 @@ macro_rules! impl_type {
 		}
 	};
 
-	(for $type:ty, map $map:expr; $($name:tt => $func:expr,)*) => {
-		impl_type!(for $type, map $map; $($name => $func),*);
+	(for $type:ty, $map:expr; $($name:tt => $func:expr,)*) => {
+		impl_type!(for $type, $map; $($name => $func),*);
 	};
 
 	(for $type:ty; $($name:tt => $func:expr),*) => {
 		impl_type!(for $type,
-			map $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
+			$crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
 			$($name => $func),*
 		);
 	};

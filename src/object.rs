@@ -131,8 +131,7 @@ impl AnyObject {
 	}
 
 	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-		let val = self.0.map.read().expect("cant read obj map").get(attr)
-			.ok_or_else(|| Error::AttrMissing { obj: self.clone(), attr: attr.clone()})?;
+		let val = self.get(attr)?;
 
 		match val.downcast::<types::RustFn>() {
 			Some(rustfn) => rustfn.data().read().expect("err when calling rustfn").call(self, args),
@@ -143,7 +142,31 @@ impl AnyObject {
 				val.call_attr("()", self_args.as_ref())
 			}
 		}
+	}
+}
 
+impl AnyObject {
+	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
+		if let Some(var) = attr.downcast::<self::types::Variable>() {
+			if *var.data().read().expect("read err in AnyObject::get").as_ref() == "::" {
+				return Ok(self::types::pristine::GETTER.as_any())
+			}
+		}
+
+		self.call_attr("::", &[attr])
+	}
+
+	pub fn set(&self, attr: AnyObject, val: AnyObject) {
+		self.0.map.write().expect("write err in AnyObject::set").set(attr, val);
+	}
+
+	pub fn del(&self, attr: &AnyObject) -> Result<AnyObject> {
+		self.0.map.write().expect("write err in AnyObject::del").del(attr)
+			.ok_or_else(|| Error::AttrMissing { attr: attr.clone(), obj: self.clone() })
+	}
+
+	pub fn has(&self, attr: &AnyObject) -> bool {
+		self.0.map.read().expect("get err in AnyObject::has").has(attr)
 	}
 }
 

@@ -42,7 +42,7 @@ impl RustFn {
 		RustFn::_new_untyped(None, func)
 	}
 
-	pub fn new_untyped_named<F>(name: &'static str, func: F) -> RustFn
+	pub fn new_named_untyped<F>(name: &'static str, func: F) -> RustFn
 			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
 			      F: Send + Sync + 'static {
 		RustFn::_new_untyped(Some(name), func)
@@ -77,6 +77,18 @@ impl Object<RustFn> {
 			      F: Send + Sync + 'static,
 			      T: Send + Sync + 'static {
 		Object::new(RustFn::new_named(name, func))
+	}
+
+	pub fn new_untyped_rustfn<F>(func: F) -> Object<RustFn>
+			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
+			      F: Send + Sync + 'static {
+		Object::new(RustFn::new_untyped(func))
+	}
+
+	pub fn new_named_untyped_rustfn<F>(name: &'static str, func: F) -> Object<RustFn>
+			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
+			      F: Send + Sync + 'static {
+		Object::new(RustFn::new_named_untyped(name, func))
 	}
 }
 
@@ -123,7 +135,7 @@ mod tests {
 	#[test]
 	fn untyped() {
 		assert_eq!(RustFn::new_untyped(|_, _| unreachable!()).name(), None);
-		assert_eq!(RustFn::new_untyped_named("hi there", |_, _| unreachable!()).name(), Some("hi there"));
+		assert_eq!(RustFn::new_named_untyped("hi there", |_, _| unreachable!()).name(), Some("hi there"));
 
 		// let f: fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
 		// assert_eq!(RustFn::new_untyped(f), RustFn::new_untyped(f));

@@ -6,6 +6,7 @@ mod number;
 mod variable;
 mod rustfn;
 mod boolean;
+pub(super) mod pristine;
 
 pub use self::{
 	number::Number,
