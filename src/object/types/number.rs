@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use crate::object::{Object, AnyObject};
-use crate::err::Result;
+use crate::err::{Result, Error};
 use std::ops::Deref;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Default)]
@@ -27,11 +27,18 @@ impl Number {
 	}
 
 	pub fn parse_str(text: &str) -> Result<Number> {
-		// BadArgument
-		unimplemented!("Number::parse_str")
+		use std::str::FromStr;
+		// todo: parse_str
+		// this is very temporary.
+		println!("{:?}", text);
+		f64::from_str(text).map(Number::new).map_err(|err| Error::Boxed(Box::new(err)))
 	}
 	// "@num" => |obj, _| Number::parse_str(&obj.data().read().expect("read err in Text::@bool")).map(Object::new),
 
+	pub fn to_integer(&self) -> isize {
+		// TODO: make tests here
+		self.0 as isize
+	}
 }
 
 impl Object<Number> {
@@ -87,15 +94,15 @@ impl Display for Number {
 
 macro_rules! f64_func {
 	(math $oper:tt) => { |num, args| {
-		let rhs_ref = getarg!(args[0] @ to_number)?;
+		let rhs_obj = getarg!(args[0] @ to_number)?;
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
-		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
+		let rhs = rhs_obj.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_number(**lhs $oper **rhs))
 	}};
 	(logic $oper:tt) => { |num, args| {
-		let rhs_ref = getarg!(args[0] @ to_number)?;
+		let rhs_obj = getarg!(args[0] @ to_number)?;
 		let lhs = num.data().read().expect(concat!("num read error in Number::", stringify!($oper)));
-		let rhs = rhs_ref.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
+		let rhs = rhs_obj.data().read().expect(concat!("rhs read error in Number::", stringify!($oper)));
 		Ok(Object::new_boolean(**lhs $oper **rhs))
 	}};
 
@@ -115,9 +122,9 @@ impl_type! { for Number;
 	"/" => f64_func!(math /),
 	"%" => f64_func!(math %),
 	"**" => |obj, args| {
-		let rhs_ref = getarg!(args[0] @ to_number)?;
+		let rhs_obj = getarg!(args[0] @ to_number)?;
 		let lhs = obj.data().read().expect("obj read error in Number::**");
-		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
+		let rhs = rhs_obj.data().read().expect("rhs read error in Number::**");
 		Ok(Object::new_number(lhs.powf(**rhs)))
 	},
 
@@ -129,9 +136,9 @@ impl_type! { for Number;
 	">" => f64_func!(logic >),
 	"<=>" => |obj, args| {
 		use std::cmp::{Ordering, Ord};
-		let rhs_ref = getarg!(args[0] @ to_number)?;
+		let rhs_obj = getarg!(args[0] @ to_number)?;
 		let lhs = **obj.data().read().expect("obj read error in Number::**");
-		let rhs = rhs_ref.data().read().expect("rhs read error in Number::**");
+		let rhs = rhs_obj.data().read().expect("rhs read error in Number::**");
 
 		Ok(match lhs.partial_cmp(&*rhs) {
 			None => Object::new_null(),
@@ -174,7 +181,7 @@ mod fn_tests {
 			(PI, []) => true,
 			(E, []) => true,
 			(-123.0, []) => true,
-			(12e49, [&n!(34.0)]) => true //  ensure extra args are ignored
+			(12e49, [&n!(34.0)]) => true // ensure extra args are ignored
 		);
 		Ok(())
 	}
@@ -206,7 +213,7 @@ mod fn_tests {
 			(PI, []) => PI,
 			(E, []) => E,
 			(-123.0, []) => -123.0,
-			(12.0, [&n!(34.0)]) => 12.0 //  ensure extra args are ignored
+			(12.0, [&n!(34.0)]) => 12.0 // ensure extra args are ignored
 		);
 
 		// make sure that it acutally duplicates the map
@@ -233,7 +240,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("+", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -256,7 +263,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("-", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -279,7 +286,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("*", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -305,7 +312,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("/", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -333,7 +340,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("%", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -360,7 +367,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("**", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -383,7 +390,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("==", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -405,7 +412,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("==", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -431,7 +438,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("<=>", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -455,7 +462,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("<", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -480,7 +487,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr("<=", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -505,7 +512,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr(">", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -529,7 +536,7 @@ mod fn_tests {
 		// check to see if too few args are passed it handles it right
 		match n!(4.0).call_attr(">=", &[]).unwrap_err() {
 			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!()
+			err => panic!("Bad error type returned: {:?}", err)
 		}
 
 		Ok(())
@@ -566,6 +573,12 @@ mod fn_tests {
 
 		assert!(n!(NAN).call_attr("+@", &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
 
+
+		// make sure that it acutally duplicates the map
+		let obj = Object::new_number(12.45);
+		let dup = obj.call_attr("@num", &[])?.downcast_or_err::<Number>()?;
+		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
+		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
 	}
 }

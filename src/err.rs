@@ -7,7 +7,8 @@ pub enum Error {
 	CastError { obj: AnyObject, into: &'static str },
 	AttrMissing { attr: AnyObject, obj: AnyObject },
 	MissingArgument { pos: usize, args: Vec<AnyObject> },
-	BadArgument { pos: usize, arg: AnyObject, msg: String },
+	BadArgument { pos: usize, arg: AnyObject, msg: &'static str },
+	Boxed(Box<dyn ErrorTrait>),
 	// #[cfg(test)]
 	// PoisonError,
 	__Testing

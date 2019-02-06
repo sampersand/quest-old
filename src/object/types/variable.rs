@@ -98,7 +98,7 @@ mod tests {
 		assert_eq!(Variable::new("").as_ref(), &"");
 		assert_eq!(Variable::new("foobar").as_ref(), &"foobar");
 		assert_eq!(Variable::new("a b c d ").as_ref(), &"a b c d ");
-		assert_eq!(Variable::new("I ❤️ Quest").as_ref(), &"I \u{2764}\u{fe0f} Quest");
+		assert_eq!(Variable::new("`I ❤️ Quest`").as_ref(), &"`I \u{2764}\u{fe0f} Quest`");
 		assert_eq!(Variable::new("🚀s are cool!").as_ref(), &"\u{1f680}s are cool!");
 		assert_eq!(Variable::new("Ɣ㠨𥊗").as_ref(), &"\u{194}㠨\u{25297}");
 	}
@@ -107,7 +107,7 @@ mod tests {
 	fn from_static_str() {
 		assert_eq!(Variable::from("foobarbaz").as_ref(), &"foobarbaz");
 		assert_eq!(Variable::from("__!_@#__$*!~").as_ref(), &"__!_@#__$*!~");
-		assert_eq!(Variable::from("lol").as_ref(), &"lol");
+		assert_eq!(Variable::from("`lol`").as_ref(), &"`lol`");
 		assert_eq!(Variable::from("I ❤️ 🚀, they r cool").as_ref(), &"I \u{2764}\u{fe0f} \u{1f680}, they r cool");
 		assert_eq!(Variable::from("Ɣ㠨𥊗").as_ref(), &"\u{194}㠨\u{25297}");
 	}
@@ -122,7 +122,7 @@ mod tests {
 
 	#[test]
 	fn new_variable() {
-		assert_eq!(Object::new(Variable::new("quest is fun")), Object::new_variable("quest is fun"));
+		assert_eq!(Object::new(Variable::new("`quest is fun`")), Object::new_variable("`quest is fun`"));
 	}
 
 	#[test]

@@ -47,7 +47,6 @@ disp("9 + 3.4 = ", add_two(9, 3.4)); #=> 9 + 3.4 = 12.4
 	`amount` = @0;
 	`numbers` = @1 or [0, 1]; // undefined variables are 'null'
 
-	// Quest uses falsey values, so '!0' will be true
 	if(amount <= 0, {
 		// return numbers up two levels in the stack.
 		//   $0 is the current scope,
