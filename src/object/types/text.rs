@@ -112,7 +112,7 @@ impl_type! { for Text;
 		match util::get_index(start, end, this.len()) {
 			Ok(range) => Ok(Object::new_text_str(this.get(range).expect("indexing failed in Text::[]"))),
 			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
-			Err(IndexError::StartTooBig) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
+			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
 		}
 	},
 	"[]=" => |obj, args| {
@@ -130,7 +130,6 @@ impl_type! { for Text;
 		};
 
 		let mut this = obj.data().write().expect("write err in Text::[]=");
-
 		match util::get_index(start, end, this.len()) {
 			Ok(range) => {
 				this.replace_range(range, &insertion.data().read().expect("read err in Text::[]="));
@@ -138,7 +137,7 @@ impl_type! { for Text;
 				Ok(obj.as_any())
 			},
 			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
-			Err(IndexError::StartTooBig) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
+			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
 		}
 	},
 }

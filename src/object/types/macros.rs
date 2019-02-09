@@ -21,14 +21,14 @@ macro_rules! object_map {
 
 	(UNTYPED $prefix:literal, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
 		let mut map = $map;
-		use $crate::map::Map;
+		use $crate::map::Map as __MapOnlyForAccessToFuncs;
 		$(object_map!(@UNTYPED $prefix; map $name $func);)*
 		map
 	})};
 
 	(TYPED $type:ty, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
 		let mut map = $map;
-		use $crate::map::Map;
+		use $crate::map::Map as __MapOnlyForAccessToFuncs;
 		$(object_map!(@TYPED $type; map $name $func);)*
 		map
 	})};

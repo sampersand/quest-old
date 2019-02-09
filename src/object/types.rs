@@ -8,6 +8,10 @@ mod rustfn;
 mod boolean;
 mod text;
 mod null;
+mod map;
+mod list;
+mod oper;
+mod block;
 
 pub(super) mod pristine;
 
@@ -17,15 +21,19 @@ pub use self::{
 	variable::Variable,
 	boolean::Boolean,
 	text::Text,
-	null::Null
+	null::Null,
+	map::Map,
+	list::List,
+	oper::Oper,
+	block::Block
 };
 
-use crate::{shared::Shared, map::Map};
+use crate::{shared::Shared, map::Map as MapTrait};
 use std::hash::Hash;
 use std::fmt::Debug;
 
 pub trait Type : Debug + PartialEq + Hash + Send + Sync + 'static {
-	fn get_type_map() -> Shared<dyn Map>;
+	fn get_type_map() -> Shared<dyn MapTrait>;
 }
 
 #[cfg(test)]
