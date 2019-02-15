@@ -62,28 +62,33 @@ macro_rules! object_map {
 }
 
 macro_rules! impl_type {
-	(for $type:ty, $map:expr; $($impl:tt)*) => {
+	(for $type:ty, map $mapname:ident: $map:expr; $($impl:tt)*) => {
 		lazy_static::lazy_static! {
-			pub static ref OBJECT_MAP: $crate::shared::Shared<dyn $crate::map::Map> = 
+			pub static ref $mapname: $crate::shared::Shared<dyn $crate::map::Map> = 
 				object_map!(TYPED $type, $map; $($impl)*);
 		}
 
 		impl $crate::object::types::Type for $type {
 			fn get_type_map() -> $crate::shared::Shared<dyn $crate::map::Map> {
-				OBJECT_MAP.clone()
+				$mapname.clone()
 			}
 		}
 	};
 
-	(for $type:ty, $map:expr; $($name:tt => $func:expr,)*) => {
-		impl_type!(for $type, $map; $($name => $func),*);
+	(for $type:ty, map $mapname:ident $map:expr; $($name:tt => $func:expr,)*) => {
+		impl_type!(for $type, map $mapname: $map; $($name => $func),*);
 	};
 
-	(for $type:ty; $($name:tt => $func:expr),*) => {
+	(for $type:ty, map $mapname:ident; $($name:tt => $func:expr),*) => {
 		impl_type!(for $type,
-			$crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
+			map $mapname: $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
 			$($name => $func),*
 		);
+	};
+
+
+	(for $type:ty; $($name:tt => $func:expr),*) => {
+		impl_type!(for $type, map OBJECT_MAP; $($name => $func),*);
 	};
 
 	(for $type:ty; $($name:tt => $func:expr,)*) => {

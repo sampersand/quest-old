@@ -1,12 +1,14 @@
 #![allow(unused)]
-
 #![feature(unsize, coerce_unsized, core_intrinsics, never_type)]
+
+#[macro_use]
+mod util;
+
 mod object;
 mod map;
 mod shared;
 mod env;
 mod err;
-mod util;
 
 pub fn _test(){
 	macro_rules! n {

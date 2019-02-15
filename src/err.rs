@@ -9,17 +9,9 @@ pub enum Error {
 	MissingArgument { pos: usize, args: Vec<AnyObject> },
 	BadArgument { pos: usize, arg: AnyObject, msg: &'static str },
 	Boxed(Box<dyn ErrorTrait>),
-	// #[cfg(test)]
-	// PoisonError,
+	#[cfg(test)]
 	__Testing
 }
 
 #[must_use]
 pub type Result<T> = std::result::Result<T, Error>;
-
-// #[cfg(test)]
-// impl<T> From<PoisonError<T>> for Error {
-// 	fn from(_: PoisonError<T>) -> Error {
-// 		Error::PoisonError
-// 	}
-// }

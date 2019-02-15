@@ -30,10 +30,14 @@ impl Number {
 		use std::str::FromStr;
 		// todo: parse_str
 		// this is very temporary.
-		println!("{:?}", text);
-		f64::from_str(text).map(Number::new).map_err(|err| Error::Boxed(Box::new(err)))
+		if text.is_empty() {
+			return Ok(Number::new(0.0))
+		}
+
+		f64::from_str(text).map(Number::new).map_err(|_| Error::BadArgument {
+			pos: 0, arg: Object::new_number(9.0).as_any(), msg: ""
+		})
 	}
-	// "@num" => |obj, _| Number::parse_str(&obj.data().read().expect("read err in Text::@bool")).map(Object::new),
 
 	pub fn to_integer(&self) -> isize {
 		// TODO: make tests here

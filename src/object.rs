@@ -119,6 +119,10 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	pub fn duplicate_add_parent(&self, parent: AnyObject) -> Object<T> {
 		unimplemented!()
 	}
+
+	pub fn id_eq(&self, other: &Object<T>) -> bool {
+		self.0.info.id == other.0.info.id
+	}
 }
 
 impl<T: Send + Sync + Sized + 'static> Object<T> {
@@ -323,6 +327,12 @@ mod tests {
 	fn _check_is_sized() {
 		fn _is_sized<T: Sized>(){}
 		_is_sized::<AnyObject>()
+	}
+
+	#[test]
+	#[ignore]
+	fn _make_sure_invalid_operations_are_ignored() {
+		unimplemented!()
 	}
 
 	#[test]

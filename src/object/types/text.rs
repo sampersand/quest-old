@@ -210,15 +210,34 @@ mod fn_tests {
 			("foo", []) => true,
 			("bar baz quux", []) => true,
 			("I ❤️ 🚀, they r cool", []) => true,
-			("Ɣ㠨𥊗", [&t!("")]) => true // ensure extra arge are ignored
+			("Ɣ㠨𥊗", [&t!("")]) => true // ensure extra args are ignored
 		);
 		Ok(())
 	}
 
 	#[test]
-	#[ignore]
 	fn at_num() -> Result<()> {
-		unimplemented!("TODO: @num")
+		assert_text_call_eq!("@num" Number;
+			("", []) => 0.0,
+			("1", []) => 1.0,
+			("1.0", []) => 1.0,
+			("-1.00000", []) => -1.0,
+			("3.14159265", []) => 3.14159265,
+			("-12.34", []) => -12.34,
+			("12e9", []) => 12e9,
+			("12E+9", []) => 12E+9,
+			("-12.41e+9", []) => -12.41e+9,
+			("14.5", [&t!("1")]) => 14.5 // ensure extra args are ignored
+		);
+
+		match t!('a').call_attr("@num", &[]).unwrap_err() {
+			Error::BadArgument { pos: 0, .. } => {},
+			err => panic!("Bad error type returned: {:?}", err)
+		}
+
+		// assert!(t!('a').call_attr("@num", &[])?.is_null());
+
+		Ok(())
 	}
 
 	#[test]
@@ -289,7 +308,7 @@ mod fn_tests {
 
 	#[test]
 	#[ignore]
-	fn add_ignore() -> Result<()> {
+	fn add_inplace() -> Result<()> {
 		unimplemented!("+=");
 	}
 
