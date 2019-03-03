@@ -97,43 +97,7 @@ lazy_static! {
 mod tests {
 	use super::*;
 	use crate::err::{Result, Error};
-	use std::fmt::{self, Debug, Formatter};
 	use crate::object::types::{Boolean, Variable};
-	use std::hash::{Hash, Hasher};
-
-	macro_rules! define_blank {
-		(struct $struct:ident;) => { define_blank!(struct $struct, BLANK_MAP;); };
-		(struct $struct:ident, $map:ident; $($impl_type_block:tt)*) => {
-			struct $struct;
-			impl Hash for $struct {
-				fn hash<H: Hasher>(&self, _: &mut H) {
-					unreachable!()
-				}
-			}
-
-			impl Eq for $struct {}
-			impl PartialEq for $struct {
-				fn eq(&self, _: &$struct) -> bool {
-					unreachable!()
-				}
-			}
-
-			impl Debug for $struct {
-				fn fmt(&self, _: &mut Formatter) -> fmt::Result {
-					unreachable!()
-				}
-			}
-
-			impl $struct {
-				fn new_any() -> AnyObject {
-					Object::new($struct).as_any()
-				}
-			}
-
-			impl_type!{ for $struct, map $map; $($impl_type_block)* }
-		}
-	}
-
 
 	define_blank!(struct BlankObject;);
 	define_blank!(struct BlankButFalse, BLANK_BUT_FALSE_MAP;

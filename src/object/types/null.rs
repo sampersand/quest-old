@@ -3,10 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::object::{Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
-use super::quest_funcs::{
-	AT_TEXT, AT_BOOL, AT_NUM,
-	NOT, EQL, CALL
-};
+use super::quest_funcs;
 
 const NULL_STR: &str = "null";
 
@@ -21,9 +18,9 @@ impl Object<Null> {
 
 impl AnyObject {
 	pub fn to_null(&self) -> Result<Object<Null>> {
-		self//.call_attr(AT_BOOL, &[])?
-			.downcast_or_err::<Null>() // we don't have an attr to downcast to
+		self.downcast_or_err::<Null>() // we don't have an attr to downcast to
 	}
+
 	pub fn is_null(&self) -> bool {
 		self.downcast::<Null>().is_some()
 	}
@@ -48,87 +45,155 @@ impl Display for Null {
 	}
 }
 
+mod funcs {
+	use super::{Null, NULL_STR};
+	use crate::err::Result;
+	use crate::object::{Object, AnyObject};
+	use crate::object::types::{Text, Boolean, Number};
+
+	pub fn at_text(_: &Object<Null>) -> Object<Text> {
+		Object::new_text_str(NULL_STR)
+	}
+
+	pub fn at_bool(_: &Object<Null>) -> Object<Boolean> {
+		Object::new_boolean(false)
+	}
+
+	pub fn at_num(_: &Object<Null>) -> Object<Number> {
+		Object::new_number(std::f64::NAN)
+	}
+
+	pub fn eql(_: &Object<Null>, _: &Object<Null>) -> Object<Boolean> {
+		Object::new_boolean(true)
+	}
+
+	pub fn call(_: &Object<Null>, _: &[&AnyObject]) -> Result<AnyObject> {
+		Ok(Object::new_null())
+	}
+}
+
 impl_type! { for Null;
-	AT_TEXT => |_, _| Ok(Object::new_text_str(NULL_STR)),
-	AT_BOOL => |_, _| Ok(Object::new_boolean(false)),
-	AT_NUM => |_, _| Ok(Object::new_number(std::f64::NAN)),
-	NOT => |_, _| Ok(Object::new_boolean(true)),
-	EQL => |_, args| Ok(Object::new_boolean(getarg!(args[0])?.is_null())),
-	CALL => |_, _| Ok(Object::new_null()) // executing null gives you null
+	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
+	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
+	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o)),
+	quest_funcs::EQL => |o, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(o, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
+	quest_funcs::CALL => |o, a| funcs::call(o, a)
 }
 
 #[cfg(test)]
 mod fn_tests {
-	use super::*;
-	use crate::object::types::{Number, Text, Boolean};
-	use crate::err::Error;
+	use super::funcs;
+	use crate::object::Object;
 
-	macro_rules! n {
-		() => (Object::new_null().as_any())
+	#[test]
+	fn at_bool() {
+		let ref n = Object::new_null();
+		assert_eq!(funcs::at_bool(n), false);
 	}
 
-	macro_rules! assert_null_call_eq {
-		($attr:tt $type:ty; $((_, $args:tt) => $expected:expr),*) => {
-			$(
-				assert_eq!(*n!().call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
-			)*
+	#[test]
+	fn at_text() {
+		let ref n = Object::new_null();
+		assert_eq!(funcs::at_text(n), super::NULL_STR);
+	}
+
+	#[test]
+	fn at_num() {
+		let ref n = Object::new_null();
+		assert!(funcs::at_num(n).is_nan());
+	}
+
+	#[test]
+	fn eql() {
+		let ref n = Object::new_null();
+		assert_eq!(funcs::eql(n, n), true);
+		assert_eq!(funcs::eql(n, &Object::new_null()), true);
+	}
+
+	#[test]
+	fn call() {
+		let ref n = Object::new_null();
+		match funcs::call(n, &[]) {
+			Ok(ref obj) if obj.is_null() => {},
+			other => panic!("bad result: {:?}", other)
+		}
+
+		match funcs::call(n, &[&Object::new_null().as_any()]) {
+			Ok(ref obj) if obj.is_null() => {},
+			other => panic!("bad result: {:?}", other)
 		}
 	}
+}
 
+#[cfg(test)]
+mod integration {
+	use super::funcs;
+	use crate::err::Result;
+	use crate::object::Object;
+	use crate::object::types::{Text, Boolean, Number};
+	use crate::object::types::quest_funcs::{
+		AT_BOOL, AT_TEXT, AT_NUM,
+		EQL, CALL
+	};
 
 	#[test]
 	fn at_bool() -> Result<()> {
-		assert_null_call_eq!(AT_BOOL Boolean;
-			(_, []) => false,
-			(_, [&Object::new_number(12.3).as_any()]) => false // ensure extra args are ignored
-		);
+		let ref n = Object::new_null();
+		
+		assert_eq!(n.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, funcs::at_bool(n));
 
 		Ok(())
 	}
 
 	#[test]
 	fn at_text() -> Result<()> {
-		assert_null_call_eq!(AT_TEXT Text;
-			(_, []) => *NULL_STR,
-			(_, [&Object::new_number(12.3).as_any()]) => *NULL_STR // ensure extra args are ignored
-		);
+		let ref n = Object::new_null();
+		
+		assert_eq!(n.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, funcs::at_text(n));
 
 		Ok(())
 	}
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert!(n!().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		// ensure extra args are ignored
-		assert!(n!().call_attr(AT_NUM, &[&Object::new_number(12.3).as_any()])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		Ok(())
-	}
-
-
-	#[test]
-	fn equality() -> Result<()> {
-		assert_null_call_eq!(EQL Boolean;
-			(_, [&n!()]) => true,
-			(_, [&Object::new_boolean(false).as_any()]) => false, 
-			(_, [&n!(), &Object::new_number(12.3).as_any()]) => true // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!().call_attr(EQL, &[]));
+		let ref n = Object::new_null();
+		
+		assert!(n.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.is_nan());
 
 		Ok(())
 	}
 
 	#[test]
-	fn negate() -> Result<()> {
-		assert_null_call_eq!(NOT Boolean;
-			(_, []) => true,
-			(_, [&Object::new_number(12.3).as_any()]) => true // ensure extra args are ignored
-		);
+	fn eql() -> Result<()> {
+		let ref n = Object::new_null();
+		let ref n2 = Object::new_null();
+		
+		assert_eq!(n.as_any().call_attr(EQL, &[&n.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(n, n));
+		assert_eq!(n.as_any().call_attr(EQL, &[&n2.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(n, n2));
+
+		define_blank!(struct Blank;);
+		assert_eq!(n.as_any().call_attr(EQL, &[&Blank::new_any()])?.downcast_or_err::<Boolean>()?, false);
+
+		assert_param_missing!(n.as_any().call_attr(EQL, &[]));
+
+		Ok(())
+	
+	}
+
+	#[test]
+	fn call() -> Result<()> {
+		let ref n = Object::new_null();
+		let ref n2 = Object::new_null().as_any();
+
+		assert_eq!(n.as_any().call_attr(CALL, &[])?, funcs::call(n, &[])?);
+		assert_eq!(n.as_any().call_attr(CALL, &[n2])?, funcs::call(n, &[n2])?);
 
 		Ok(())
 	}
 }
+
+
+
 
 #[cfg(test)]
 mod tests {

@@ -10,21 +10,22 @@ use super::quest_funcs::{
 	POS, NEG
 };
 
+type Inner = f64;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Default)]
-pub struct Number(f64);
+pub struct Number(Inner);
 
 impl Number {
 	#[inline]
-	pub fn new(num: f64) -> Number {
+	pub fn new(num: Inner) -> Number {
 		Number(num)
 	}
 
 	#[allow(unused)] // this isn't working properly
 	fn _from_whole_decimal(whole: i32, decimal: u32) -> Number {
-		let decimal_digits = (decimal as f64).log10().ceil();
-		let whole = whole as f64;
-		let decimal = (decimal as f64) * 10f64.powf(-decimal_digits);
+		let decimal_digits = (decimal as Inner).log10().ceil();
+		let whole = whole as Inner;
+		let decimal = (decimal as Inner) * 10f64.powf(-decimal_digits);
 
 		if whole.is_sign_negative() {
 			Number(whole - decimal)
@@ -41,7 +42,7 @@ impl Number {
 			return Ok(Number::new(0.0))
 		}
 
-		f64::from_str(text).map(Number::new).map_err(|_| Error::BadArgument {
+		Inner::from_str(text).map(Number::new).map_err(|_| Error::BadArgument {
 			pos: 0, arg: Object::new_number(9.0).as_any(), msg: ""
 		})
 	}
@@ -53,40 +54,55 @@ impl Number {
 }
 
 impl Object<Number> {
-	pub fn new_number(num: f64) -> Object<Number> {
+	pub fn new_number(num: Inner) -> Object<Number> {
 		Object::new(Number::new(num))
 	}
 }
 
 impl AnyObject {
 	pub fn to_number(&self) -> Result<Object<Number>> {
-		self.call_attr(AT_NUM, &[])?
-			.downcast_or_err::<Number>()
+		self.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()
 	}
 }
 
 
-impl From<f64> for Number {
-	fn from(num: f64) -> Number {
+impl From<Inner> for Number {
+	fn from(num: Inner) -> Number {
 		Number::new(num)
 	}
 }
 
-impl From<Number> for f64 {
-	fn from(num: Number) -> f64 {
+impl From<Number> for Inner {
+	fn from(num: Number) -> Inner {
 		num.0
 	}
 }
 
-impl AsRef<f64> for Number {
-	fn as_ref(&self) -> &f64 {
+impl PartialEq<Inner> for Object<Number> {
+	fn eq(&self, rhs: &Inner) -> bool {
+		self.data().read().expect("read error in Object<Number>::eq<Inner>").as_ref() == rhs
+	}
+}
+
+impl Object<Number> {
+	pub fn is_nan(&self) -> bool {
+		self.data().read().expect("read err in Object<Number>::is_nan").is_nan()
+	}
+
+	pub fn is_infinite(&self) -> bool {
+		self.data().read().expect("read err in Object<Number>::is_infinite").is_infinite()
+	}
+}
+
+impl AsRef<Inner> for Number {
+	fn as_ref(&self) -> &Inner {
 		&self.0
 	}
 }
 
 impl Deref for Number {
-	type Target = f64;
-	fn deref(&self) -> &f64 {
+	type Target = Inner;
+	fn deref(&self) -> &Inner {
 		&self.0
 	}
 }
@@ -124,7 +140,10 @@ macro_rules! f64_func {
 }
 
 impl_type! { for Number;
-	AT_BOOL => |num, _| Ok(Object::new_boolean(*num.data().read().expect(const_concat!("read error in Number::", AT_BOOL)).as_ref() != 0.0)),
+	AT_BOOL => |num, _| {
+		let num = *num.data().read().expect(const_concat!("read error in Number::", AT_BOOL)).as_ref();
+		Ok(Object::new_boolean(num != 0.0 && !num.is_nan()))
+	},
 	AT_NUM => |num, _| Ok(num.duplicate()),
 	AT_TEXT => |num, _| Ok(Object::new_text(num.data().read().expect(const_concat!("read error in Number::", AT_TEXT)).as_ref().to_string())),
 
@@ -188,6 +207,7 @@ mod fn_tests {
 		assert_num_call_eq!(AT_BOOL Boolean;
 			(0.0, []) => false,
 			(-0.0, []) => false,
+			(NAN, []) => false,
 			(13.4, []) => true,
 			(INFINITY, []) => true,
 			(PI, []) => true,
@@ -601,8 +621,8 @@ mod tests {
 	fn to_number() -> Result<()> {
 		assert_eq!(*Object::new_number(1234.0).as_any().to_number()?.unwrap_data(), 1234.0);
 		assert_eq!(*Object::new_number(1.0).as_any().to_number()?.unwrap_data(), 1.0);
-		assert!(Object::new_number(std::f64::INFINITY).as_any().to_number()?.unwrap_data().is_infinite());
-		assert!(Object::new_number(std::f64::NAN).as_any().to_number()?.unwrap_data().is_nan());
+		assert!(Object::new_number(std::Inner::INFINITY).as_any().to_number()?.unwrap_data().is_infinite());
+		assert!(Object::new_number(std::Inner::NAN).as_any().to_number()?.unwrap_data().is_nan());
 		
 		Ok(())
 	}

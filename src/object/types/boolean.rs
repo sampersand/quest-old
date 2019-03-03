@@ -7,6 +7,9 @@ use super::quest_funcs;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boolean(bool);
 
+const TRUE_STR: &str = "true";
+const FALSE_STR: &str = "false";
+
 impl Boolean {
 	#[inline]
 	pub fn new(boolean: bool) -> Boolean {
@@ -24,7 +27,7 @@ impl Object<Boolean> {
 	}
 
 	pub fn is_true(&self) -> bool {
-		self.data().read().expect("read error in Object::is_true").is_true()
+		*self == true
 	}
 }
 
@@ -32,6 +35,12 @@ impl AnyObject {
 	pub fn to_boolean(&self) -> Result<Object<Boolean>> {
 		self.call_attr(quest_funcs::AT_BOOL, &[])?
 			.downcast_or_err::<Boolean>()
+	}
+}
+
+impl PartialEq<bool> for Object<Boolean> {
+	fn eq(&self, rhs: &bool) -> bool {
+		self.data().read().expect("read error in Object<Boolean>::eq").as_ref() == rhs
 	}
 }
 
@@ -62,16 +71,19 @@ impl AsRef<bool> for Boolean {
 
 impl Display for Boolean {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		Display::fmt(&self.0, f)
+		if self.0 {
+			write!(f, "{}", TRUE_STR)
+		} else {
+			write!(f, "{}", FALSE_STR)
+		}
 	}
 }
 
 mod funcs {
-	use crate::object::types::{Number, Boolean, Text};
+	use super::{Boolean, TRUE_STR, FALSE_STR};
+	use crate::object::types::{Number, Text};
 	use crate::object::Object;
 
-	pub const TRUE_STR: &str = "true";
-	pub const FALSE_STR: &str = "false";
 	pub const TRUE_NUM: f64 = 1.0;
 	pub const FALSE_NUM: f64 = 0.0;
 
@@ -118,15 +130,15 @@ mod funcs {
 }
 
 impl_type! { for Boolean;
-	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o) as _),
-	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o) as _),
-	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o) as _),
+	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
+	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o)),
+	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
 
-	quest_funcs::NOT => |o, _| Ok(funcs::not(o) as _),
-	quest_funcs::EQL => |o, a| Ok(funcs::eql(o, &getarg!(a[0] @ to_boolean)?) as _),
-	quest_funcs::B_XOR => |o, a| Ok(funcs::b_xor(o, &getarg!(a[0] @ to_boolean)?) as _),
-	quest_funcs::B_AND => |o, a| Ok(funcs::b_and(o, &getarg!(a[0] @ to_boolean)?) as _),
-	quest_funcs::B_OR => |o, a| Ok(funcs::b_or(o, &getarg!(a[0] @ to_boolean)?) as _),
+	quest_funcs::NOT => |o, _| Ok(funcs::not(o)),
+	quest_funcs::EQL => |o, a| Ok(funcs::eql(o, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_XOR => |o, a| Ok(funcs::b_xor(o, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_AND => |o, a| Ok(funcs::b_and(o, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_OR => |o, a| Ok(funcs::b_or(o, &getarg!(a[0] @ to_boolean)?)),
 }
 
 #[cfg(test)]
@@ -139,8 +151,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_bool(t).is_true(), true);
-		assert_eq!(funcs::at_bool(f).is_true(), false);
+		assert_eq!(funcs::at_bool(t), true);
+		assert_eq!(funcs::at_bool(f), false);
 
 		assert_obj_duplicated!(t, funcs::at_bool(t));
 	}
@@ -150,8 +162,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(*funcs::at_text(t).unwrap_data(), funcs::TRUE_STR);
-		assert_eq!(*funcs::at_text(f).unwrap_data(), funcs::FALSE_STR);
+		assert_eq!(funcs::at_text(t), super::TRUE_STR);
+		assert_eq!(funcs::at_text(f), super::FALSE_STR);
 	}
 
 	#[test]
@@ -159,8 +171,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(*funcs::at_num(t).unwrap_data(), funcs::TRUE_NUM);
-		assert_eq!(*funcs::at_num(f).unwrap_data(), funcs::FALSE_NUM);
+		assert!(!funcs::TRUE_NUM.is_nan() && !funcs::FALSE_NUM.is_nan()); // else these tests break
+		assert_eq!(funcs::at_num(t), funcs::TRUE_NUM);
+		assert_eq!(funcs::at_num(f), funcs::FALSE_NUM);
+
 	}
 
 	#[test]
@@ -168,8 +182,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::not(t).is_true(), false);
-		assert_eq!(funcs::not(f).is_true(), true);
+		assert_eq!(funcs::not(t), false);
+		assert_eq!(funcs::not(f), true);
 	}
 
 	#[test]
@@ -177,10 +191,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::eql(t, t).is_true(), true);
-		assert_eq!(funcs::eql(t, f).is_true(), false);
-		assert_eq!(funcs::eql(f, t).is_true(), false);
-		assert_eq!(funcs::eql(f, f).is_true(), true);
+		assert_eq!(funcs::eql(t, t), true);
+		assert_eq!(funcs::eql(t, f), false);
+		assert_eq!(funcs::eql(f, t), false);
+		assert_eq!(funcs::eql(f, f), true);
 	}
 
 	#[test]
@@ -188,10 +202,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::b_xor(t, t).is_true(), false);
-		assert_eq!(funcs::b_xor(t, f).is_true(), true);
-		assert_eq!(funcs::b_xor(f, t).is_true(), true);
-		assert_eq!(funcs::b_xor(f, f).is_true(), false);
+		assert_eq!(funcs::b_xor(t, t), false);
+		assert_eq!(funcs::b_xor(t, f), true);
+		assert_eq!(funcs::b_xor(f, t), true);
+		assert_eq!(funcs::b_xor(f, f), false);
 	}
 
 	#[test]
@@ -199,10 +213,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::b_and(t, t).is_true(), true);
-		assert_eq!(funcs::b_and(t, f).is_true(), false);
-		assert_eq!(funcs::b_and(f, t).is_true(), false);
-		assert_eq!(funcs::b_and(f, f).is_true(), false);
+		assert_eq!(funcs::b_and(t, t), true);
+		assert_eq!(funcs::b_and(t, f), false);
+		assert_eq!(funcs::b_and(f, t), false);
+		assert_eq!(funcs::b_and(f, f), false);
 	}
 
 	#[test]
@@ -210,10 +224,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::b_or(t, t).is_true(), true);
-		assert_eq!(funcs::b_or(t, f).is_true(), true);
-		assert_eq!(funcs::b_or(f, t).is_true(), true);
-		assert_eq!(funcs::b_or(f, f).is_true(), false);
+		assert_eq!(funcs::b_or(t, t), true);
+		assert_eq!(funcs::b_or(t, f), true);
+		assert_eq!(funcs::b_or(f, t), true);
+		assert_eq!(funcs::b_or(f, f), false);
 	}
 }
 
@@ -282,6 +296,8 @@ mod integration {
 		assert_eq!(f.as_any().call_attr(EQL, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(f, t));
 		assert_eq!(f.as_any().call_attr(EQL, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(f, f));
 
+		assert_param_missing!(t.as_any().call_attr(EQL, &[]));
+
 		Ok(())
 	}
 
@@ -294,6 +310,8 @@ mod integration {
 		assert_eq!(t.as_any().call_attr(B_XOR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(t, f));
 		assert_eq!(f.as_any().call_attr(B_XOR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(f, t));
 		assert_eq!(f.as_any().call_attr(B_XOR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(f, f));
+
+		assert_param_missing!(t.as_any().call_attr(B_XOR, &[]));
 
 		Ok(())
 	}
@@ -308,6 +326,8 @@ mod integration {
 		assert_eq!(f.as_any().call_attr(B_AND, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(f, t));
 		assert_eq!(f.as_any().call_attr(B_AND, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(f, f));
 
+		assert_param_missing!(t.as_any().call_attr(B_AND, &[]));
+
 		Ok(())
 	}
 
@@ -320,6 +340,8 @@ mod integration {
 		assert_eq!(t.as_any().call_attr(B_OR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(t, f));
 		assert_eq!(f.as_any().call_attr(B_OR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(f, t));
 		assert_eq!(f.as_any().call_attr(B_OR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(f, f));
+
+		assert_param_missing!(t.as_any().call_attr(B_OR, &[]));
 
 		Ok(())
 	}

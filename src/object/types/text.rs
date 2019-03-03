@@ -67,6 +67,12 @@ impl From<String> for Text {
 	}
 }
 
+impl PartialEq<&'_ str> for Object<Text> {
+	fn eq(&self, rhs: &&str) -> bool {
+		self.data().read().expect("read err in Object<Text>::eq").as_ref() == *rhs
+	}
+}
+
 impl AsRef<str> for Text {
 	fn as_ref(&self) -> &str {
 		&self.0

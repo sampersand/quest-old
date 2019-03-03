@@ -8,7 +8,7 @@ macro_rules! assert_param_missing {
 	($expr:expr) => (assert_param_missing!($expr, 0));
 	($expr:expr, $pos:expr) => (
 		match $expr {
-			Err(Error::MissingArgument { pos: 0, .. }) => {},
+			Err(crate::err::Error::MissingArgument { pos: 0, .. }) => {},
 			other => panic!("invalid response returend from `assert_param_missing({:?},{:?})`: {:?}", $expr, $pos, other)
 		}
 	);
@@ -40,6 +40,42 @@ macro_rules! getarg {
 		})
 	}
 }
+
+macro_rules! define_blank {
+	(struct $struct:ident;) => { define_blank!(struct $struct, BLANK_MAP;); };
+	(struct $struct:ident, $map:ident; $($impl_type_block:tt)*) => {
+		struct $struct;
+		impl ::std::hash::Hash for $struct {
+			fn hash<H: ::std::hash::Hasher>(&self, _: &mut H) {
+				unreachable!(concat!("Attempted to hash a", stringify!($struct)));
+			}
+		}
+
+		impl Eq for $struct {}
+		impl PartialEq for $struct {
+			fn eq(&self, _: &$struct) -> bool {
+				unreachable!(concat!("Attempted to compare a", stringify!($struct)));
+			}
+		}
+
+		impl ::std::fmt::Debug for $struct {
+			fn fmt(&self, _: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+				unreachable!(concat!("Attempted to debug format a", stringify!($struct)));
+
+			}
+		}
+
+		impl $struct {
+			fn new_any() -> $crate::object::AnyObject {
+				$crate::object::Object::new($struct).as_any()
+			}
+		}
+
+		impl_type!{ for $struct, map $map; $($impl_type_block)* }
+	}
+}
+
+
 
 macro_rules! object_map {
 	(UNTYPED $prefix:literal, $map:expr; $($name:expr => $func:expr,)*) => (
