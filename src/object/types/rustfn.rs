@@ -4,6 +4,10 @@ use std::any::Any;
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 
+use super::quest_funcs::{
+	AT_TEXT, CALL
+};
+
 type Inner = dyn Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> + Send + Sync;
 
 pub struct RustFn {
@@ -116,8 +120,8 @@ impl Debug for RustFn {
 }
 
 impl_type! { for RustFn;
-	// "@text" => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
-	// "()" => |obj, args| obj.as_any().call_attr("()", args)
+	// AT_TEXT => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
+	// CALL => |obj, args| obj.as_any().call_attr(CALL, args)
 }
 
 

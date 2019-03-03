@@ -1,9 +1,6 @@
-macro_rules! const_concat {
-	($($arg:expr),*) => {{
-		let mut x = String::new();
-		$(x.push_str(&$arg);)*
-		Box::leak(x.into_boxed_str())
-	}}
+macro_rules! data_err {
+	(read in $ty:ty, $name:ident) => {const_concat!("read err in ", stringify!($ty), "::", $name) };
+	(write in $ty:ty, $name:ident) => {const_concat!("write err in ", stringify!($ty), "::", $name) }
 }
 
 #[cfg(test)]

@@ -6,6 +6,9 @@ use std::ops::Deref;
 use crate::err::Result;
 use lazy_static::lazy_static;
 
+use super::quest_funcs::{
+	AT_VAR
+};
 
 lazy_static! {
 	static ref ID_STRINGS: RwLock<HashSet<&'static str>> = RwLock::new(HashSet::new());
@@ -33,7 +36,7 @@ impl Object<Variable> {
 
 impl AnyObject {
 	pub fn to_variable(&self) -> Result<Object<Variable>> {
-		self.call_attr("@var", &[])?
+		self.call_attr(AT_VAR, &[])?
 			.downcast_or_err::<Variable>()
 	}
 }
@@ -84,7 +87,7 @@ impl From<String> for Variable {
 }
 
 impl_type! { for Variable;
-	"@var" => |obj, _| Ok(Object::new_variable(**obj.data().read().expect("read err in Variable::@var"))),
+	AT_VAR => |obj, _| Ok(Object::new_variable(**obj.data().read().expect(data_err![read in Variable, AT_VAR])))
 }
 
 

@@ -15,6 +15,19 @@ impl Display for PtrFormatter {
 	}
 }
 
+macro_rules! const_concat {
+	($($arg:expr),*) => {{
+		::lazy_static::lazy_static!{
+			static ref VAL: &'static str = {
+				let mut x = String::new();
+				$(x.push_str(&$arg);)*
+				Box::leak(x.into_boxed_str())
+			};
+		}
+		&*VAL
+	}}
+}
+
 #[cfg(test)]
 macro_rules! matches {
 	($a:expr, $b:pat) => (if let $b = $a { true } else { false })

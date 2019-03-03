@@ -5,6 +5,15 @@ use std::hash::{Hasher, Hash};
 use std::ops::Deref;
 use std::collections::HashMap;
 
+use super::quest_funcs::{
+	AT_MAP, AT_LIST, AT_TEXT, AT_BOOL,
+	EQL,
+	ADD, SUB, MUL,
+	INDEX, INDEX_ASSIGN, INDEX_DELETE,
+	B_OR, B_AND, B_XOR,
+	L_LEN
+};
+
 type ObjMap = HashMap<AnyObject, AnyObject>;
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -65,21 +74,23 @@ impl Hash for Map {
 }
 
 impl_type! { for Map; 
-	"@map" => |obj, _| unimplemented!(),
-	"@list" => |obj, _| unimplemented!(),
-	"@bool" => |obj, _| unimplemented!(),
+	AT_MAP => |obj, _| unimplemented!(),
+	AT_LIST => |obj, _| unimplemented!(),
+	AT_BOOL => |obj, _| unimplemented!(),
+	AT_TEXT => |obj, _| unimplemented!(),
 
-	"==" => |obj, args| unimplemented!(),
-	"len" => |obj, _| unimplemented!(),
-	"+" => |obj, args| unimplemented!(),
-	"-" => |obj, args| unimplemented!(),
+	EQL => |obj, args| unimplemented!(),
+	L_LEN => |obj, _| unimplemented!(),
+	ADD => |obj, args| unimplemented!(),
+	SUB => |obj, args| unimplemented!(),
 
-	"[]" => |obj, args| unimplemented!(),
-	"[]=" => |obj, args| unimplemented!(),
+	INDEX => |obj, args| unimplemented!(),
+	INDEX_ASSIGN => |obj, args| unimplemented!(),
+	INDEX_DELETE => |obj, args| unimplemented!(),
 
-	"|" => |obj, args| unimplemented!(), // union
-	"&" => |obj, args| unimplemented!(), // intersect
-	"^" => |obj, args| unimplemented!(), // symmetric_difference
+	B_OR => |obj, args| unimplemented!(), // union
+	B_AND => |obj, args| unimplemented!(), // intersect
+	B_XOR => |obj, args| unimplemented!(), // symmetric_difference
 }
 
 

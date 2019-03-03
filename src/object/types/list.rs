@@ -4,12 +4,13 @@ use crate::err::{Result, Error};
 use std::ops::Deref;
 
 use super::quest_funcs::{
-	AT_LIST, AT_TEXT, AT_BOOL,
-	EQ,
+	AT_LIST, AT_TEXT, AT_BOOL, AT_MAP,
+	EQL,
 	ADD, SUB, MUL,
+
 	INDEX, INDEX_ASSIGN, INDEX_DELETE,
-	BW_OR, BW_AND, BW_XOR,
-	MISC_LEN
+	B_OR, B_AND, B_XOR,
+	L_LEN
 };
 
 #[derive(Debug, PartialEq, Clone, Default, Hash)]
@@ -63,19 +64,22 @@ impl From<List> for Vec<AnyObject> {
 
 impl_type! { for List; 
 	AT_LIST => |obj, _| unimplemented!(),
+	AT_MAP => |obj, _| unimplemented!(),
 	AT_BOOL => |obj, _| unimplemented!(),
-	EQ => |obj, args| unimplemented!(),
+	AT_TEXT => |obj, _| unimplemented!(),
+
+	EQL => |obj, args| unimplemented!(),
 	ADD => |obj, args| unimplemented!(),
 	SUB => |obj, args| unimplemented!(),
 	MUL => |obj, args| unimplemented!(),
-	MISC_LEN => |obj, _| unimplemented!(),
+	L_LEN => |obj, _| unimplemented!(),
 
 	INDEX => |obj, args| unimplemented!(),
 	INDEX_ASSIGN => |obj, args| unimplemented!(),
 	INDEX_DELETE => |obj, args| unimplemented!(),
 
-	BW_OR => |obj, args| unimplemented!(), // union
-	BW_AND => |obj, args| unimplemented!(), // intersect
-	BW_XOR => |obj, args| unimplemented!(), // symmetric_difference
+	B_OR => |obj, args| unimplemented!(), // union
+	B_AND => |obj, args| unimplemented!(), // intersect
+	B_XOR => |obj, args| unimplemented!(), // symmetric_difference
 } 
 

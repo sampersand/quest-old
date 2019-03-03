@@ -7,6 +7,13 @@ use crate::err::{Result, Error};
 use lazy_static::lazy_static;
 use crate::util::{self, IndexError};
 
+use super::quest_funcs::{
+	AT_TEXT, AT_VAR, AT_BOOL, AT_NUM,
+	CALL, L_EVAL, L_LEN,
+	ADD, MUL,
+	EQL, ADD_ASSIGN, 
+	INDEX, INDEX_ASSIGN
+};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Default)]
 pub struct Text(String);
@@ -29,7 +36,7 @@ impl Object<Text> {
 
 impl AnyObject {
 	pub fn to_text(&self) -> Result<Object<Text>> {
-		self.call_attr("@text", &[])?
+		self.call_attr(AT_TEXT, &[])?
 			.downcast_or_err::<Text>()
 	}
 }
@@ -67,58 +74,63 @@ impl AsRef<str> for Text {
 }
 
 
+
 impl_type! { for Text;
-	"@text" => |obj, _| Ok(Object::new_text(obj.data().read().expect("read err in Text::@text").as_ref().to_string())),
-	"@var" => |obj, _| Ok(Object::new_variable_from_string(obj.data().read().expect("read err in Text::@var").as_ref().to_string())),
-	"@bool" => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Text::@bool").is_empty())),
-	"@num" => |obj, _| Ok(Object::new(super::Number::parse_str(&obj.data().read().expect("read err in Text::@bool"))?).as_any()),
+	AT_TEXT => |obj, _| Ok(obj.duplicate()),
+	AT_VAR => |obj, _| Ok(Object::new_variable_from_string(obj.data().read().expect(data_err![read in Text, AT_VAR]).as_ref().to_string())),
+	AT_BOOL => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect(data_err![read in Text, AT_BOOL]).is_empty())),
+	AT_NUM => |obj, _| Ok(Object::new(super::Number::parse_str(&obj.data().read().expect(data_err!(read in Text, AT_TEXT)))?).as_any()),
 
-	"()" => |_, _| unimplemented!("()"),
-	"eval" => |_, _| unimplemented!("This will be 'evaluate this text', possibly with new environment"),
+	CALL => |_, _| unimplemented!("{}", CALL),
+	L_EVAL => |_, _| unimplemented!("This will be 'evaluate this text', possibly with new environment"),
 
-	"==" => |obj, args| {
-		Ok(Object::new_boolean(*obj.data().read().expect("read err in Text::==") == *getarg!(args[0] @ to_text)?.data().read().expect("read err in Text::==")))
+	EQL => |obj, args| {
+		let lhs = obj.data().read().expect(data_err![read in Text, EQL]);
+		let rhs = getarg!(args[0] @ to_text)?;
+		let rhs = rhs.data().read().expect(data_err![read in Text, EQL]);
+		Ok(Object::new_boolean(*lhs == *rhs))
 	},
-	"+" => |obj, args| {
+
+	ADD => |obj, args| {
 		let text_obj = getarg!(args[0] @ to_text)?;
-		let mut new_text = obj.data().read().expect("read err in Text::+").as_ref().to_string();
-		new_text.push_str(&text_obj.data().read().expect("read err in Text::+").as_ref());
+		let mut new_text = obj.data().read().expect(data_err![read in Text, ADD]).as_ref().to_string();
+		new_text.push_str(&text_obj.data().read().expect(data_err![read in Text, ADD]).as_ref());
 		Ok(Object::new_text(new_text))
 	},
 
-	"+=" => |obj, args| {
+	ADD_ASSIGN => |obj, args| {
 		let text_obj = getarg!(args[0] @ to_text)?;
 		// this might fail if we try adding the same number
-		obj.data().write().expect("write err in Text::+=").push_str(&text_obj.data().read().expect("read err in Text::+="));
+		obj.data().write().expect(data_err![write in Text, ADD_ASSIGN]).push_str(&text_obj.data().read().expect(data_err![read in Text, ADD_ASSIGN]));
 		Ok(obj.clone())
 	},
 
-	"*" => |obj, args| {
+	MUL => |obj, args| {
 		let amnt_obj = getarg!(args[0] @ to_number)?;
-		let amnt = amnt_obj.data().read().expect("read err in Text::*").to_integer();
+		let amnt = amnt_obj.data().read().expect(data_err![read in Text, MUL]).to_integer();
 		if amnt.is_negative() {
 			return Err(Error::BadArgument{ pos: 0, arg: amnt_obj, msg: "received a negative value" });;
 		}
 
-		Ok(Object::new_text(obj.data().read().expect("read err in Text::*").repeat(amnt as usize)))
+		Ok(Object::new_text(obj.data().read().expect(data_err![read in Text, MUL]).repeat(amnt as usize)))
 	},
 
-	"len" => |obj, _| Ok(Object::new_number(obj.data().read().expect("read err in Text::len").chars().count() as f64)),
-	"[]" => |obj, args| { // note you index starting at 1
-		let this = obj.data().read().expect("read err in Text::[]");
-		let start = getarg!(args[0] @ to_number)?.data().read().expect("read err in Text::[]").to_integer();
-		let end = args.get(1).map(|x| x.to_number()).transpose()?.map(|x| x.data().read().expect("read err in Text::[]").to_integer());
+	L_LEN => |obj, _| Ok(Object::new_number(obj.data().read().expect(data_err![read in Text, L_LEN]).chars().count() as f64)),
+	INDEX => |obj, args| { // note you index starting at 1
+		let this = obj.data().read().expect(data_err![read in Text, INDEX]);
+		let start = getarg!(args[0] @ to_number)?.data().read().expect(data_err![read in Text, INDEX]).to_integer();
+		let end = args.get(1).map(|x| x.to_number()).transpose()?.map(|x| x.data().read().expect(data_err![read in Text, INDEX]).to_integer());
 
 		match util::get_index(start, end, this.len()) {
-			Ok(range) => Ok(Object::new_text_str(this.get(range).expect("indexing failed in Text::[]"))),
+			Ok(range) => Ok(Object::new_text_str(this.get(range).expect(const_concat!["indexing failed in Text::", INDEX]))),
 			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
 			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
 		}
 	},
-	"[]=" => |obj, args| {
-		let start = getarg!(args[0] @ to_number)?.data().read().expect("read err in Text::[]=").to_integer();
+	INDEX_ASSIGN => |obj, args| {
+		let start = getarg!(args[0] @ to_number)?.data().read().expect(data_err![read in Text, INDEX_ASSIGN]).to_integer();
 		let end = if args.len() >= 3 {
-			Some(args[1].to_number()?.data().read().expect("read err in Text::[]=").to_integer())
+			Some(args[1].to_number()?.data().read().expect(data_err![read in Text, INDEX_ASSIGN]).to_integer())
 		} else {
 			None
 		};
@@ -129,10 +141,10 @@ impl_type! { for Text;
 			getarg!(args[2] @ to_text)?
 		};
 
-		let mut this = obj.data().write().expect("write err in Text::[]=");
+		let mut this = obj.data().write().expect(data_err![write in Text, INDEX_ASSIGN]);
 		match util::get_index(start, end, this.len()) {
 			Ok(range) => {
-				this.replace_range(range, &insertion.data().read().expect("read err in Text::[]="));
+				this.replace_range(range, &insertion.data().read().expect(data_err![read in Text, INDEX_ASSIGN]));
 				drop(this);
 				Ok(obj.as_any())
 			},
@@ -167,7 +179,7 @@ mod fn_tests {
 
 	#[test]
 	fn at_text() -> Result<()> {
-		assert_text_call_eq!("@text" Text; 
+		assert_text_call_eq!(AT_TEXT Text; 
 			("", []) => "",
 			(r#"`\"\'`"#, []) => r#"`\"\'`"#,
 			("my name is not fred", []) => "my name is not fred",
@@ -180,7 +192,7 @@ mod fn_tests {
 
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_text_str("hi there");
-		let dup = obj.as_any().call_attr("@text", &[])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
@@ -188,7 +200,7 @@ mod fn_tests {
 
 	#[test]
 	fn at_var() -> Result<()> {
-		assert_text_call_eq!("@var" Variable;
+		assert_text_call_eq!(AT_VAR Variable;
 			("", []) => "",
 			("``", []) => "``",
 			("my name is not fred", []) => "my name is not fred",
@@ -204,7 +216,7 @@ mod fn_tests {
 
 	#[test]
 	fn at_bool() -> Result<()> {
-		assert_text_call_eq!("@bool" Boolean;
+		assert_text_call_eq!(AT_BOOL Boolean;
 			("", []) => false,
 			("\0", []) => true,
 			("foo", []) => true,
@@ -217,7 +229,7 @@ mod fn_tests {
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert_text_call_eq!("@num" Number;
+		assert_text_call_eq!(AT_NUM Number;
 			("", []) => 0.0,
 			("1", []) => 1.0,
 			("1.0", []) => 1.0,
@@ -230,31 +242,31 @@ mod fn_tests {
 			("14.5", [&t!("1")]) => 14.5 // ensure extra args are ignored
 		);
 
-		match t!('a').call_attr("@num", &[]).unwrap_err() {
+		match t!('a').call_attr(AT_NUM, &[]).unwrap_err() {
 			Error::BadArgument { pos: 0, .. } => {},
 			err => panic!("Bad error type returned: {:?}", err)
 		}
 
-		// assert!(t!('a').call_attr("@num", &[])?.is_null());
+		// assert!(t!('a').call_attr(AT_NUM, &[])?.is_null());
 
 		Ok(())
 	}
 
 	#[test]
 	#[ignore]
-	fn exec() -> Result<()> {
-		unimplemented!("TODO: ()");
+	fn call() -> Result<()> {
+		unimplemented!("{}", CALL);
 	}
 
 	#[test]
 	#[ignore]
 	fn eval() -> Result<()> {
-		unimplemented!("TODO: eval");
+		unimplemented!("{}", L_EVAL);
 	}
 
 	#[test]
-	fn equality() -> Result<()> {
-		assert_text_call_eq!("==" Boolean; 
+	fn eql() -> Result<()> {
+		assert_text_call_eq!(EQL Boolean; 
 			("", [&t!("")]) => true,
 			("my name is not fred", [&t!("my name is fred")]) => false,
 			("`jk, it's \0 not ºåΩ∂ª≈Z≥≥ afsoeifhawef", [&t!("`jk, it's \0 not ºåΩ∂ª≈Z≥≥ afsoeifhawef")]) => true,
@@ -265,19 +277,14 @@ mod fn_tests {
 			("test", [&t!("test"), &t!("ing")]) => true // ensure extra args are ignored
 		);
 
-
-		// check to see if too few args are passed it handles it right
-		match t!("lol").call_attr("==", &[]).unwrap_err() {
-			Error::MissingArgument { pos: 0, .. } => {},
-			err => panic!("Bad error type returned: {:?}", err)
-		}
+		assert_param_missing!(t!("lol").call_attr(EQL, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn add() -> Result<()> {
-		assert_text_call_eq!("+" Text; 
+		assert_text_call_eq!(ADD Text; 
 			("", [&t!("")]) => "",
 			("123", [&t!("456")]) => "123456",
 			("`\0❤️🚀ºåΩ", [&t!("wotm8")]) => "`\0❤️🚀ºåΩwotm8",
@@ -288,33 +295,29 @@ mod fn_tests {
 
 		// make sure an object can be added to itself
 		let t = t!("hi");
-		assert_eq!(**t.call_attr("+", &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "hihi");
+		assert_eq!(**t.call_attr(ADD, &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "hihi");
 
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("Hello, ");
-		let dup = obj.as_any().call_attr("+", &[&t!("world")])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr(ADD, &[&t!("world")])?.downcast_or_err::<Text>()?;
 		assert_eq!(**obj.data().read().unwrap(), "Hello, "); // make sure it's not edited in-place
 		assert_eq!(**dup.data().read().unwrap(), "Hello, world");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 
-		// check to see if too few args are passed it handles it right
-		match t!("lol").call_attr("+", &[]).unwrap_err() {
-			Error::MissingArgument { pos: 0, .. } => {},
-			err => panic!("Bad error type returned: {:?}", err)
-		}
+		assert_param_missing!(t!("lol").call_attr(ADD, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	#[ignore]
-	fn add_inplace() -> Result<()> {
-		unimplemented!("+=");
+	fn add_assign() -> Result<()> {
+		unimplemented!("{}", ADD_ASSIGN);
 	}
 
 	#[test]
 	fn mul() -> Result<()> {
-		assert_text_call_eq!("*" Text; 
+		assert_text_call_eq!(MUL Text; 
 			("1234", [&n!(0)]) => "",
 			("1234", [&n!(1)]) => "1234",
 			("", [&n!(3)]) => "",
@@ -328,33 +331,29 @@ mod fn_tests {
 
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("foo");
-		let dup = obj.as_any().call_attr("*", &[&n!(3)])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr(MUL, &[&n!(3)])?.downcast_or_err::<Text>()?;
 		assert_eq!(**obj.data().read().unwrap(), "foo"); // make sure it's not edited in-place
 		assert_eq!(**dup.data().read().unwrap(), "foofoofoo");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 
 		// make sure texts (that are numbers) can be multiplied by themselves
 		let t = t!("4");
-		assert_eq!(**t.call_attr("*", &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "4444");
+		assert_eq!(**t.call_attr(MUL, &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "4444");
 
 		// make sure negative numbers return an argument error
-		match t!("_").call_attr("*", &[&n!(-2.0)]).unwrap_err() {
+		match t!("_").call_attr(MUL, &[&n!(-2.0)]).unwrap_err() {
 			Error::BadArgument{ pos: 0, msg: "received a negative value", .. } => {},
 			err => panic!("Bad error type returned: {:?}", err)
 		}
 
-		// check to see if too few args are passed it handles it right
-		match t!("lol").call_attr("*", &[]).unwrap_err() {
-			Error::MissingArgument { pos: 0, .. } => {},
-			err => panic!("Bad error type returned: {:?}", err)
-		}
+		assert_param_missing!(t!("lol").call_attr(MUL, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn mul_nonnum() -> Result<()> {
-		assert_text_call_eq!("*" Text; 
+		assert_text_call_eq!(MUL Text; 
 			("lol", [&Object::new_boolean(true).as_any()]) => "lol",
 			("a", [&t!("4")]) => "aaaa",
 			("test", [&Object::new_boolean(false).as_any(), &n!(2)]) => "" // ensure extra args are ignored
@@ -362,7 +361,7 @@ mod fn_tests {
 
 
 		// make sure negative numbers return an argument error
-		match t!("_").call_attr("*", &[&t!("-2")]).unwrap_err() {
+		match t!("_").call_attr(MUL, &[&t!("-2")]).unwrap_err() {
 			Error::BadArgument{ pos: 0, msg: "received a negative value", .. } => {},
 			err => panic!("Bad Error type returned: {:?}", err)
 		}
@@ -371,7 +370,7 @@ mod fn_tests {
 
 	#[test]
 	fn len() -> Result<()> {
-		assert_text_call_eq!("len" Number; 
+		assert_text_call_eq!(L_LEN Number; 
 			("", []) => 0.0,
 			("123", []) => 3.0,
 			("\x7f\x00\n\0", []) => 4.0,
@@ -386,13 +385,13 @@ mod fn_tests {
 	#[test]
 	#[ignore]
 	fn index() -> Result<()> {
-		unimplemented!("[]")
+		unimplemented!("{}", INDEX)
 	}
 
 	#[test]
 	#[ignore]
 	fn index_assign() -> Result<()> {
-		unimplemented!("[]=")
+		unimplemented!("{}", INDEX_ASSIGN)
 	}
 }
 

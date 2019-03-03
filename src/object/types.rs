@@ -12,7 +12,7 @@ mod map;
 mod list;
 mod oper;
 mod block;
-mod quest_funcs;
+pub mod quest_funcs;
 
 pub(super) mod pristine;
 

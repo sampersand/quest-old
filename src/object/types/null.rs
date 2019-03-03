@@ -3,6 +3,12 @@ use std::hash::{Hash, Hasher};
 use crate::object::{Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
+use super::quest_funcs::{
+	AT_TEXT, AT_BOOL, AT_NUM,
+	NOT, EQL, CALL
+};
+
+const NULL_STR: &str = "null";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Null;
@@ -15,7 +21,7 @@ impl Object<Null> {
 
 impl AnyObject {
 	pub fn to_null(&self) -> Result<Object<Null>> {
-		self//.call_attr("@bool", &[])?
+		self//.call_attr(AT_BOOL, &[])?
 			.downcast_or_err::<Null>() // we don't have an attr to downcast to
 	}
 	pub fn is_null(&self) -> bool {
@@ -38,31 +44,17 @@ impl From<Null> for () {
 
 impl Display for Null {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "null")
+		write!(f, "{}", NULL_STR)
 	}
 }
 
-// fn "@text" (_) {
-// 		"null".to_string().into_object()
-// 	}
-
-// 	fn "@bool" (_) {
-// 		false.into_object()
-// 	}
-
-// 	fn "==" (_this, rhs) {
-// 		rhs.is_null().into_object()
-// 	}
-
-// 	fn "()" (@_this) { Object::new_null() } // for stuff like if(foo {12})!
-// }
 impl_type! { for Null;
-	"@text" => |_, _| Ok(Object::new_text_str("null")),
-	"@bool" => |_, _| Ok(Object::new_boolean(false)),
-	"@num" => |_, _| Ok(Object::new_number(std::f64::NAN)),
-	"!" => |_, _| Ok(Object::new_boolean(true)),
-	"==" => |_, args| Ok(Object::new_boolean(getarg!(args[0])?.is_null())),
-	"()" => |_, _| Ok(Object::new_null()) // executing null gives you null
+	AT_TEXT => |_, _| Ok(Object::new_text_str(NULL_STR)),
+	AT_BOOL => |_, _| Ok(Object::new_boolean(false)),
+	AT_NUM => |_, _| Ok(Object::new_number(std::f64::NAN)),
+	NOT => |_, _| Ok(Object::new_boolean(true)),
+	EQL => |_, args| Ok(Object::new_boolean(getarg!(args[0])?.is_null())),
+	CALL => |_, _| Ok(Object::new_null()) // executing null gives you null
 }
 
 #[cfg(test)]
@@ -86,7 +78,7 @@ mod fn_tests {
 
 	#[test]
 	fn at_bool() -> Result<()> {
-		assert_null_call_eq!("@bool" Boolean;
+		assert_null_call_eq!(AT_BOOL Boolean;
 			(_, []) => false,
 			(_, [&Object::new_number(12.3).as_any()]) => false // ensure extra args are ignored
 		);
@@ -96,9 +88,9 @@ mod fn_tests {
 
 	#[test]
 	fn at_text() -> Result<()> {
-		assert_null_call_eq!("@text" Text;
-			(_, []) => *"null",
-			(_, [&Object::new_number(12.3).as_any()]) => *"null" // ensure extra args are ignored
+		assert_null_call_eq!(AT_TEXT Text;
+			(_, []) => *NULL_STR,
+			(_, [&Object::new_number(12.3).as_any()]) => *NULL_STR // ensure extra args are ignored
 		);
 
 		Ok(())
@@ -106,9 +98,9 @@ mod fn_tests {
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert!(n!().call_attr("@num", &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
 		// ensure extra args are ignored
-		assert!(n!().call_attr("@num", &[&Object::new_number(12.3).as_any()])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!().call_attr(AT_NUM, &[&Object::new_number(12.3).as_any()])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
 
 		Ok(())
 	}
@@ -116,24 +108,20 @@ mod fn_tests {
 
 	#[test]
 	fn equality() -> Result<()> {
-		assert_null_call_eq!("==" Boolean;
+		assert_null_call_eq!(EQL Boolean;
 			(_, [&n!()]) => true,
 			(_, [&Object::new_boolean(false).as_any()]) => false, 
 			(_, [&n!(), &Object::new_number(12.3).as_any()]) => true // ensure extra args are ignored
 		);
 
-		// check to see if too few args are passed it handles it right
-		match n!().call_attr("==", &[]).unwrap_err() {
-			Error::MissingArgument { pos: 0, .. } => {},
-			_ => panic!("got bad err")
-		};
+		assert_param_missing!(n!().call_attr(EQL, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn negate() -> Result<()> {
-		assert_null_call_eq!("!" Boolean;
+		assert_null_call_eq!(NOT Boolean;
 			(_, []) => true,
 			(_, [&Object::new_number(12.3).as_any()]) => true // ensure extra args are ignored
 		);

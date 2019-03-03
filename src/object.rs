@@ -1,7 +1,7 @@
 mod types;
 mod map;
 
-use self::types::Type;
+use self::types::{Type, quest_funcs};
 use self::map::ObjectMap;
 
 use std::sync::{Arc, RwLock, Weak};
@@ -11,7 +11,6 @@ use crate::map::Map;
 use crate::err::{Error, Result};
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
-
 pub struct Object<T: ?Sized + Send + Sync>(Arc<Inner<T>>);
 pub type AnyObject = Object<dyn Any + Send + Sync>;
 
@@ -145,19 +144,19 @@ impl AnyObject {
 				let mut self_args = Vec::with_capacity(args.len() + 1);
 				self_args.push(self);
 				self_args.extend(args);
-				val.call_attr("()", self_args.as_ref())
+				val.call_attr(quest_funcs::CALL, self_args.as_ref())
 			}
 		}
 	}
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
 		if let Some(var) = attr.downcast::<self::types::Variable>() {
-			if *var.data().read().expect("read err in AnyObject::get").as_ref() == "::" {
+			if *var.data().read().expect("read err in AnyObject::get").as_ref() == quest_funcs::COLON_COLON {
 				return Ok(self::types::pristine::GETTER.as_any())
 			}
 		}
 
-		self.call_attr("::", &[attr])
+		self.call_attr(quest_funcs::COLON_COLON, &[attr])
 	}
 
 	pub fn set(&self, attr: AnyObject, val: AnyObject) {
@@ -221,14 +220,14 @@ impl PartialEq for AnyObject {
 		use self::types::{Variable, Boolean};
 
 		if let (Some(lhs), Some(rhs)) = (self.downcast::<Variable>(), rhs.downcast::<Variable>()) {
-			let lhs = lhs.data().read().expect("lhs read err in AnyObject::==");
-			let rhs = rhs.data().read().expect("rhs read err in AnyObject::==");
+			let lhs = lhs.data().read().expect(const_concat!("lhs read err in AnyObject::", quest_funcs::EQL));
+			let rhs = rhs.data().read().expect(const_concat!("rhs read err in AnyObject::", quest_funcs::EQL));
 			*lhs == *rhs
 		} else {
-			self.call_attr("==", &[rhs])
+			self.call_attr(quest_funcs::EQL, &[rhs])
 				.ok()
 				.and_then(|x| x.to_boolean().ok())
-				.map(|x| x.data().read().expect("read err in AnyObject::==").is_true())
+				.map(|x| x.data().read().expect(const_concat!("read err in AnyObject::", quest_funcs::EQL)).is_true())
 				.unwrap_or(false)
 		}
 	}
@@ -308,7 +307,7 @@ mod tests {
 	impl Type for MyType {
 		fn get_type_map() -> Shared<dyn Map> {
 			let mut m = HashMap::<AnyObject, AnyObject>::new();
-			m.insert(Object::new_variable("==").as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
+			m.insert(Object::new_variable(quest_funcs::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
 				Ok(Object::new_boolean(
 					arg[0].downcast::<MyType>().map(|x| 
 						*obj.data().read().unwrap() == *x.data().read().unwrap()

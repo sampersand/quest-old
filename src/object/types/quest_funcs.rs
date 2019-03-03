@@ -9,14 +9,16 @@ define_consts!{
 	AT_BOOL = "@bool";
 	AT_NUM = "@num";
 	AT_LIST = "@list";
+	AT_MAP = "@map";
+	AT_VAR = "@var";
 
 /* Normal Operators */
 	// Equality
-	STRICT_EQ = "==="; STRICT_NEQ = "!==";
-	EQ = "=="; NEQ = "!=";
+	STRICT_EQL = "==="; STRICT_NEQ = "!==";
+	EQL = "=="; NEQ = "!=";
 	
 	// Comparison
-	LT = "<"; GT = ">";
+	LTH = "<";  GTH = ">";
 	LEQ = "<="; GEQ = ">=";
 	CMP = "<=>";
 	
@@ -24,8 +26,8 @@ define_consts!{
 	NOT = "!"; AND = "and"; OR = "or";
 
 	// Bitwise
-	BW_XOR = "^"; BW_AND = "&"; BW_OR = "|"; 
-	BW_LSH = "<<"; BW_RSH = ">>"; BW_NOT = "~";
+	B_XOR = "^"; B_AND = "&"; B_OR = "|"; 
+	B_LSH = "<<"; B_RSH = ">>"; B_NOT = "~";
 
 	// Mathematical
 	ADD = "+"; SUB = "-"; MUL = "*"; DIV = "/";
@@ -34,26 +36,38 @@ define_consts!{
 
 /* Assignment Operators */
 	ASSIGN = "=";
-	ARROW_LEFT = "<-"; ARROW_RIGHT = "<-";
+	ARROW_LEFT = "<-"; ARROW_RIGHT = "->";
 
 	ADD_ASSIGN = "+="; SUB_ASSIGN = "-="; MUL_ASSIGN = "*="; DIV_ASSIGN = "/=";
 	MOD_ASSIGN = "%="; POW_ASSIGN = "**=";
-	BW_XOR_ASSIGN = "^="; BW_AND_ASSIGN = "&="; BW_OR_ASSIGN = "|=";
+	B_XOR_ASSIGN = "^="; B_AND_ASSIGN = "&="; B_OR_ASSIGN = "|=";
 
 /* Misc Operators */
-	PERIOD = ".";
-	COLON_COLON = "::";
 	COMMA = ",";
 	ENDLINE = ";";
+	CALL = "()";
 
 /* Indexing and Calling */
 	INDEX = "[]";
 	INDEX_ASSIGN = "[]=";
 	INDEX_DELETE = "[]~";
 	INDEX_HAS = "[]?";
-	EXECUTE = "()";
 
-/* Misc */
-	MISC_CLONE = "clone";
-	MISC_LEN = "len";
+	ACCESS = ".";
+	ACCESS_ASSIGN = ".=";
+	ACCESS_DELETE = ".~";
+	ACCESS_HAS = ".?";
+
+	COLON_COLON = "::";
+
+
+/* Literals */
+	L_CLONE = "clone";
+	L_LEN = "len";
+	L_EVAL = "eval";
+	L___ID__ = "__id__";
+	L___MAP__ = "__map__";
+	L___ENV__ = "__env__";
 }
+
+

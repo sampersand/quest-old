@@ -10,19 +10,19 @@ use crate::err::Result;
 use crate::object::types::pristine::PRISTINE_MAP;
 
 use super::quest_funcs::{
-	STRICT_EQ, STRICT_NEQ, EQ, NEQ,
+	STRICT_EQL, STRICT_NEQ, EQL, NEQ,
 	NOT, AND, OR,
 	ARROW_LEFT, ARROW_RIGHT,
 	AT_BOOL, AT_TEXT,
-	MISC_CLONE
+	L_CLONE
 };
 
-fn strict_eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+fn strict_eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 	Ok(Object::new_boolean(obj.id() == getarg!(args[0])?.id()))
 }
 
 fn strict_neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(STRICT_EQ, args)?.call_attr(NOT, &[])
+	obj.call_attr(STRICT_EQL, args)?.call_attr(NOT, &[])
 }
 
 fn at_bool(_: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
@@ -35,18 +35,18 @@ fn at_text(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
 
 fn clone(_obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
 	unimplemented!()
-	// MISC_CLONE => |obj, _| Ok(obj.duplicate())
+	// L_CLONE => |obj, _| Ok(obj.duplicate())
 }
 
-fn eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(STRICT_EQ, args)
+fn eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+	obj.call_attr(STRICT_EQL, args)
 }
 
 fn neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(EQ, args)?.call_attr(NOT, &[])
+	obj.call_attr(EQL, args)?.call_attr(NOT, &[])
 }
 
-fn assignment_arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+fn arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 	getarg!(args[0])?.call_attr(ARROW_LEFT, &[obj])
 }
 
@@ -72,15 +72,15 @@ fn or(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 
 lazy_static! {
 	pub static ref BASIC_MAP: Shared<dyn Map> = object_map!{UNTYPED "Basic", ParentMap::new(PRISTINE_MAP.clone(), HashMap::new());
-		STRICT_EQ => strict_eq,
+		STRICT_EQL => strict_eql,
 		STRICT_NEQ => strict_neq,
 		AT_BOOL => at_bool,
 		AT_TEXT => at_text,
-		MISC_CLONE => clone,
+		L_CLONE => clone,
 
-		EQ => eq,
+		EQL => eql,
 		NEQ => neq,
-		ARROW_RIGHT => assignment_arrow_right,
+		ARROW_RIGHT => arrow_right,
 
 		NOT => not,
 		AND => and,
@@ -145,17 +145,17 @@ mod tests {
 
 	// Object are strictly equal if they have the same pointer
 	#[test]
-	fn strict_eq() -> Result<()> {
+	fn strict_eql() -> Result<()> {
 		let ref obj = BlankObject::new_any();
 		let ref obj_clone = obj.clone();
 		let ref obj_duplicate = BlankObject::new_any();
 
-		assert_eq!(basic::strict_eq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::strict_eq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::strict_eq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::strict_eq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+		assert_eq!(basic::strict_eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(basic::strict_eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(basic::strict_eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(basic::strict_eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-		assert_param_missing!(basic::strict_eq(obj, &[]));
+		assert_param_missing!(basic::strict_eql(obj, &[]));
 		Ok(())
 	}
 
@@ -186,22 +186,24 @@ mod tests {
 
 	#[test]
 	#[ignore]
-	fn at_text() {
-		unimplemented!()
-	}
+	fn at_text() { unimplemented!("{}", AT_TEXT) }
 
 	#[test]
-	fn eq() -> Result<()> {
+	#[ignore]
+	fn clone() { unimplemented!("{}", L_CLONE); }
+
+	#[test]
+	fn eql() -> Result<()> {
 		let ref obj = BlankObject::new_any();
 		let ref obj_clone = obj.clone();
 		let ref obj_duplicate = BlankObject::new_any();
 
-		assert_eq!(basic::eq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::eq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::eq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::eq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+		assert_eq!(basic::eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(basic::eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(basic::eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(basic::eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-		assert_param_missing!(basic::eq(obj, &[]));
+		assert_param_missing!(basic::eql(obj, &[]));
 
 		/* we don't need to test to see that `===` is called; we only do if we define `==` to default to that. */
 		// use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
@@ -210,7 +212,7 @@ mod tests {
 		// }
 
 		// define_blank!(struct StrictEqChanged, STRICT_EQ_BLANKMAP;
-		// 	STRICT_EQ => |_, _| {
+		// 	STRICT_EQL => |_, _| {
 		// 		assert_eq!(STRICT_EQUALITY_CALLED.swap(true, Relaxed), false);
 		// 		Ok(Object::new_boolean(true)) // result's always true, to test `!=`
 		// 	}	
@@ -218,9 +220,9 @@ mod tests {
 
 		// assert_eq!(STRICT_EQUALITY_CALLED.load(Relaxed), false);
 		// // note: extra argument isn't needed here, as the funciton ignores it
-		// assert_eq!(basic::eq(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		// assert_eq!(basic::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
 		// assert_eq!(STRICT_EQUALITY_CALLED.swap(false, Relaxed), true);
-		// assert_eq!(basic::eq(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		// assert_eq!(basic::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
 		// assert_eq!(STRICT_EQUALITY_CALLED.swap(false, Relaxed), true);
 		Ok(())
 	}
@@ -241,11 +243,11 @@ mod tests {
 	}
 
 	#[test]
-	fn assignment_arrow_right() -> Result<()> {
+	fn arrow_right() -> Result<()> {
 		let ref obj1 = BlankObject::new_any();
 		let ref obj2 = BlankObject::new_any();
 		// first make sure the arrow returns an error if it doesnt exist
-		match basic::assignment_arrow_right(obj1, &[obj2]).unwrap_err() {
+		match basic::arrow_right(obj1, &[obj2]).unwrap_err() {
 			Error::AttrMissing { attr, obj } => {
 				assert!(obj.id_eq(&obj2));
 				assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
@@ -267,7 +269,7 @@ mod tests {
 
 		assert!(RECEIVED.try_lock().unwrap().is_none());
 		let ref cantake = CanTakeArrow::new_any();
-		assert!(basic::assignment_arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
+		assert!(basic::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
 		let (obj, arg) = RECEIVED.try_lock().unwrap().take().unwrap();
 		assert!(cantake.id_eq(&obj), "{:?} != {:?}", cantake.id(), obj.id());
 		assert!(arg.id_eq(obj1));
@@ -345,7 +347,7 @@ mod tests {
 		use crate::object::types::Text;
 
 		define_blank!(struct StrictlyEqAlways, STRICTLY_EQ_ALWAYS;
-			STRICT_EQ => |_, _| Ok(Object::new_boolean(true))
+			STRICT_EQL => |_, _| Ok(Object::new_boolean(true))
 		);
 
 		define_blank!(struct StrictlyNeqAlways, STRICTLY_EQ_NEVER; 
@@ -353,44 +355,42 @@ mod tests {
 		);
 
 		define_blank!(struct EqNeverStrictCrash, EQ_NEVER_STRICT_CRASH;
-			EQ => |_, _| Ok(Object::new_boolean(false)),
-			NEQ => |_, _| unreachable!(),
-			STRICT_EQ => |_, _| unreachable!(),
+			EQL => |_, _| Ok(Object::new_boolean(false)),
+			STRICT_EQL => |_, _| unreachable!(),
 			STRICT_NEQ => |_, _| unreachable!()
 		);
 		define_blank!(struct NeqNeverStrictCrash, NEQ_NEVER_STRICT_CRASH;
 			NEQ => |_, _| Ok(Object::new_boolean(false)),
-			EQ => |_, _| unreachable!(),
-			STRICT_EQ => |_, _| unreachable!(),
+			EQL => |_, _| unreachable!(),
+			STRICT_EQL => |_, _| unreachable!(),
 			STRICT_NEQ => |_, _| unreachable!()
 		);
 
 
 		// Object are strictly equal if they have the same pointer
 		#[test]
-		fn strict_eq() -> Result<()> {
+		fn strict_eql() -> Result<()> {
 			// first check to see that the default `===` does what we expect
 			let ref obj = BlankObject::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = BlankObject::new_any();
 
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-			assert_param_missing!(obj.call_attr(STRICT_EQ, &[]));
+			assert_param_missing!(obj.call_attr(STRICT_EQL, &[]));
 
 			// and now see if we can override it
 			let ref obj = StrictlyEqAlways::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = StrictlyEqAlways::new_any();
 
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(STRICT_EQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(STRICT_EQL, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
 
-			assert_param_missing!(obj.call_attr(STRICT_EQ, &[]));
 			Ok(())
 		}
 
@@ -417,8 +417,6 @@ mod tests {
 			assert_eq!(obj.call_attr(STRICT_NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
 			assert_eq!(obj.call_attr(STRICT_NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
 
-			assert_param_missing!(obj.call_attr(STRICT_NEQ, &[]));
-
 			// and now for `!==` being overriden directly
 			let ref obj = StrictlyNeqAlways::new_any();
 			let ref obj_clone = obj.clone();
@@ -427,8 +425,6 @@ mod tests {
 			assert_eq!(obj.call_attr(STRICT_NEQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
 			assert_eq!(obj.call_attr(STRICT_NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
 			assert_eq!(obj.call_attr(STRICT_NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
-
-			assert_param_missing!(obj.call_attr(STRICT_NEQ, &[]));
 
 			Ok(())
 		}
@@ -465,40 +461,40 @@ mod tests {
 		}
 
 		#[test]
-		fn eq() -> Result<()> {
+		#[ignore]
+		fn clone() { unimplemented!("{}", L_CLONE); }
+
+		#[test]
+		fn eql() -> Result<()> {
 			// first check to make sure it works as we'd expect `===` to work
 			let ref obj = BlankObject::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = BlankObject::new_any();
 
-			assert_eq!(obj.call_attr(EQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(EQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(EQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(EQ, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+			assert_eq!(obj.call_attr(EQL, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(EQL, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(EQL, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(obj.call_attr(EQL, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-			assert_param_missing!(obj.call_attr(EQ, &[]));
+			assert_param_missing!(obj.call_attr(EQL, &[]));
 
 			// now make sure modifying `===` will correctly redirect it
 			let ref obj = StrictlyEqAlways::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = StrictlyEqAlways::new_any();
 
-			assert_eq!(obj.call_attr(EQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(EQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-			assert_eq!(obj.call_attr(EQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
-
-			assert_param_missing!(obj.call_attr(EQ, &[]));
+			assert_eq!(obj.call_attr(EQL, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(EQL, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(EQL, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
 
 			// now make sure that you can overwrite `==` correctly
 			let ref obj = EqNeverStrictCrash::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = EqNeverStrictCrash::new_any();
 
-			assert_eq!(obj.call_attr(EQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(EQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(EQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-
-			assert_param_missing!(obj.call_attr(EQ, &[]));
+			assert_eq!(obj.call_attr(EQL, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(obj.call_attr(EQL, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(obj.call_attr(EQL, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
 
 			Ok(())
 		}
@@ -526,8 +522,6 @@ mod tests {
 			assert_eq!(obj.call_attr(NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
 			assert_eq!(obj.call_attr(NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
 
-			assert_param_missing!(obj.call_attr(NEQ, &[]));
-
 			// make sure that modifying `!==` won't affect it
 			let ref obj = StrictlyNeqAlways::new_any();
 			let ref obj_clone = obj.clone();
@@ -537,30 +531,25 @@ mod tests {
 			assert_eq!(obj.call_attr(NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
 			assert_eq!(obj.call_attr(NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
 
-			assert_param_missing!(obj.call_attr(NEQ, &[]));
-
-
 			// now make sure that you can overwrite `==` correctly
 
 			let ref obj = EqNeverStrictCrash::new_any();
 			let ref obj_clone = obj.clone();
 			let ref obj_duplicate = EqNeverStrictCrash::new_any();
 
-			assert_eq!(obj.call_attr(NEQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(obj.call_attr(NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-
-			assert_param_missing!(obj.call_attr(NEQ, &[]));
+			assert_eq!(obj.call_attr(NEQ, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(NEQ, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			assert_eq!(obj.call_attr(NEQ, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
 
 			Ok(())
 		}
 		
 		#[test]
-		fn assignment_arrow_right() -> Result<()> {
+		fn arrow_right() -> Result<()> {
 			let ref obj1 = BlankObject::new_any();
 			let ref obj2 = BlankObject::new_any();
 			// first make sure the arrow returns an error if it doesnt exist
-			match basic::assignment_arrow_right(obj1, &[obj2]).unwrap_err() {
+			match basic::arrow_right(obj1, &[obj2]).unwrap_err() {
 				Error::AttrMissing { attr, obj } => {
 					assert!(obj.id_eq(&obj2));
 					assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
@@ -582,7 +571,7 @@ mod tests {
 
 			assert!(RECEIVED.try_lock().unwrap().is_none());
 			let ref cantake = CanTakeArrow::new_any();
-			assert!(basic::assignment_arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
+			assert!(basic::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
 			let (obj, arg) = RECEIVED.try_lock().unwrap().take().unwrap();
 			assert!(cantake.id_eq(&obj), "{:?} != {:?}", cantake.id(), obj.id());
 			assert!(arg.id_eq(obj1));
@@ -622,6 +611,35 @@ mod tests {
 			assert!(matches!(basic::and(e, &[f]).unwrap_err(), Error::__Testing));
 			assert!(matches!(basic::and(e, &[f, e]).unwrap_err(), Error::__Testing));
 			assert!(matches!(basic::and(e, &[e]).unwrap_err(), Error::__Testing));
+
+			Ok(())
+		}
+
+		#[test]
+		fn or() -> Result<()> {
+			let ref t = BlankObject::new_any();
+			let ref f = BlankButFalse::new_any();
+			let ref e = BooleanError::new_any();
+			let ref f2 = BlankButFalse::new_any();
+			let ref t2 = BlankObject::new_any();
+
+			assert!(basic::or(t, &[t])?.id_eq(t));
+			assert!(basic::or(t, &[t2])?.id_eq(t));
+			assert!(basic::or(t, &[f])?.id_eq(t));
+			assert!(basic::or(t, &[f, e])?.id_eq(t));
+			assert!(basic::or(t, &[e])?.id_eq(t));
+
+			assert!(basic::or(f, &[t])?.id_eq(t));
+			assert!(basic::or(f, &[f2])?.id_eq(f2));
+			assert!(basic::or(f, &[f])?.id_eq(f));
+			assert!(basic::or(f, &[t, e])?.id_eq(t));
+			assert!(basic::or(f, &[e])?.id_eq(e));
+
+			assert!(matches!(basic::or(e, &[t]).unwrap_err(), Error::__Testing));
+			assert!(matches!(basic::or(e, &[f2]).unwrap_err(), Error::__Testing));
+			assert!(matches!(basic::or(e, &[f]).unwrap_err(), Error::__Testing));
+			assert!(matches!(basic::or(e, &[f, e]).unwrap_err(), Error::__Testing));
+			assert!(matches!(basic::or(e, &[e]).unwrap_err(), Error::__Testing));
 
 			Ok(())
 		}
