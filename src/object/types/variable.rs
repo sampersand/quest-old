@@ -130,9 +130,9 @@ mod tests {
 
 	#[test]
 	fn to_variable() -> Result<()> {
-		assert_eq!(**Object::new_variable("abc").as_any().to_variable()?.data().read().unwrap(), "abc");
-		assert_eq!(**Object::new_variable("").as_any().to_variable()?.data().read().unwrap(), "");
-		assert_eq!(**Object::new_variable("I ❤️ 🚀, they r cool").as_any().to_variable()?.data().read().unwrap(), "I ❤️ 🚀, they r cool");
+		assert_eq!(*Object::new_variable("abc").as_any().to_variable()?.unwrap_data(), "abc");
+		assert_eq!(*Object::new_variable("").as_any().to_variable()?.unwrap_data(), "");
+		assert_eq!(*Object::new_variable("I ❤️ 🚀, they r cool").as_any().to_variable()?.unwrap_data(), "I ❤️ 🚀, they r cool");
 		
 		Ok(())
 	}

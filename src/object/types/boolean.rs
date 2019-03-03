@@ -72,25 +72,33 @@ mod funcs {
 	use crate::object::{Object, AnyObject};
 	use crate::err::Result;
 
-	pub fn at_bool(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Boolean>> {
-		Ok(obj.duplicate())
+	pub const TRUE_STR: &str = "true";
+	pub const FALSE_STR: &str = "false";
+
+	pub fn at_bool(obj: &Object<Boolean>) -> Object<Boolean> {
+		obj.duplicate()
 	}
 	
-	pub fn at_num(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Number>> {
+	pub fn at_num(obj: &Object<Boolean>) -> Object<Number> {
 		if obj.is_true() {
-			Ok(Object::new_number(1.0))
+			Object::new_number(1.0)
 		} else {
-			Ok(Object::new_number(0.0))
+			Object::new_number(0.0)
 		}
 	}
 
-	pub fn at_text(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Text>> {
-		Ok(Object::new_text(obj.is_true().to_string()))
+	pub fn at_text(obj: &Object<Boolean>) -> Object<Text> {
+		// this is instead of `is_true().to_string()` in case I want to change something
+		if obj.is_true() {
+			Object::new_text_str(TRUE_STR)
+		} else {
+			Object::new_text_str(FALSE_STR)
+		}
 	}
 
-	pub fn not(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Boolean>> {
+	pub fn not(obj: &Object<Boolean>) -> Object<Boolean> {
 		use crate::object::types::quest_funcs::NOT;
-		Ok(Object::new_boolean(!obj.data().read().expect(data_err![read in Boolean, NOT]).is_true()))
+		Object::new_boolean(!obj.is_true())
 	}
 
 	pub fn eql(lhs: &Object<Boolean>, args: &[&AnyObject]) -> Result<Object<Boolean>> {
@@ -115,11 +123,11 @@ mod funcs {
 }
 
 impl_type! { for Boolean;
-	quest_funcs::AT_BOOL => |o, a| funcs::at_bool(o, a).map(|x| x as _),
-	quest_funcs::AT_NUM => |o, a| funcs::at_num(o, a).map(|x| x as _),
-	quest_funcs::AT_TEXT => |o, a| funcs::at_text(o, a).map(|x| x as _),
+	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o) as _),
+	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o) as _),
+	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o) as _),
 
-	quest_funcs::NOT => |o, a| funcs::not(o, a).map(|x| x as _),
+	quest_funcs::NOT => |o, _| Ok(funcs::not(o) as _),
 	quest_funcs::EQL => |o, a| funcs::eql(o, a).map(|x| x as _),
 	quest_funcs::B_XOR => |o, a| funcs::b_xor(o, a).map(|x| x as _),
 	quest_funcs::B_AND => |o, a| funcs::b_and(o, a).map(|x| x as _),
@@ -142,7 +150,7 @@ mod fn_tests {
 	macro_rules! assert_bool_call_eq {
 		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
 			$(
-				assert_eq!(**_b_!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+				assert_eq!(*_b_!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
 			)*
 		}
 	}
@@ -152,12 +160,10 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_bool(t, &[])?.is_true(), true);
-		assert_eq!(funcs::at_bool(f, &[])?.is_true(), false);
-		assert_eq!(funcs::at_bool(f, &[&t.as_any()])?.is_true(), false);
+		assert_eq!(funcs::at_bool(t).is_true(), true);
+		assert_eq!(funcs::at_bool(f).is_true(), false);
 
-		assert_obj_duplicated!(t, funcs::at_bool(t, &[])?);
-
+		assert_obj_duplicated!(t, funcs::at_bool(t));
 		Ok(())
 	}
 
@@ -166,9 +172,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_text(t, &[])?.data().read().unwrap().as_ref(), "true");
-		assert_eq!(funcs::at_text(f, &[])?.data().read().unwrap().as_ref(), "false");
-		assert_eq!(funcs::at_text(f, &[&t.as_any()])?.data().read().unwrap().as_ref(), "false");
+		assert_eq!(*funcs::at_text(t).unwrap_data(), funcs::TRUE_STR);
+		assert_eq!(*funcs::at_text(f).unwrap_data(), funcs::FALSE_STR);
 
 		Ok(())
 	}
@@ -178,9 +183,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_num(t, &[])?.data().read().unwrap().as_ref(), &1.0);
-		assert_eq!(funcs::at_num(f, &[])?.data().read().unwrap().as_ref(), &0.0);
-		assert_eq!(funcs::at_num(f, &[&t.as_any()])?.data().read().unwrap().as_ref(), &0.0);
+		assert_eq!(*funcs::at_num(t).unwrap_data(), 1.0);
+		assert_eq!(*funcs::at_num(f).unwrap_data(), 0.0);
 
 		Ok(())
 	}
@@ -281,12 +285,12 @@ mod tests {
 
 	#[test]
 	fn to_boolean() -> Result<()> {
-		assert_eq!(**Object::new_boolean(true).as_any().to_boolean()?.data().read().unwrap(), true);
-		assert_eq!(**Object::new_boolean(false).as_any().to_boolean()?.data().read().unwrap(), false);
+		assert_eq!(*Object::new_boolean(true).as_any().to_boolean()?.unwrap_data(), true);
+		assert_eq!(*Object::new_boolean(false).as_any().to_boolean()?.unwrap_data(), false);
 
 		// TODO: make `MyStruct` here so it doesn't rely upon number
-		assert_eq!(**Object::new_number(0.0).as_any().to_boolean()?.data().read().unwrap(), false);
-		assert_eq!(**Object::new_number(1.0).as_any().to_boolean()?.data().read().unwrap(), true);
+		assert_eq!(*Object::new_number(0.0).as_any().to_boolean()?.unwrap_data(), false);
+		assert_eq!(*Object::new_number(1.0).as_any().to_boolean()?.unwrap_data(), true);
 		
 		Ok(())
 	}

@@ -252,9 +252,9 @@ mod tests {
 		match funcs::arrow_right(obj1, &[obj2]).unwrap_err() {
 			Error::AttrMissing { attr, obj } => {
 				assert!(obj.id_eq(&obj2));
-				assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
+				assert_eq!(*attr.downcast_or_err::<Variable>()?.unwrap_data(), ARROW_LEFT);
 			},
-			_ => unimplemented!("got bad err")
+			_ => panic!("got bad err")
 		}
 
 		lazy_static! {
@@ -456,8 +456,8 @@ mod tests {
 			);
 
 			let ref obj = BlankButText::new_any();
-			assert_eq!(obj.call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?.data().read().unwrap().as_ref(), TEXT);
-			assert_eq!(obj.call_attr(AT_TEXT, &[&BlankObject::new_any()])?.downcast_or_err::<Text>()?.data().read().unwrap().as_ref(), TEXT);
+			assert_eq!(obj.call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?.unwrap_data().as_ref(), TEXT);
+			assert_eq!(obj.call_attr(AT_TEXT, &[&BlankObject::new_any()])?.downcast_or_err::<Text>()?.unwrap_data().as_ref(), TEXT);
 
 			Ok(())
 		}
@@ -557,9 +557,9 @@ mod tests {
 			match funcs::arrow_right(obj1, &[obj2]).unwrap_err() {
 				Error::AttrMissing { attr, obj } => {
 					assert!(obj.id_eq(&obj2));
-					assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
+					assert_eq!(*attr.downcast_or_err::<Variable>()?.unwrap_data(), ARROW_LEFT);
 				},
-				_ => unimplemented!("got bad err")
+				_ => panic!("got bad err")
 			}
 
 			lazy_static! {

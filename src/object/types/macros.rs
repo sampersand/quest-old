@@ -17,7 +17,10 @@ macro_rules! assert_param_missing {
 #[cfg(test)]
 macro_rules! assert_obj_duplicated {
 	($obj1:expr, $obj2:expr) => ({
-		assert_eq!(*$obj1.data().read().unwrap(), *$obj2.data().read().unwrap());
+		assert_eq!(*$obj1.unwrap_data(), *$obj2.unwrap_data());
+		unsafe { 
+			assert_ne!($obj1.data_ptr(), $obj2.data_ptr());
+		}
 		assert!(!$obj1._map_only_for_testing().ptr_eq($obj2._map_only_for_testing()));
 	})
 }

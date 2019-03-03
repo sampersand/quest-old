@@ -70,7 +70,7 @@ mod fn_tests {
 	macro_rules! assert_null_call_eq {
 		($attr:tt $type:ty; $((_, $args:tt) => $expected:expr),*) => {
 			$(
-				assert_eq!(**n!().call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+				assert_eq!(*n!().call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
 			)*
 		}
 	}
@@ -98,9 +98,9 @@ mod fn_tests {
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert!(n!().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 		// ensure extra args are ignored
-		assert!(n!().call_attr(AT_NUM, &[&Object::new_number(12.3).as_any()])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!().call_attr(AT_NUM, &[&Object::new_number(12.3).as_any()])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		Ok(())
 	}

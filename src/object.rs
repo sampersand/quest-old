@@ -88,6 +88,13 @@ impl<T: Type + Clone + Sized> Object<T> {
 	}
 }
 
+impl<T: Send + Sync + Clone> Object<T> {
+	#[cfg(test)]
+	pub fn unwrap_data(&self) -> T {
+		self.data().read().expect("read err in Object::unwrap_clone_data").clone()
+	}
+}
+
 impl<T: Send + Sync + ?Sized> Object<T> {
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
 	pub fn parent(&self) -> Option<AnyObject> {
@@ -112,6 +119,11 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	#[cfg(test)]
 	pub fn _map_only_for_testing(&self) -> &Shared<ObjectMap> {
 		&self.0.map
+	}
+
+	#[cfg(test)]
+	unsafe fn data_ptr(&self) -> *const T {
+		&*self.data().read().expect("read err in Object::data_ptr") as *const _
 	}
 
 
@@ -308,11 +320,7 @@ mod tests {
 		fn get_type_map() -> Shared<dyn Map> {
 			let mut m = HashMap::<AnyObject, AnyObject>::new();
 			m.insert(Object::new_variable(quest_funcs::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
-				Ok(Object::new_boolean(
-					arg[0].downcast::<MyType>().map(|x| 
-						*obj.data().read().unwrap() == *x.data().read().unwrap()
-					).unwrap_or(false)
-				))
+				Ok(Object::new_boolean(arg[0].downcast::<MyType>().map(|x| obj.unwrap_data() == x.unwrap_data()).unwrap_or(false)))
 			}));
 			Shared::new(m)
 		}
@@ -334,13 +342,13 @@ mod tests {
 	fn new() {
 		let obj: Object<MyType> = Object::new(MyType(123));
 		assert_eq!(obj.parent(), None);
-		assert_eq!(*obj.data().read().unwrap(), MyType(123));
+		assert_eq!(obj.unwrap_data(), MyType(123));
 
 		let obj = obj.as_any();
 		let obj2: Object<MyType> = Object::new_child(MyType(456), obj.clone());
 
 		assert_eq!(obj2.parent(), Some(obj));
-		assert_eq!(*obj2.data().read().unwrap(), MyType(456));
+		assert_eq!(obj2.unwrap_data(), MyType(456));
 	}
 
 	#[test]
@@ -349,8 +357,10 @@ mod tests {
 		let obj = Object::new_child(MyType(112), parent.clone());
 		let dup = obj.duplicate();
 
-		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
-		assert_ne!(&*obj.data().read().unwrap() as *const _, &*dup.data().read().unwrap() as *const _);
+		assert_eq!(obj.unwrap_data(), dup.unwrap_data());
+		unsafe {
+			assert_ne!(obj.data_ptr(), dup.data_ptr());
+		}
 
 		assert_eq!(obj.parent().unwrap().id(), parent.id());
 		assert_eq!(dup.parent().unwrap().id(), parent.id());

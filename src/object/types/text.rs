@@ -172,7 +172,7 @@ mod fn_tests {
 	macro_rules! assert_text_call_eq {
 		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
 			$(
-				assert_eq!(**t!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+				assert_eq!(*t!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
 			)*
 		}
 	}
@@ -193,8 +193,7 @@ mod fn_tests {
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_text_str("hi there");
 		let dup = obj.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?;
-		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		assert_obj_duplicated!(obj, dup);
 		Ok(())
 	}
 
@@ -295,13 +294,13 @@ mod fn_tests {
 
 		// make sure an object can be added to itself
 		let t = t!("hi");
-		assert_eq!(**t.call_attr(ADD, &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "hihi");
+		assert_eq!(*t.call_attr(ADD, &[&t])?.downcast_or_err::<Text>()?.unwrap_data(), "hihi");
 
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("Hello, ");
 		let dup = obj.as_any().call_attr(ADD, &[&t!("world")])?.downcast_or_err::<Text>()?;
-		assert_eq!(**obj.data().read().unwrap(), "Hello, "); // make sure it's not edited in-place
-		assert_eq!(**dup.data().read().unwrap(), "Hello, world");
+		assert_eq!(*obj.unwrap_data(), "Hello, "); // make sure it's not edited in-place
+		assert_eq!(*dup.unwrap_data(), "Hello, world");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 
 		assert_param_missing!(t!("lol").call_attr(ADD, &[]));
@@ -332,13 +331,13 @@ mod fn_tests {
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("foo");
 		let dup = obj.as_any().call_attr(MUL, &[&n!(3)])?.downcast_or_err::<Text>()?;
-		assert_eq!(**obj.data().read().unwrap(), "foo"); // make sure it's not edited in-place
-		assert_eq!(**dup.data().read().unwrap(), "foofoofoo");
+		assert_eq!(*obj.unwrap_data(), "foo"); // make sure it's not edited in-place
+		assert_eq!(*dup.unwrap_data(), "foofoofoo");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 
 		// make sure texts (that are numbers) can be multiplied by themselves
 		let t = t!("4");
-		assert_eq!(**t.call_attr(MUL, &[&t])?.downcast_or_err::<Text>()?.data().read().unwrap(), "4444");
+		assert_eq!(*t.call_attr(MUL, &[&t])?.downcast_or_err::<Text>()?.unwrap_data(), "4444");
 
 		// make sure negative numbers return an argument error
 		match t!("_").call_attr(MUL, &[&n!(-2.0)]).unwrap_err() {
@@ -427,9 +426,9 @@ mod tests {
 
 	#[test]
 	fn to_text() -> Result<()> {
-		assert_eq!(Object::new_text_str("abc").as_any().to_text()?.data().read().unwrap().as_ref(), "abc");
-		assert_eq!(Object::new_text_str("").as_any().to_text()?.data().read().unwrap().as_ref(), "");
-		assert_eq!(Object::new_text_str("I ❤️ 🚀, they r cool").as_any().to_text()?.data().read().unwrap().as_ref(), "I ❤️ 🚀, they r cool");
+		assert_eq!(Object::new_text_str("abc").as_any().to_text()?.unwrap_data().as_ref(), "abc");
+		assert_eq!(Object::new_text_str("").as_any().to_text()?.unwrap_data().as_ref(), "");
+		assert_eq!(Object::new_text_str("I ❤️ 🚀, they r cool").as_any().to_text()?.unwrap_data().as_ref(), "I ❤️ 🚀, they r cool");
 		
 		Ok(())
 	}

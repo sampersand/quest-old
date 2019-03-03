@@ -178,7 +178,7 @@ mod fn_tests {
 	macro_rules! assert_num_call_eq {
 		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
 			$(
-				assert_eq!(**n!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+				assert_eq!(*n!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
 			)*
 		}
 	}
@@ -232,7 +232,7 @@ mod fn_tests {
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_number(12.45);
 		let dup = obj.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?;
-		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
+		assert_eq!(obj.unwrap_data(), dup.unwrap_data());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
 	}
@@ -246,9 +246,9 @@ mod fn_tests {
 			(8e9, [&n!(1e9), &n!(PI)]) => 9e9 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr(ADD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(ADD, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
-		assert!(n!(INFINITY).call_attr(ADD, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(ADD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(ADD, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
+		assert!(n!(INFINITY).call_attr(ADD, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		assert_param_missing!(n!(4.0).call_attr(ADD, &[]));
 
@@ -265,9 +265,9 @@ mod fn_tests {
 			(9e9, [&n!(1e9), &n!(PI)]) => 8e9 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr(SUB, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(SUB, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(SUB, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+		assert!(n!(NAN).call_attr(SUB, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(SUB, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(SUB, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
 
 		assert_param_missing!(n!(4.0).call_attr(SUB, &[]));
 
@@ -284,9 +284,9 @@ mod fn_tests {
 		);
 
 
-		assert!(n!(NAN).call_attr(MUL, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(MUL, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
-		assert!(n!(INFINITY).call_attr(MUL, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+		assert!(n!(NAN).call_attr(MUL, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(MUL, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
+		assert!(n!(INFINITY).call_attr(MUL, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
 
 		assert_param_missing!(n!(4.0).call_attr(MUL, &[]));
 
@@ -304,11 +304,11 @@ mod fn_tests {
 		);
 
 		// make sure to test for negative stuff here
-		assert!(n!(1.0).call_attr(DIV, &[&n!(0.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_infinite());
+		assert!(n!(1.0).call_attr(DIV, &[&n!(0.0)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
 
-		assert!(n!(NAN).call_attr(DIV, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(DIV, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(DIV, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(DIV, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(DIV, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(DIV, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		assert_param_missing!(n!(4.0).call_attr(DIV, &[]));
 
@@ -328,11 +328,11 @@ mod fn_tests {
 			(-1234.0, [&n!(39.0), &n!(PI)]) => -25.0 // ensure extra args are ignored
 		);
 
-		assert!(n!(1.0).call_attr(MOD, &[&n!(0.0)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(1.0).call_attr(MOD, &[&n!(0.0)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
-		assert!(n!(NAN).call_attr(MOD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(MOD, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(INFINITY).call_attr(MOD, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(MOD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(MOD, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(INFINITY).call_attr(MOD, &[&n!(NEG_INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		assert_param_missing!(n!(4.0).call_attr(MOD, &[]));
 
@@ -353,9 +353,9 @@ mod fn_tests {
 			(12.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(NAN).call_attr(POW, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
-		assert!(n!(NEG_INFINITY).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(NAN).call_attr(POW, &[&n!(INFINITY)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert!(n!(NEG_INFINITY).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		assert_param_missing!(n!(4.0).call_attr(POW, &[]));
 
@@ -515,7 +515,7 @@ mod fn_tests {
 			(1.0, [&n!(PI)]) => -1.0 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr(NEG, &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(NEG, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 		Ok(())
 	}
@@ -532,14 +532,14 @@ mod fn_tests {
 			(1.0, [&n!(PI)]) => 1.0 // ensure extra args are ignored
 		);
 
-		assert!(n!(NAN).call_attr(POS, &[])?.downcast_or_err::<Number>()?.data().read().unwrap().is_nan());
+		assert!(n!(NAN).call_attr(POS, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
 
 
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_number(12.45);
 		let dup = obj.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?;
-		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		assert_obj_duplicated!(obj, dup);
+
 		Ok(())
 	}
 }
@@ -599,10 +599,10 @@ mod tests {
 
 	#[test]
 	fn to_number() -> Result<()> {
-		assert_eq!(**Object::new_number(1234.0).as_any().to_number()?.data().read().unwrap(), 1234.0);
-		assert_eq!(**Object::new_number(1.0).as_any().to_number()?.data().read().unwrap(), 1.0);
-		assert!(Object::new_number(std::f64::INFINITY).as_any().to_number()?.data().read().unwrap().is_infinite());
-		assert!(Object::new_number(std::f64::NAN).as_any().to_number()?.data().read().unwrap().is_nan());
+		assert_eq!(*Object::new_number(1234.0).as_any().to_number()?.unwrap_data(), 1234.0);
+		assert_eq!(*Object::new_number(1.0).as_any().to_number()?.unwrap_data(), 1.0);
+		assert!(Object::new_number(std::f64::INFINITY).as_any().to_number()?.unwrap_data().is_infinite());
+		assert!(Object::new_number(std::f64::NAN).as_any().to_number()?.unwrap_data().is_nan());
 		
 		Ok(())
 	}
