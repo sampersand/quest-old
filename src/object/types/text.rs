@@ -180,7 +180,7 @@ mod fn_tests {
 
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_text_str("hi there");
-		let dup = obj.call_attr("@text", &[])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr("@text", &[])?.downcast_or_err::<Text>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
@@ -292,7 +292,7 @@ mod fn_tests {
 
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("Hello, ");
-		let dup = obj.call_attr("+", &[&t!("world")])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr("+", &[&t!("world")])?.downcast_or_err::<Text>()?;
 		assert_eq!(**obj.data().read().unwrap(), "Hello, "); // make sure it's not edited in-place
 		assert_eq!(**dup.data().read().unwrap(), "Hello, world");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
@@ -328,7 +328,7 @@ mod fn_tests {
 
 		// make sure it doesn't do an in-place edit
 		let obj = Object::new_text_str("foo");
-		let dup = obj.call_attr("*", &[&n!(3)])?.downcast_or_err::<Text>()?;
+		let dup = obj.as_any().call_attr("*", &[&n!(3)])?.downcast_or_err::<Text>()?;
 		assert_eq!(**obj.data().read().unwrap(), "foo"); // make sure it's not edited in-place
 		assert_eq!(**dup.data().read().unwrap(), "foofoofoo");
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));

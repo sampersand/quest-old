@@ -1,3 +1,21 @@
+macro_rules! const_concat {
+	($($arg:expr),*) => {{
+		let mut x = String::new();
+		$(x.push_str(&$arg);)*
+		Box::leak(x.into_boxed_str())
+	}}
+}
+
+#[cfg(test)]
+macro_rules! assert_param_missing {
+	($expr:expr) => (assert_param_missing!($expr, 0));
+	($expr:expr, $pos:expr) => (
+		match $expr {
+			Err(Error::MissingArgument { pos: 0, .. }) => {},
+			other => panic!("invalid response returend from `assert_param_missing({:?},{:?})`: {:?}", $expr, $pos, other)
+		}
+	);
+}
 macro_rules! getarg {
 	($args:ident[$pos:expr]: $type:ty) => {
 		getarg!($args[$pos]).and_then(|obj| obj.downcast_or_err::<$type>())
@@ -33,31 +51,31 @@ macro_rules! object_map {
 		map
 	})};
 
-	(@UNTYPED $prefix:literal; $map:ident $name:literal $func:expr) => {
+	(@UNTYPED $prefix:literal; $map:ident $name:tt $func:expr) => {
 		assert!(
 			$map.set(
 				$crate::object::Object::new_variable($name),
-				$crate::object::Object::new_named_untyped_rustfn(concat!($prefix, "::", $name), $func)
+				$crate::object::Object::new_named_untyped_rustfn(const_concat!($prefix, "::", $name), $func)
 			).is_none()
 		);
 	};
 
-	(@TYPED $type:ty; $map:ident $name:literal $func:expr) => {
+	(@TYPED $type:ty; $map:ident $name:tt $func:expr) => {
 		// this will fail if $name is a number, but i cant check for it, so whatever
 		assert!(
 			$map.set(
 				$crate::object::Object::new_variable($name),
 				$crate::object::Object::new_named_rustfn::<_, $type>(
-					concat!(stringify!($type), "::", $name),
+					const_concat!(stringify!($type), "::", $name),
 					$func
 				)
 			).is_none(),
-			concat!("Found a duplicate entry for '", $name, "'.")
+			const_concat!("Found a duplicate entry for '", $name, "'.")
 		);
 	};
 
 	(@TYPED $type:ty; $_map:ident $invalid:tt $_func:expr) => {
-		compile_error!(concat!("Invalid type name encountered: `" stringify!($type), "::", stringify!($invalid), "`"))
+		compile_error!(const_concat!("Invalid type name encountered: `", stringify!($type), "::", stringify!($invalid), "`"))
 	};
 }
 

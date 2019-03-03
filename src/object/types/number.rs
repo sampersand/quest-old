@@ -222,7 +222,7 @@ mod fn_tests {
 
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_number(12.45);
-		let dup = obj.call_attr("@num", &[])?.downcast_or_err::<Number>()?;
+		let dup = obj.as_any().call_attr("@num", &[])?.downcast_or_err::<Number>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
@@ -580,7 +580,7 @@ mod fn_tests {
 
 		// make sure that it acutally duplicates the map
 		let obj = Object::new_number(12.45);
-		let dup = obj.call_attr("@num", &[])?.downcast_or_err::<Number>()?;
+		let dup = obj.as_any().call_attr("@num", &[])?.downcast_or_err::<Number>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())

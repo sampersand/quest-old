@@ -125,21 +125,17 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	}
 }
 
-impl<T: Send + Sync + Sized + 'static> Object<T> {
-	pub fn call_attr(&self, attr: &'static str, args: &[&AnyObject]) -> Result<AnyObject> {
-		self.as_any().call_attr(attr, args)
-	}
-
-	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-		self.as_any().call(attr, args)
-	}
-}
-
 impl AnyObject {
 	pub fn call_attr(&self, attr: &'static str, args: &[&AnyObject]) -> Result<AnyObject> {
 		self.call(&Object::new_variable(attr).as_any(), args)
 	}
 
+	pub fn get_attr(&self, attr: &'static str) -> Result<AnyObject> {
+		self.get(&Object::new_variable(attr).as_any())
+	}
+}
+
+impl AnyObject {
 	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 		let val = self.get(attr)?;
 

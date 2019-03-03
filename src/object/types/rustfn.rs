@@ -115,7 +115,10 @@ impl Debug for RustFn {
 	}
 }
 
-impl_type! { for RustFn; }
+impl_type! { for RustFn;
+	// "@text" => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
+	// "()" => |obj, args| obj.as_any().call_attr("()", args)
+}
 
 
 #[cfg(test)]

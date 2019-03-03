@@ -15,8 +15,17 @@ impl Display for PtrFormatter {
 	}
 }
 
+#[cfg(test)]
 macro_rules! matches {
 	($a:expr, $b:pat) => (if let $b = $a { true } else { false })
+}
+
+#[cfg(test)]
+macro_rules! assert_matches {
+	($lhs:expr, $rhs:pat) => ({
+		let lhs = $lhs;
+		assert!(matches!(lhs, $rhs), "{:?} doesn't match the pattern", $lhs);
+	})
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]

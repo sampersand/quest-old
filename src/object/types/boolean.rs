@@ -110,7 +110,7 @@ mod fn_tests {
 
 		// ensnure that the map isn't the same object
 		let obj = Object::new_boolean(true);
-		let dup = obj.call_attr("@bool", &[])?.downcast_or_err::<Boolean>()?;
+		let dup = obj.as_any().call_attr("@bool", &[])?.downcast_or_err::<Boolean>()?;
 		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
 		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
 		Ok(())
@@ -247,10 +247,6 @@ mod tests {
 		assert_ne!(Boolean::new(true), Boolean::new(false));
 	}
 }
-
-
-
-
 
 
 
