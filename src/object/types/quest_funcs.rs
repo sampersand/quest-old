@@ -1,29 +1,34 @@
-// Conversions
-pub const AT_BOOL: &str = "@bool";
-pub const AT_TEXT: &str = "@text";
-pub const AT_NUM: &str = "@num";
+macro_rules! define_consts {
+	($($name:ident = $val:expr;)*) => (
+		$(pub const $name: &str = $val;)*
+	)
+}
+define_consts!{
+	// Conversions
+	AT_TEXT = "@text";
+	AT_BOOL = "@bool";
+	AT_NUM = "@num";
 
-// Equality
-pub const STRICT_EQ: &str = "===";
-pub const STRICT_NEQ: &str = "!==";
-pub const EQ: &str = "==";
-pub const NEQ: &str = "!==";
+	// Equality
+	STRICT_EQ = "==="; STRICT_NEQ = "!==";
+	EQ = "=="; NEQ = "!=";
 
-// Comparison
-pub const LT: &str = "<"; 
-pub const GT: &str = ">"; 
-pub const LEQ: &str = "<="; 
-pub const GEQ: &str = ">=";
-pub const CMP: &str = "<=>";
+	// Comparison
+	LT = "<"; GT = ">";
+	LEQ = "<="; GEQ = ">=";
+	CMP = "<=>";
 
-// Boolean operations
-pub const LOGICAL_NOT: &str = "!";
-pub const LOGICAL_AND: &str = "and";
-pub const LOGICAL_OR: &str = "or";
+	// Boolean operations
+	NOT = "!"; AND = "and"; OR = "or";
 
-// Operators
-pub const ARROW_LEFT: &str = "<-";
-pub const ARROW_RIGHT: &str = "<-";
+	// Bitwise operators
+	B_XOR = "^"; B_AND = "&"; B_OR = "|"; 
+	B_LSH = "<<"; B_RSH = ">>"; 
 
-// Misc
-pub const CLONE: &str = "clone";
+	// Assignment Operators
+	ARROW_LEFT = "<-";
+	ARROW_RIGHT = "<-";
+
+	// Misc
+	CLONE = "clone";
+}

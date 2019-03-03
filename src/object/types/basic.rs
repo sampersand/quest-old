@@ -8,9 +8,10 @@ use crate::shared::Shared;
 use crate::map::{Map, ParentMap};
 use crate::err::Result;
 use crate::object::types::pristine::PRISTINE_MAP;
+
 use super::quest_funcs::{
 	STRICT_EQ, STRICT_NEQ, EQ, NEQ,
-	LOGICAL_NOT, LOGICAL_AND, LOGICAL_OR,
+	NOT, AND, OR,
 	ARROW_LEFT, ARROW_RIGHT,
 	AT_BOOL, AT_TEXT,
 	CLONE
@@ -21,7 +22,7 @@ fn strict_eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 }
 
 fn strict_neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(STRICT_EQ, args)?.call_attr(LOGICAL_NOT, &[])
+	obj.call_attr(STRICT_EQ, args)?.call_attr(NOT, &[])
 }
 
 fn at_bool(_: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
@@ -42,7 +43,7 @@ fn eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
 }
 
 fn neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(EQ, args)?.call_attr(LOGICAL_NOT, &[])
+	obj.call_attr(EQ, args)?.call_attr(NOT, &[])
 }
 
 fn assignment_arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
@@ -50,7 +51,7 @@ fn assignment_arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObj
 }
 
 fn not(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
-	obj.to_boolean()?.as_any().call_attr(LOGICAL_NOT, &[])
+	obj.to_boolean()?.as_any().call_attr(NOT, &[])
 }
 
 fn and(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
@@ -81,9 +82,9 @@ lazy_static! {
 		NEQ => neq,
 		ARROW_RIGHT => assignment_arrow_right,
 
-		LOGICAL_NOT => not,
-		LOGICAL_AND => and,
-		LOGICAL_OR => or
+		NOT => not,
+		AND => and,
+		OR => or
 	};
 }
 
