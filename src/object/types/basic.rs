@@ -17,74 +17,77 @@ use super::quest_funcs::{
 	L_CLONE
 };
 
-fn strict_eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	Ok(Object::new_boolean(obj.id() == getarg!(args[0])?.id()))
-}
-
-fn strict_neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(STRICT_EQL, args)?.call_attr(NOT, &[])
-}
-
-fn at_bool(_: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
-	Ok(Object::new_boolean(true))
-}
-
-fn at_text(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
-	unimplemented!()
-}
-
-fn clone(_obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
-	unimplemented!()
-	// L_CLONE => |obj, _| Ok(obj.duplicate())
-}
-
-fn eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(STRICT_EQL, args)
-}
-
-fn neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	obj.call_attr(EQL, args)?.call_attr(NOT, &[])
-}
-
-fn arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	getarg!(args[0])?.call_attr(ARROW_LEFT, &[obj])
-}
-
-fn not(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
-	obj.to_boolean()?.as_any().call_attr(NOT, &[])
-}
-
-fn and(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	if obj.to_boolean()?.is_true() {
-		getarg!(args[0]).map(Clone::clone)
-	} else {
-		Ok(obj.clone())
+mod funcs {
+	use super::*;
+	pub fn strict_eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		Ok(Object::new_boolean(obj.id() == getarg!(args[0])?.id()))
 	}
-}
 
-fn or(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-	if obj.to_boolean()?.is_true() {
-		Ok(obj.clone())
-	} else {
-		getarg!(args[0]).map(Clone::clone)
+	pub fn strict_neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		obj.call_attr(STRICT_EQL, args)?.call_attr(NOT, &[])
+	}
+
+	pub fn at_bool(_: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
+		Ok(Object::new_boolean(true))
+	}
+
+	pub fn at_text(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
+		unimplemented!()
+	}
+
+	pub fn clone(_obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
+		unimplemented!()
+		// L_CLONE => |obj, _| Ok(obj.duplicate())
+	}
+
+	pub fn eql(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		obj.call_attr(STRICT_EQL, args)
+	}
+
+	pub fn neq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		obj.call_attr(EQL, args)?.call_attr(NOT, &[])
+	}
+
+	pub fn arrow_right(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		getarg!(args[0])?.call_attr(ARROW_LEFT, &[obj])
+	}
+
+	pub fn not(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
+		obj.to_boolean()?.as_any().call_attr(NOT, &[])
+	}
+
+	pub fn and(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		if obj.to_boolean()?.is_true() {
+			getarg!(args[0]).map(Clone::clone)
+		} else {
+			Ok(obj.clone())
+		}
+	}
+
+	pub fn or(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		if obj.to_boolean()?.is_true() {
+			Ok(obj.clone())
+		} else {
+			getarg!(args[0]).map(Clone::clone)
+		}
 	}
 }
 
 lazy_static! {
 	pub static ref BASIC_MAP: Shared<dyn Map> = object_map!{UNTYPED "Basic", ParentMap::new(PRISTINE_MAP.clone(), HashMap::new());
-		STRICT_EQL => strict_eql,
-		STRICT_NEQ => strict_neq,
-		AT_BOOL => at_bool,
-		AT_TEXT => at_text,
-		L_CLONE => clone,
+		STRICT_EQL => funcs::strict_eql,
+		STRICT_NEQ => funcs::strict_neq,
+		AT_BOOL => funcs::at_bool,
+		AT_TEXT => funcs::at_text,
+		L_CLONE => funcs::clone,
 
-		EQL => eql,
-		NEQ => neq,
-		ARROW_RIGHT => arrow_right,
+		EQL => funcs::eql,
+		NEQ => funcs::neq,
+		ARROW_RIGHT => funcs::arrow_right,
 
-		NOT => not,
-		AND => and,
-		OR => or
+		NOT => funcs::not,
+		AND => funcs::and,
+		OR => funcs::or
 	};
 }
 
@@ -93,7 +96,6 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::super::basic;
 	use crate::err::{Result, Error};
 	use std::fmt::{self, Debug, Formatter};
 	use crate::object::types::{Boolean, Variable};
@@ -150,12 +152,12 @@ mod tests {
 		let ref obj_clone = obj.clone();
 		let ref obj_duplicate = BlankObject::new_any();
 
-		assert_eq!(basic::strict_eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::strict_eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::strict_eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::strict_eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+		assert_eq!(funcs::strict_eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::strict_eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::strict_eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::strict_eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-		assert_param_missing!(basic::strict_eql(obj, &[]));
+		assert_param_missing!(funcs::strict_eql(obj, &[]));
 		Ok(())
 	}
 
@@ -166,20 +168,20 @@ mod tests {
 		let ref obj_duplicate = BlankObject::new_any();
 
 		// make sure `!==` can override correctly
-		assert_eq!(basic::strict_neq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::strict_neq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::strict_neq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::strict_neq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), true); // ensure duplciates are ignored
+		assert_eq!(funcs::strict_neq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::strict_neq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::strict_neq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::strict_neq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), true); // ensure duplciates are ignored
 
-		assert_param_missing!(basic::strict_neq(obj, &[]));
+		assert_param_missing!(funcs::strict_neq(obj, &[]));
 		Ok(())
 	}
 
 	#[test]
 	fn at_bool() -> Result<()> {
 		let ref obj = BlankObject::new_any();
-		assert_eq!(basic::at_bool(obj, &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::at_bool(obj, &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::at_bool(obj, &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::at_bool(obj, &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), true);
 
 		Ok(())
 	}
@@ -198,12 +200,12 @@ mod tests {
 		let ref obj_clone = obj.clone();
 		let ref obj_duplicate = BlankObject::new_any();
 
-		assert_eq!(basic::eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
+		assert_eq!(funcs::eql(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::eql(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::eql(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::eql(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), false); // ensure duplicates are ignored
 
-		assert_param_missing!(basic::eql(obj, &[]));
+		assert_param_missing!(funcs::eql(obj, &[]));
 
 		/* we don't need to test to see that `===` is called; we only do if we define `==` to default to that. */
 		// use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
@@ -220,9 +222,9 @@ mod tests {
 
 		// assert_eq!(STRICT_EQUALITY_CALLED.load(Relaxed), false);
 		// // note: extra argument isn't needed here, as the funciton ignores it
-		// assert_eq!(basic::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		// assert_eq!(funcs::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
 		// assert_eq!(STRICT_EQUALITY_CALLED.swap(false, Relaxed), true);
-		// assert_eq!(basic::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		// assert_eq!(funcs::eql(&StrictEqChanged::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
 		// assert_eq!(STRICT_EQUALITY_CALLED.swap(false, Relaxed), true);
 		Ok(())
 	}
@@ -233,12 +235,12 @@ mod tests {
 		let ref obj_clone = obj.clone();
 		let ref obj_duplicate = BlankObject::new_any();
 
-		assert_eq!(basic::neq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::neq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::neq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
-		assert_eq!(basic::neq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), true); // ensure duplciates are ignored
+		assert_eq!(funcs::neq(obj, &[obj])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::neq(obj, &[obj_clone])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::neq(obj, &[obj_duplicate])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::neq(obj, &[obj_duplicate, obj])?.downcast_or_err::<Boolean>()?.is_true(), true); // ensure duplciates are ignored
 
-		assert_param_missing!(basic::neq(obj, &[]));
+		assert_param_missing!(funcs::neq(obj, &[]));
 		Ok(())
 	}
 
@@ -247,7 +249,7 @@ mod tests {
 		let ref obj1 = BlankObject::new_any();
 		let ref obj2 = BlankObject::new_any();
 		// first make sure the arrow returns an error if it doesnt exist
-		match basic::arrow_right(obj1, &[obj2]).unwrap_err() {
+		match funcs::arrow_right(obj1, &[obj2]).unwrap_err() {
 			Error::AttrMissing { attr, obj } => {
 				assert!(obj.id_eq(&obj2));
 				assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
@@ -269,7 +271,7 @@ mod tests {
 
 		assert!(RECEIVED.try_lock().unwrap().is_none());
 		let ref cantake = CanTakeArrow::new_any();
-		assert!(basic::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
+		assert!(funcs::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
 		let (obj, arg) = RECEIVED.try_lock().unwrap().take().unwrap();
 		assert!(cantake.id_eq(&obj), "{:?} != {:?}", cantake.id(), obj.id());
 		assert!(arg.id_eq(obj1));
@@ -278,9 +280,9 @@ mod tests {
 
 	#[test]
 	fn not() -> Result<()> {
-		assert_eq!(basic::not(&BlankObject::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::not(&BlankObject::new_any(), &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), false);
-		assert_eq!(basic::not(&BlankButFalse::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
+		assert_eq!(funcs::not(&BlankObject::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::not(&BlankObject::new_any(), &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), false);
+		assert_eq!(funcs::not(&BlankButFalse::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
 		Ok(())
 	}
 
@@ -292,23 +294,23 @@ mod tests {
 		let ref f2 = BlankButFalse::new_any();
 		let ref t2 = BlankObject::new_any();
 
-		assert!(basic::and(t, &[t])?.id_eq(t));
-		assert!(basic::and(t, &[t2])?.id_eq(t2));
-		assert!(basic::and(t, &[f])?.id_eq(f));
-		assert!(basic::and(t, &[f, e])?.id_eq(f));
-		assert!(basic::and(t, &[e])?.id_eq(e));
+		assert!(funcs::and(t, &[t])?.id_eq(t));
+		assert!(funcs::and(t, &[t2])?.id_eq(t2));
+		assert!(funcs::and(t, &[f])?.id_eq(f));
+		assert!(funcs::and(t, &[f, e])?.id_eq(f));
+		assert!(funcs::and(t, &[e])?.id_eq(e));
 
-		assert!(basic::and(f, &[t])?.id_eq(f));
-		assert!(basic::and(f, &[f2])?.id_eq(f));
-		assert!(basic::and(f, &[f])?.id_eq(f));
-		assert!(basic::and(f, &[t, e])?.id_eq(f));
-		assert!(basic::and(f, &[e])?.id_eq(f));
+		assert!(funcs::and(f, &[t])?.id_eq(f));
+		assert!(funcs::and(f, &[f2])?.id_eq(f));
+		assert!(funcs::and(f, &[f])?.id_eq(f));
+		assert!(funcs::and(f, &[t, e])?.id_eq(f));
+		assert!(funcs::and(f, &[e])?.id_eq(f));
 
-		assert!(matches!(basic::and(e, &[t]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::and(e, &[f2]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::and(e, &[f]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::and(e, &[f, e]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::and(e, &[e]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::and(e, &[t]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::and(e, &[f2]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::and(e, &[f]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::and(e, &[f, e]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::and(e, &[e]).unwrap_err(), Error::__Testing));
 
 		Ok(())
 	}
@@ -321,23 +323,23 @@ mod tests {
 		let ref e = BooleanError::new_any();
 		let ref f2 = BlankButFalse::new_any();
 
-		assert!(basic::or(t, &[t])?.id_eq(t));
-		assert!(basic::or(t, &[&BlankObject::new_any()])?.id_eq(t));
-		assert!(basic::or(t, &[f])?.id_eq(t));
-		assert!(basic::or(t, &[f, e])?.id_eq(t));
-		assert!(basic::or(t, &[e])?.id_eq(t));
+		assert!(funcs::or(t, &[t])?.id_eq(t));
+		assert!(funcs::or(t, &[&BlankObject::new_any()])?.id_eq(t));
+		assert!(funcs::or(t, &[f])?.id_eq(t));
+		assert!(funcs::or(t, &[f, e])?.id_eq(t));
+		assert!(funcs::or(t, &[e])?.id_eq(t));
 
-		assert!(basic::or(f, &[t])?.id_eq(t));
-		assert!(basic::or(f, &[f2])?.id_eq(f2));
-		assert!(basic::or(f, &[f])?.id_eq(f));
-		assert!(basic::or(f, &[t, e])?.id_eq(t));
-		assert!(basic::or(f, &[e])?.id_eq(e));
+		assert!(funcs::or(f, &[t])?.id_eq(t));
+		assert!(funcs::or(f, &[f2])?.id_eq(f2));
+		assert!(funcs::or(f, &[f])?.id_eq(f));
+		assert!(funcs::or(f, &[t, e])?.id_eq(t));
+		assert!(funcs::or(f, &[e])?.id_eq(e));
 
-		assert!(matches!(basic::or(e, &[t]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::or(e, &[f2]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::or(e, &[f]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::or(e, &[f, e]).unwrap_err(), Error::__Testing));
-		assert!(matches!(basic::or(e, &[e]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::or(e, &[t]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::or(e, &[f2]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::or(e, &[f]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::or(e, &[f, e]).unwrap_err(), Error::__Testing));
+		assert!(matches!(funcs::or(e, &[e]).unwrap_err(), Error::__Testing));
 
 		Ok(())
 	}
@@ -545,11 +547,14 @@ mod tests {
 		}
 		
 		#[test]
+		#[ignore]
 		fn arrow_right() -> Result<()> {
+			unimplemented!("this should be integration");
+
 			let ref obj1 = BlankObject::new_any();
 			let ref obj2 = BlankObject::new_any();
 			// first make sure the arrow returns an error if it doesnt exist
-			match basic::arrow_right(obj1, &[obj2]).unwrap_err() {
+			match funcs::arrow_right(obj1, &[obj2]).unwrap_err() {
 				Error::AttrMissing { attr, obj } => {
 					assert!(obj.id_eq(&obj2));
 					assert_eq!(**attr.downcast_or_err::<Variable>()?.data().read().unwrap(), ARROW_LEFT);
@@ -571,7 +576,7 @@ mod tests {
 
 			assert!(RECEIVED.try_lock().unwrap().is_none());
 			let ref cantake = CanTakeArrow::new_any();
-			assert!(basic::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
+			assert!(funcs::arrow_right(obj1, &[cantake, obj2])?.is_null()); // also to ensure extra args are ignored
 			let (obj, arg) = RECEIVED.try_lock().unwrap().take().unwrap();
 			assert!(cantake.id_eq(&obj), "{:?} != {:?}", cantake.id(), obj.id());
 			assert!(arg.id_eq(obj1));
@@ -579,67 +584,74 @@ mod tests {
 		}
 
 		#[test]
+		#[ignore]
 		fn not() -> Result<()> {
-			assert_eq!(basic::not(&BlankObject::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(basic::not(&BlankObject::new_any(), &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), false);
-			assert_eq!(basic::not(&BlankButFalse::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
+			unimplemented!("this should be integration");
+			assert_eq!(funcs::not(&BlankObject::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(funcs::not(&BlankObject::new_any(), &[&BlankButFalse::new_any()])?.downcast_or_err::<Boolean>()?.is_true(), false);
+			assert_eq!(funcs::not(&BlankButFalse::new_any(), &[])?.downcast_or_err::<Boolean>()?.is_true(), true);
 			Ok(())
 		}
 
 		#[test]
+		#[ignore]
 		fn and() -> Result<()> {
+			unimplemented!("this should be integration");
+
 			let ref t = BlankObject::new_any();
 			let ref f = BlankButFalse::new_any();
 			let ref e = BooleanError::new_any();
 			let ref f2 = BlankButFalse::new_any();
 			let ref t2 = BlankObject::new_any();
 
-			assert!(basic::and(t, &[t])?.id_eq(t));
-			assert!(basic::and(t, &[t2])?.id_eq(t2));
-			assert!(basic::and(t, &[f])?.id_eq(f));
-			assert!(basic::and(t, &[f, e])?.id_eq(f));
-			assert!(basic::and(t, &[e])?.id_eq(e));
+			assert!(funcs::and(t, &[t])?.id_eq(t));
+			assert!(funcs::and(t, &[t2])?.id_eq(t2));
+			assert!(funcs::and(t, &[f])?.id_eq(f));
+			assert!(funcs::and(t, &[f, e])?.id_eq(f));
+			assert!(funcs::and(t, &[e])?.id_eq(e));
 
-			assert!(basic::and(f, &[t])?.id_eq(f));
-			assert!(basic::and(f, &[f2])?.id_eq(f));
-			assert!(basic::and(f, &[f])?.id_eq(f));
-			assert!(basic::and(f, &[t, e])?.id_eq(f));
-			assert!(basic::and(f, &[e])?.id_eq(f));
+			assert!(funcs::and(f, &[t])?.id_eq(f));
+			assert!(funcs::and(f, &[f2])?.id_eq(f));
+			assert!(funcs::and(f, &[f])?.id_eq(f));
+			assert!(funcs::and(f, &[t, e])?.id_eq(f));
+			assert!(funcs::and(f, &[e])?.id_eq(f));
 
-			assert!(matches!(basic::and(e, &[t]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::and(e, &[f2]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::and(e, &[f]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::and(e, &[f, e]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::and(e, &[e]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::and(e, &[t]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::and(e, &[f2]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::and(e, &[f]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::and(e, &[f, e]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::and(e, &[e]).unwrap_err(), Error::__Testing));
 
 			Ok(())
 		}
 
+
 		#[test]
+		#[ignore]
 		fn or() -> Result<()> {
+			unimplemented!("this should be integration");
 			let ref t = BlankObject::new_any();
 			let ref f = BlankButFalse::new_any();
 			let ref e = BooleanError::new_any();
 			let ref f2 = BlankButFalse::new_any();
-			let ref t2 = BlankObject::new_any();
 
-			assert!(basic::or(t, &[t])?.id_eq(t));
-			assert!(basic::or(t, &[t2])?.id_eq(t));
-			assert!(basic::or(t, &[f])?.id_eq(t));
-			assert!(basic::or(t, &[f, e])?.id_eq(t));
-			assert!(basic::or(t, &[e])?.id_eq(t));
+			assert!(funcs::or(t, &[t])?.id_eq(t));
+			assert!(funcs::or(t, &[&BlankObject::new_any()])?.id_eq(t));
+			assert!(funcs::or(t, &[f])?.id_eq(t));
+			assert!(funcs::or(t, &[f, e])?.id_eq(t));
+			assert!(funcs::or(t, &[e])?.id_eq(t));
 
-			assert!(basic::or(f, &[t])?.id_eq(t));
-			assert!(basic::or(f, &[f2])?.id_eq(f2));
-			assert!(basic::or(f, &[f])?.id_eq(f));
-			assert!(basic::or(f, &[t, e])?.id_eq(t));
-			assert!(basic::or(f, &[e])?.id_eq(e));
+			assert!(funcs::or(f, &[t])?.id_eq(t));
+			assert!(funcs::or(f, &[f2])?.id_eq(f2));
+			assert!(funcs::or(f, &[f])?.id_eq(f));
+			assert!(funcs::or(f, &[t, e])?.id_eq(t));
+			assert!(funcs::or(f, &[e])?.id_eq(e));
 
-			assert!(matches!(basic::or(e, &[t]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::or(e, &[f2]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::or(e, &[f]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::or(e, &[f, e]).unwrap_err(), Error::__Testing));
-			assert!(matches!(basic::or(e, &[e]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::or(e, &[t]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::or(e, &[f2]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::or(e, &[f]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::or(e, &[f, e]).unwrap_err(), Error::__Testing));
+			assert!(matches!(funcs::or(e, &[e]).unwrap_err(), Error::__Testing));
 
 			Ok(())
 		}

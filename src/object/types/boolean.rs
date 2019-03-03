@@ -3,11 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::object::{Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
-use super::quest_funcs::{
-	AT_BOOL, AT_NUM, AT_TEXT,
-	NOT, EQL,
-	B_XOR, B_AND, B_OR
-};
+use super::quest_funcs;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boolean(bool);
@@ -35,7 +31,7 @@ impl Object<Boolean> {
 
 impl AnyObject {
 	pub fn to_boolean(&self) -> Result<Object<Boolean>> {
-		self.call_attr(AT_BOOL, &[])?
+		self.call_attr(quest_funcs::AT_BOOL, &[])?
 			.downcast_or_err::<Boolean>()
 	}
 }
@@ -71,86 +67,138 @@ impl Display for Boolean {
 	}
 }
 
-impl_type! { for Boolean;
-	AT_BOOL => |obj, _| Ok(Object::new_boolean(obj.data().read().expect("read err in Boolean::@bool").is_true())),
-	AT_NUM => |obj, _| Ok(Object::new_number(if obj.is_true() { 1.0 } else { 0.0 })),
-	AT_TEXT => |obj, _| Ok(Object::new_text(obj.is_true().to_string())),
+mod funcs {
+	use crate::object::types::{Number, Boolean, Text};
+	use crate::object::{Object, AnyObject};
+	use crate::err::Result;
 
-	NOT => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true())),
-	EQL => |obj, args| Ok(Object::new_boolean(obj.is_true() == getarg!(args[0] @ to_boolean)?.is_true())),
-	B_XOR => |obj, args| Ok(Object::new_boolean(obj.is_true() ^ getarg!(args[0] @ to_boolean)?.is_true())),
-	B_AND => |obj, args| Ok(Object::new_boolean(obj.is_true() & getarg!(args[0] @ to_boolean)?.is_true())),
-	B_OR => |obj, args| Ok(Object::new_boolean(obj.is_true() | getarg!(args[0] @ to_boolean)?.is_true()))
+	pub fn at_bool(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Boolean>> {
+		Ok(obj.duplicate())
+	}
+	
+	pub fn at_num(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Number>> {
+		if obj.is_true() {
+			Ok(Object::new_number(1.0))
+		} else {
+			Ok(Object::new_number(0.0))
+		}
+	}
+
+	pub fn at_text(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Text>> {
+		Ok(Object::new_text(obj.is_true().to_string()))
+	}
+
+	pub fn not(obj: &Object<Boolean>, _: &[&AnyObject]) -> Result<Object<Boolean>> {
+		use crate::object::types::quest_funcs::NOT;
+		Ok(Object::new_boolean(!obj.data().read().expect(data_err![read in Boolean, NOT]).is_true()))
+	}
+
+	pub fn eql(lhs: &Object<Boolean>, args: &[&AnyObject]) -> Result<Object<Boolean>> {
+		let rhs = getarg!(args[0] @ to_boolean)?;
+		Ok(Object::new_boolean(lhs.is_true() == rhs.is_true()))
+	}
+
+	pub fn b_xor(lhs: &Object<Boolean>, args: &[&AnyObject]) -> Result<Object<Boolean>> {
+		let rhs = getarg!(args[0] @ to_boolean)?;
+		Ok(Object::new_boolean(lhs.is_true() ^ rhs.is_true()))
+	}
+
+	pub fn b_and(lhs: &Object<Boolean>, args: &[&AnyObject]) -> Result<Object<Boolean>> {
+		let rhs = getarg!(args[0] @ to_boolean)?;
+		Ok(Object::new_boolean(lhs.is_true() & rhs.is_true()))
+	}
+
+	pub fn b_or(lhs: &Object<Boolean>, args: &[&AnyObject]) -> Result<Object<Boolean>> {
+		let rhs = getarg!(args[0] @ to_boolean)?;
+		Ok(Object::new_boolean(lhs.is_true() | rhs.is_true()))
+	}
+}
+
+impl_type! { for Boolean;
+	quest_funcs::AT_BOOL => |o, a| funcs::at_bool(o, a).map(|x| x as _),
+	quest_funcs::AT_NUM => |o, a| funcs::at_num(o, a).map(|x| x as _),
+	quest_funcs::AT_TEXT => |o, a| funcs::at_text(o, a).map(|x| x as _),
+
+	quest_funcs::NOT => |o, a| funcs::not(o, a).map(|x| x as _),
+	quest_funcs::EQL => |o, a| funcs::eql(o, a).map(|x| x as _),
+	quest_funcs::B_XOR => |o, a| funcs::b_xor(o, a).map(|x| x as _),
+	quest_funcs::B_AND => |o, a| funcs::b_and(o, a).map(|x| x as _),
+	quest_funcs::B_OR => |o, a| funcs::b_or(o, a).map(|x| x as _),
 }
 
 #[cfg(test)]
 mod fn_tests {
-	use super::*;
+	use super::{*, quest_funcs::*};
 	use crate::object::types::{Number, Text};
 	use crate::err::Error;
 
-	macro_rules! b {
+	macro_rules! _b_ {
 		($bool:expr) => (Object::new_boolean($bool).as_any())
+	}
+	macro_rules! b {
+		($bool:expr) => (Object::new_boolean($bool))
 	}
 
 	macro_rules! assert_bool_call_eq {
 		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
 			$(
-				assert_eq!(**b!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
+				assert_eq!(**_b_!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.data().read().unwrap(), $expected);
 			)*
 		}
 	}
 
-
 	#[test]
 	fn at_bool() -> Result<()> {
-		assert_bool_call_eq!(AT_BOOL Boolean;
-			(true, []) => true,
-			(false, []) => false,
-			(true, [&b!(false)]) => true // ensure extra args are ignored
-		);
+		let ref t = Object::new_boolean(true);
+		let ref f = Object::new_boolean(false);
 
-		// ensnure that the map isn't the same object
-		let obj = Object::new_boolean(true);
-		let dup = obj.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?;
-		assert_eq!(*obj.data().read().unwrap(), *dup.data().read().unwrap());
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		assert_eq!(funcs::at_bool(t, &[])?.is_true(), true);
+		assert_eq!(funcs::at_bool(f, &[])?.is_true(), false);
+		assert_eq!(funcs::at_bool(f, &[&t.as_any()])?.is_true(), false);
+
+		assert_obj_duplicated!(t, funcs::at_bool(t, &[])?);
+
 		Ok(())
 	}
 
 	#[test]
 	fn at_text() -> Result<()> {
-		assert_bool_call_eq!(AT_TEXT Text; 
-			(true, []) => *"true",
-			(false, []) => *"false",
-			(true, [&b!(false)]) => *"true" // ensure extra args are ignored
-		);
+		let ref t = Object::new_boolean(true);
+		let ref f = Object::new_boolean(false);
+
+		assert_eq!(funcs::at_text(t, &[])?.data().read().unwrap().as_ref(), "true");
+		assert_eq!(funcs::at_text(f, &[])?.data().read().unwrap().as_ref(), "false");
+		assert_eq!(funcs::at_text(f, &[&t.as_any()])?.data().read().unwrap().as_ref(), "false");
 
 		Ok(())
 	}
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert_bool_call_eq!(AT_NUM Number; 
-			(true, []) => 1.0,
-			(false, []) => 0.0,
-			(true, [&b!(false)]) => 1.0 // ensure extra args are ignored
-		);
+		let ref t = Object::new_boolean(true);
+		let ref f = Object::new_boolean(false);
+
+		assert_eq!(funcs::at_num(t, &[])?.data().read().unwrap().as_ref(), &1.0);
+		assert_eq!(funcs::at_num(f, &[])?.data().read().unwrap().as_ref(), &0.0);
+		assert_eq!(funcs::at_num(f, &[&t.as_any()])?.data().read().unwrap().as_ref(), &0.0);
 
 		Ok(())
 	}
 
 	#[test]
 	fn equality() -> Result<()> {
+		let ref t = Object::new_boolean(true);
+		let ref f = Object::new_boolean(false);
+
 		assert_bool_call_eq!(EQL Boolean; 
-			(true, [&b!(true)]) => true,
-			(true, [&b!(false)]) => false,
-			(false, [&b!(true)]) => false,
-			(false, [&b!(false)]) => true,
-			(false, [&b!(false), &b!(true)]) => true // ensure extra args are ignored
+			(true, [&_b_!(true)]) => true,
+			(true, [&_b_!(false)]) => false,
+			(false, [&_b_!(true)]) => false,
+			(false, [&_b_!(false)]) => true,
+			(false, [&_b_!(false), &_b_!(true)]) => true // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(EQL, &[]));
+		assert_param_missing!(_b_!(true).call_attr(EQL, &[]));
 
 		Ok(())
 	}
@@ -160,7 +208,7 @@ mod fn_tests {
 		assert_bool_call_eq!(NOT Boolean;
 			(true, []) => false,
 			(false, []) => true,
-			(true, [&b!(false)]) => false // ensure extra args are ignored
+			(true, [&_b_!(false)]) => false // ensure extra args are ignored
 		);
 
 		Ok(())
@@ -169,14 +217,14 @@ mod fn_tests {
 	#[test]
 	fn b_xor() -> Result<()> {
 		assert_bool_call_eq!(B_XOR Boolean; 
-			(true, [&b!(true)]) => false,
-			(true, [&b!(false)]) => true,
-			(false, [&b!(true)]) => true,
-			(false, [&b!(false)]) => false,
-			(false, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
+			(true, [&_b_!(true)]) => false,
+			(true, [&_b_!(false)]) => true,
+			(false, [&_b_!(true)]) => true,
+			(false, [&_b_!(false)]) => false,
+			(false, [&_b_!(false), &_b_!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_XOR, &[]));
+		assert_param_missing!(_b_!(true).call_attr(B_XOR, &[]));
 
 		Ok(())
 	}
@@ -184,14 +232,14 @@ mod fn_tests {
 	#[test]
 	fn b_and() -> Result<()> {
 		assert_bool_call_eq!(B_AND Boolean; 
-			(true, [&b!(true)]) => true,
-			(true, [&b!(false)]) => false,
-			(false, [&b!(true)]) => false,
-			(false, [&b!(false)]) => false,
-			(true, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
+			(true, [&_b_!(true)]) => true,
+			(true, [&_b_!(false)]) => false,
+			(false, [&_b_!(true)]) => false,
+			(false, [&_b_!(false)]) => false,
+			(true, [&_b_!(false), &_b_!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_AND, &[]));
+		assert_param_missing!(_b_!(true).call_attr(B_AND, &[]));
 
 		Ok(())
 	}
@@ -199,14 +247,14 @@ mod fn_tests {
 	#[test]
 	fn b_or() -> Result<()> {
 		assert_bool_call_eq!(B_OR Boolean; 
-			(true, [&b!(true)]) => true,
-			(true, [&b!(false)]) => true,
-			(false, [&b!(true)]) => true,
-			(false, [&b!(false)]) => false,
-			(false, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
+			(true, [&_b_!(true)]) => true,
+			(true, [&_b_!(false)]) => true,
+			(false, [&_b_!(true)]) => true,
+			(false, [&_b_!(false)]) => false,
+			(false, [&_b_!(false), &_b_!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_OR, &[]));
+		assert_param_missing!(_b_!(true).call_attr(B_OR, &[]));
 
 		Ok(())
 	}

@@ -13,6 +13,15 @@ macro_rules! assert_param_missing {
 		}
 	);
 }
+
+#[cfg(test)]
+macro_rules! assert_obj_duplicated {
+	($obj1:expr, $obj2:expr) => ({
+		assert_eq!(*$obj1.data().read().unwrap(), *$obj2.data().read().unwrap());
+		assert!(!$obj1._map_only_for_testing().ptr_eq($obj2._map_only_for_testing()));
+	})
+}
+
 macro_rules! getarg {
 	($args:ident[$pos:expr]: $type:ty) => {
 		getarg!($args[$pos]).and_then(|obj| obj.downcast_or_err::<$type>())
@@ -30,25 +39,25 @@ macro_rules! getarg {
 }
 
 macro_rules! object_map {
-	(UNTYPED $prefix:literal, $map:expr; $($name:tt => $func:expr,)*) => (
+	(UNTYPED $prefix:literal, $map:expr; $($name:expr => $func:expr,)*) => (
 		object_map!(UNTYPED $prefix, $map; $($name => $func),*)
 	);
 
-	(UNTYPED $prefix:literal, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
+	(UNTYPED $prefix:literal, $map:expr; $($name:expr => $func:expr),*) => {$crate::shared::Shared::new({
 		let mut map = $map;
 		use $crate::map::Map as __MapOnlyForAccessToFuncs;
-		$(object_map!(@UNTYPED $prefix; map $name $func);)*
+		$(object_map!(@UNTYPED $prefix; map $name, $func);)*
 		map
 	})};
 
-	(TYPED $type:ty, $map:expr; $($name:tt => $func:expr),*) => {$crate::shared::Shared::new({
+	(TYPED $type:ty, $map:expr; $($name:expr => $func:expr),*) => {$crate::shared::Shared::new({
 		let mut map = $map;
 		use $crate::map::Map as __MapOnlyForAccessToFuncs;
-		$(object_map!(@TYPED $type; map $name $func);)*
+		$(object_map!(@TYPED $type; map $name, $func);)*
 		map
 	})};
 
-	(@UNTYPED $prefix:literal; $map:ident $name:tt $func:expr) => {
+	(@UNTYPED $prefix:literal; $map:ident $name:expr, $func:expr) => {
 		assert!(
 			$map.set(
 				$crate::object::Object::new_variable($name),
@@ -57,7 +66,7 @@ macro_rules! object_map {
 		);
 	};
 
-	(@TYPED $type:ty; $map:ident $name:tt $func:expr) => {
+	(@TYPED $type:ty; $map:ident $name:expr, $func:expr) => {
 		// this will fail if $name is a number, but i cant check for it, so whatever
 		assert!(
 			$map.set(
@@ -71,7 +80,7 @@ macro_rules! object_map {
 		);
 	};
 
-	(@TYPED $type:ty; $_map:ident $invalid:tt $_func:expr) => {
+	(@TYPED $type:ty; $_map:ident $invalid:expr, $_func:expr) => {
 		compile_error!(const_concat!("Invalid type name encountered: `", stringify!($type), "::", stringify!($invalid), "`"))
 	};
 }
@@ -90,11 +99,11 @@ macro_rules! impl_type {
 		}
 	};
 
-	(for $type:ty, map $mapname:ident $map:expr; $($name:tt => $func:expr,)*) => {
+	(for $type:ty, map $mapname:ident $map:expr; $($name:expr => $func:expr,)*) => {
 		impl_type!(for $type, map $mapname: $map; $($name => $func),*);
 	};
 
-	(for $type:ty, map $mapname:ident; $($name:tt => $func:expr),*) => {
+	(for $type:ty, map $mapname:ident; $($name:expr => $func:expr),*) => {
 		impl_type!(for $type,
 			map $mapname: $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
 			$($name => $func),*
@@ -102,11 +111,11 @@ macro_rules! impl_type {
 	};
 
 
-	(for $type:ty; $($name:tt => $func:expr),*) => {
+	(for $type:ty; $($name:expr => $func:expr),*) => {
 		impl_type!(for $type, map OBJECT_MAP; $($name => $func),*);
 	};
 
-	(for $type:ty; $($name:tt => $func:expr,)*) => {
+	(for $type:ty; $($name:expr => $func:expr,)*) => {
 		impl_type!(for $type; $($name => $func),*);
 	};
 
