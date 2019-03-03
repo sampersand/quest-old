@@ -14,7 +14,7 @@ use super::quest_funcs::{
 	NOT, AND, OR,
 	ARROW_LEFT, ARROW_RIGHT,
 	AT_BOOL, AT_TEXT,
-	CLONE
+	MISC_CLONE
 };
 
 fn strict_eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
@@ -35,7 +35,7 @@ fn at_text(obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
 
 fn clone(_obj: &AnyObject, _: &[&AnyObject]) -> Result<AnyObject> {
 	unimplemented!()
-	// CLONE => |obj, _| Ok(obj.duplicate())
+	// MISC_CLONE => |obj, _| Ok(obj.duplicate())
 }
 
 fn eq(obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
@@ -76,7 +76,7 @@ lazy_static! {
 		STRICT_NEQ => strict_neq,
 		AT_BOOL => at_bool,
 		AT_TEXT => at_text,
-		CLONE => clone,
+		MISC_CLONE => clone,
 
 		EQ => eq,
 		NEQ => neq,

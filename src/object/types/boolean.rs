@@ -6,7 +6,7 @@ use std::ops::Deref;
 use super::quest_funcs::{
 	AT_BOOL, AT_NUM, AT_TEXT,
 	NOT, EQ,
-	B_XOR, B_AND, B_OR
+	BW_XOR, BW_AND, BW_OR
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -78,9 +78,9 @@ impl_type! { for Boolean;
 
 	NOT => |obj, _| Ok(Object::new_boolean(!obj.data().read().expect("read err in Boolean::!").is_true())),
 	EQ => |obj, args| Ok(Object::new_boolean(obj.is_true() == getarg!(args[0] @ to_boolean)?.is_true())),
-	B_XOR => |obj, args| Ok(Object::new_boolean(obj.is_true() ^ getarg!(args[0] @ to_boolean)?.is_true())),
-	B_AND => |obj, args| Ok(Object::new_boolean(obj.is_true() & getarg!(args[0] @ to_boolean)?.is_true())),
-	B_OR => |obj, args| Ok(Object::new_boolean(obj.is_true() | getarg!(args[0] @ to_boolean)?.is_true()))
+	BW_XOR => |obj, args| Ok(Object::new_boolean(obj.is_true() ^ getarg!(args[0] @ to_boolean)?.is_true())),
+	BW_AND => |obj, args| Ok(Object::new_boolean(obj.is_true() & getarg!(args[0] @ to_boolean)?.is_true())),
+	BW_OR => |obj, args| Ok(Object::new_boolean(obj.is_true() | getarg!(args[0] @ to_boolean)?.is_true()))
 }
 
 #[cfg(test)]
@@ -168,7 +168,7 @@ mod fn_tests {
 
 	#[test]
 	fn b_xor() -> Result<()> {
-		assert_bool_call_eq!(B_XOR Boolean; 
+		assert_bool_call_eq!(BW_XOR Boolean; 
 			(true, [&b!(true)]) => false,
 			(true, [&b!(false)]) => true,
 			(false, [&b!(true)]) => true,
@@ -176,14 +176,14 @@ mod fn_tests {
 			(false, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_XOR, &[]));
+		assert_param_missing!(b!(true).call_attr(BW_XOR, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn b_and() -> Result<()> {
-		assert_bool_call_eq!(B_AND Boolean; 
+		assert_bool_call_eq!(BW_AND Boolean; 
 			(true, [&b!(true)]) => true,
 			(true, [&b!(false)]) => false,
 			(false, [&b!(true)]) => false,
@@ -191,14 +191,14 @@ mod fn_tests {
 			(true, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_AND, &[]));
+		assert_param_missing!(b!(true).call_attr(BW_AND, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn b_or() -> Result<()> {
-		assert_bool_call_eq!(B_OR Boolean; 
+		assert_bool_call_eq!(BW_OR Boolean; 
 			(true, [&b!(true)]) => true,
 			(true, [&b!(false)]) => true,
 			(false, [&b!(true)]) => true,
@@ -206,7 +206,7 @@ mod fn_tests {
 			(false, [&b!(false), &b!(true)]) => false // ensure extra args are ignored
 		);
 
-		assert_param_missing!(b!(true).call_attr(B_OR, &[]));
+		assert_param_missing!(b!(true).call_attr(BW_OR, &[]));
 
 		Ok(())
 	}
