@@ -1,6 +1,6 @@
 macro_rules! data_err {
-	(read in $ty:ty, $name:ident) => {const_concat!("read err in ", stringify!($ty), "::", $name) };
-	(write in $ty:ty, $name:ident) => {const_concat!("write err in ", stringify!($ty), "::", $name) }
+	(read in $ty:ty, $name:expr) => {const_concat!("read err in ", stringify!($ty), "::", $name) };
+	(write in $ty:ty, $name:expr) => {const_concat!("write err in ", stringify!($ty), "::", $name) }
 }
 
 #[cfg(test)]

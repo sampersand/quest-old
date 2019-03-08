@@ -18,8 +18,8 @@ define_consts!{
 	EQL = "=="; NEQ = "!=";
 	
 	// Comparison
-	LTH = "<";  GTH = ">";
-	LEQ = "<="; GEQ = ">=";
+	LTH = "<"; LEQ = "<=";
+	GTH = ">"; GEQ = ">=";
 	CMP = "<=>";
 	
 	// Logical

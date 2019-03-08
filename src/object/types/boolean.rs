@@ -33,8 +33,7 @@ impl Object<Boolean> {
 
 impl AnyObject {
 	pub fn to_boolean(&self) -> Result<Object<Boolean>> {
-		self.call_attr(quest_funcs::AT_BOOL, &[])?
-			.downcast_or_err::<Boolean>()
+		self.call_attr(quest_funcs::AT_BOOL, &[])?.downcast_or_err::<Boolean>()
 	}
 }
 
@@ -130,15 +129,15 @@ mod funcs {
 }
 
 impl_type! { for Boolean;
-	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
-	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o)),
-	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
+	quest_funcs::AT_BOOL => |b, _| Ok(funcs::at_bool(b)),
+	quest_funcs::AT_NUM => |b, _| Ok(funcs::at_num(b)),
+	quest_funcs::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
 
-	quest_funcs::NOT => |o, _| Ok(funcs::not(o)),
-	quest_funcs::EQL => |o, a| Ok(funcs::eql(o, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_XOR => |o, a| Ok(funcs::b_xor(o, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_AND => |o, a| Ok(funcs::b_and(o, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_OR => |o, a| Ok(funcs::b_or(o, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::NOT => |b, _| Ok(funcs::not(b)),
+	quest_funcs::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] @ to_boolean)?)),
+	quest_funcs::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] @ to_boolean)?)),
 }
 
 #[cfg(test)]
@@ -365,12 +364,12 @@ mod tests {
 
 	#[test]
 	fn to_boolean() -> Result<()> {
-		assert_eq!(*Object::new_boolean(true).as_any().to_boolean()?.unwrap_data(), true);
-		assert_eq!(*Object::new_boolean(false).as_any().to_boolean()?.unwrap_data(), false);
+		assert_eq!(Object::new_boolean(true).as_any().to_boolean()?, true);
+		assert_eq!(Object::new_boolean(false).as_any().to_boolean()?, false);
 
 		// TODO: make `MyStruct` here so it doesn't rely upon number
-		assert_eq!(*Object::new_number(0.0).as_any().to_boolean()?.unwrap_data(), false);
-		assert_eq!(*Object::new_number(1.0).as_any().to_boolean()?.unwrap_data(), true);
+		assert_eq!(Object::new_number(0.0).as_any().to_boolean()?, false);
+		assert_eq!(Object::new_number(1.0).as_any().to_boolean()?, true);
 		
 		Ok(())
 	}

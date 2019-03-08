@@ -31,8 +31,7 @@ impl Object<List> {
 
 impl AnyObject {
 	pub fn to_list(&self) -> Result<Object<List>> {
-		self.call_attr(AT_LIST, &[])?
-			.downcast_or_err::<List>()
+		self.call_attr(AT_LIST, &[])?.downcast_or_err::<List>()
 	}
 }
 

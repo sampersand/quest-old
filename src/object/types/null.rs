@@ -73,11 +73,11 @@ mod funcs {
 }
 
 impl_type! { for Null;
-	quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
-	quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
-	quest_funcs::AT_NUM => |o, _| Ok(funcs::at_num(o)),
-	quest_funcs::EQL => |o, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(o, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
-	quest_funcs::CALL => |o, a| funcs::call(o, a)
+	quest_funcs::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
+	quest_funcs::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
+	quest_funcs::AT_NUM => |n, _| Ok(funcs::at_num(n)),
+	quest_funcs::EQL => |n, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(n, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
+	quest_funcs::CALL => funcs::call
 }
 
 #[cfg(test)]
@@ -185,8 +185,8 @@ mod integration {
 		let ref n = Object::new_null();
 		let ref n2 = Object::new_null().as_any();
 
-		assert_eq!(n.as_any().call_attr(CALL, &[])?, funcs::call(n, &[])?);
-		assert_eq!(n.as_any().call_attr(CALL, &[n2])?, funcs::call(n, &[n2])?);
+		assert!(n.as_any().call_attr(CALL, &[])? == funcs::call(n, &[])?);
+		assert!(n.as_any().call_attr(CALL, &[n2])? == funcs::call(n, &[n2])?);
 
 		Ok(())
 	}

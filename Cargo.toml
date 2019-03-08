@@ -5,8 +5,9 @@ authors = ["sam <westerhack@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["ignore-unused"]
+default = ["ignore-unused", "display-special-numbers"]
 ignore-unused = []
+display-special-numbers = []
 
 [dependencies]
 lazy_static = "1.1.0"
