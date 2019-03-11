@@ -789,7 +789,7 @@ mod integration {
 	}
 
 	macro_rules! assert_call_eq {
-		(SINGLE; $attr:ident $func:ident $ret:ty { $($n:tt)* }) => {
+		(UNARY; $attr:ident $func:ident $ret:ty { $($n:tt)* }) => {
 			{
 				$({
 					let ref n = Object::new_number($n);
@@ -798,7 +798,7 @@ mod integration {
 			}
 		};
 
-		(DOUBLE; $attr:ident $func:ident $ret:ty { $first:tt $firstarg:tt $(,$n:tt $narg:tt)* }) => {
+		($attr:ident $func:ident $ret:ty { $first:tt $firstarg:tt $(,$n:tt $narg:tt)* }) => {
 			{
 				let ref first = Object::new_number($first);
 				let ref firstarg = Object::new_number($firstarg);
@@ -814,7 +814,7 @@ mod integration {
 		}
 	}
 	macro_rules! assert_call_nan {
-		(DOUBLE; $attr:ident $func:ident { $($n:tt $narg:tt),* }) => ({
+		($attr:ident $func:ident { $($n:tt $narg:tt),* }) => ({
 			$(
 				assert!(Object::new_number($n)
 					.as_any()
@@ -823,13 +823,24 @@ mod integration {
 					.is_nan()
 				);
 			)*
+		});
+		(UNARY; $attr:ident $func:ident { $($n:tt)* }) => ({
+			$(
+				assert!(Object::new_number($n)
+					.as_any()
+					.call_attr($attr, &[])?
+					.downcast_or_err::<Number>()?
+					.is_nan()
+				);
+			)*
 		})
+
 	}
 
 
 	#[test]
 	fn at_bool() -> Result<()> {
-		assert_call_eq!(SINGLE; AT_BOOL at_bool Boolean {
+		assert_call_eq!(UNARY; AT_BOOL at_bool Boolean {
 			0.0 (-0.0) NAN 13.4 INF PI E (-123.0) 12e49
 		});
 		Ok(())
@@ -837,7 +848,7 @@ mod integration {
 
 	#[test]
 	fn at_text() -> Result<()> {
-		assert_call_eq!(SINGLE; AT_TEXT at_text Text {
+		assert_call_eq!(UNARY; AT_TEXT at_text Text {
 			0.0 1.0 (-1.0) 12.34 (-1.23) NAN INF NEG_INF (-990.0)
 		});
 		Ok(())
@@ -845,7 +856,7 @@ mod integration {
 
 	#[test]
 	fn at_num() -> Result<()> {
-		assert_call_eq!(SINGLE; AT_NUM at_num Number {
+		assert_call_eq!(UNARY; AT_NUM at_num Number {
 			13.4 INF PI E (-123.0) 12.0
 		});
 		Ok(())
@@ -854,12 +865,12 @@ mod integration {
 
 	#[test]
 	fn add() -> Result<()> {
-		assert_call_eq!(DOUBLE; ADD add Number {
+		assert_call_eq!(ADD add Number {
 			13.4 (-4.0), PI PI, E E, 8e9 1e9,
 			NEG_INF NEG_INF, INF INF
 		});
 
-		assert_call_nan!(DOUBLE; ADD add {
+		assert_call_nan!(ADD add {
 			NAN NAN, 123.0 NAN, NEG_INF NAN,
 			INF NEG_INF, NEG_INF INF
 		});
@@ -869,12 +880,12 @@ mod integration {
 	
 	#[test]
 	fn sub() -> Result<()> {
-		assert_call_eq!(DOUBLE; SUB sub Number {
+		assert_call_eq!(SUB sub Number {
 			13.4 (-4.0), PI PI, E PI, 9e9 1e9,
 			INF NEG_INF, NEG_INF INF
 		});
 
-		assert_call_nan!(DOUBLE; SUB sub {
+		assert_call_nan!(SUB sub {
 			NAN NAN, 123.0 NAN, NEG_INF NAN,
 			INF INF, NEG_INF NEG_INF
 		});
@@ -884,12 +895,12 @@ mod integration {
 
 	#[test]
 	fn mul() -> Result<()> {
-		assert_call_eq!(DOUBLE; MUL mul Number {
+		assert_call_eq!(MUL mul Number {
 			13.4 (-4.0), PI PI, E (-1e-4), 9e3 8e3,
 			INF INF, INF NEG_INF, NEG_INF INF, NEG_INF NEG_INF
 		});
 
-		assert_call_nan!(DOUBLE; MUL mul {
+		assert_call_nan!(MUL mul {
 			NAN NAN, 123.0 NAN, INF NAN
 		});
 
@@ -898,12 +909,12 @@ mod integration {
 
 	#[test]
 	fn div() -> Result<()> {
-		assert_call_eq!(DOUBLE; DIV div Number {
+		assert_call_eq!(DIV div Number {
 			13.4 (-4.0), PI E, 9e7 (-8e-2), 4.0 1.0,
 			1.0 0.0
 		});
 
-		assert_call_nan!(DOUBLE; DIV div {
+		assert_call_nan!(DIV div {
 			NAN NAN, 123.0 NAN, INF NAN,
 			INF INF, INF NEG_INF, NEG_INF INF, NEG_INF NEG_INF
 		});
@@ -915,11 +926,11 @@ mod integration {
 		// Note: Rust implements negative modulos differently than other languages:
 		// n % d == n - (n/d).to_integer() * d
 		// this is especially important for negative numbers
-		assert_call_eq!(DOUBLE; MOD r#mod Number {
+		assert_call_eq!(MOD r#mod Number {
 			13.5 (-4.0), 13.4 3.1, PI E, 9e19 9.0, (-1234.0) 39.0
 		});
 
-		assert_call_nan!(DOUBLE; MOD r#mod {
+		assert_call_nan!(MOD r#mod {
 			NAN NAN, 123.0 NAN, INF NAN, 1.0 0.0,
 			INF INF, INF NEG_INF, NEG_INF INF, NEG_INF NEG_INF
 		});
@@ -929,14 +940,14 @@ mod integration {
 
 	#[test]
 	fn pow() -> Result<()> {
-		assert_call_eq!(DOUBLE; POW pow Number {
+		assert_call_eq!(POW pow Number {
 			13.5 4.0, 64.0 0.5, (-0.05) (-1.0),
 			9e9 2.0, NAN 0.0, INF 0.0, 12.0 (-2.0), 64.0 0.5,
 			1234.0 NEG_INF, 1234.0 INF, 12.0 0.0,
 			INF INF, NEG_INF INF, INF NEG_INF, NEG_INF NEG_INF
 		});
 
-		assert_call_nan!(DOUBLE; POW pow {
+		assert_call_nan!(POW pow {
 			NAN NAN, 123.0 NAN, NAN INF, NAN NEG_INF,
 			INF NAN, NEG_INF NAN
 		});
@@ -946,708 +957,145 @@ mod integration {
 
 	#[test]
 	fn eql() -> Result<()> {
-		assert_eq!(funcs::eql(&_n_![13.5], &_n_![13.5]), true);
-		assert_eq!(funcs::eql(&_n_![-123.0], &_n_![-123.0]), true);
-		assert_eq!(funcs::eql(&_n_![123.0], &_n_![-123.0]), false);
-		assert_eq!(funcs::eql(&_n_![-0.0], &_n_![0.0]), true);
-		assert_eq!(funcs::eql(&_n_![9.123e9], &_n_![-9.123e9]), false);
-
-		assert_eq!(funcs::eql(&_n_![-1.0], &_n_![-2.0]), false);
-		assert_eq!(funcs::eql(&_n_![-1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::eql(&_n_![-1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::eql(&_n_![-1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::eql(&_n_![ 0.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::eql(&_n_![ 0.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::eql(&_n_![ 0.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::eql(&_n_![ 1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::eql(&_n_![ 1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::eql(&_n_![ 1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::eql(&_n_![ 1.0], &_n_![ 2.0]), false);
-
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![NEG_INF+1.0]), true);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![INF-1.0]), true);
-
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![INF]), false);
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![NAN]), false);
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![0.0]), false);
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![-1.0]), false);
-		assert_eq!(funcs::eql(&_n_![NAN], &_n_![1.0]), false);
-
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![INF]), false);
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![NAN]), false);
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![0.0]), false);
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::eql(&_n_![NEG_INF], &_n_![1.0]), false);
-
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![INF]), true);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![NAN]), false);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![0.0]), false);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::eql(&_n_![INF], &_n_![1.0]), false);
+		assert_call_eq!(EQL eql Boolean {
+			13.5 13.5, (-123.0) (-123.0), 123.0 (-123.0), (-0.0) 0.0, 9.123e9 (-9.123e9),
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NEG_INF (NEG_INF+1.0), INF (INF-1.0),
+			NAN NEG_INF, NAN INF, NAN NAN,
+			NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN,
+			NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN,
+			INF 0.0, INF (-1.0), INF 1.0
+		});
 		Ok(())
 	}
 
 	#[test]
 	fn neq() -> Result<()> {
-		assert_eq!(funcs::neq(&_n_![13.5], &_n_![13.5]), false);
-		assert_eq!(funcs::neq(&_n_![-123.0], &_n_![-123.0]), false);
-		assert_eq!(funcs::neq(&_n_![123.0], &_n_![-123.0]), true);
-		assert_eq!(funcs::neq(&_n_![-0.0], &_n_![0.0]), false);
-		assert_eq!(funcs::neq(&_n_![9.123e9], &_n_![-9.123e9]), true);
-
-		assert_eq!(funcs::neq(&_n_![-1.0], &_n_![-2.0]),  true);
-		assert_eq!(funcs::neq(&_n_![-1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::neq(&_n_![-1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::neq(&_n_![-1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::neq(&_n_![ 0.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::neq(&_n_![ 0.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::neq(&_n_![ 0.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::neq(&_n_![ 1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::neq(&_n_![ 1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::neq(&_n_![ 1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::neq(&_n_![ 1.0], &_n_![ 2.0]),  true);
-
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![INF]), true);
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![NAN]), true);
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![0.0]), true);
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![-1.0]), true);
-		assert_eq!(funcs::neq(&_n_![NAN], &_n_![1.0]), true);
-
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![INF]), true);
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![NAN]), true);
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![0.0]), true);
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::neq(&_n_![NEG_INF], &_n_![1.0]), true);
-
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![INF]), false);
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![NAN]), true);
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![0.0]), true);
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::neq(&_n_![INF], &_n_![1.0]), true);
+		assert_call_eq!(NEQ neq Boolean {
+			13.5 13.5, (-123.0) (-123.0), 123.0 (-123.0), (-0.0) 0.0, 9.123e9 (-9.123e9),
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
+		});
 		Ok(())
 	}
 
 	#[test]
 	fn lth() -> Result<()> {
-		assert_eq!(funcs::lth(&_n_![13.5], &_n_![4.0]), false);
-		assert_eq!(funcs::lth(&_n_![0.5], &_n_![64.0]), true);
-		assert_eq!(funcs::lth(&_n_![-0.05], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![2.0], &_n_![9e9]), true);
-		assert_eq!(funcs::lth(&_n_![9e9], &_n_![9e9]), false);
-
-		assert_eq!(funcs::lth(&_n_![-1.0], &_n_![-2.0]), false);
-		assert_eq!(funcs::lth(&_n_![-1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![-1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::lth(&_n_![-1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::lth(&_n_![ 0.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![ 0.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::lth(&_n_![ 0.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::lth(&_n_![ 1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![ 1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::lth(&_n_![ 1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::lth(&_n_![ 1.0], &_n_![ 2.0]),  true);
-
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![INF]), false);
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![NAN]), false);
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![0.0]), false);
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![NAN], &_n_![1.0]), false);
-
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![INF]), true);
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![NAN]), false);
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![0.0]), true);
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::lth(&_n_![NEG_INF], &_n_![1.0]), true);
-
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![INF]), false);
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![NAN]), false);
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![0.0]), false);
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::lth(&_n_![INF], &_n_![1.0]), false);
+		assert_call_eq!(LTH lth Boolean {
+			13.5 4.0, 0.5 64.0, (-0.05) (-1.0), 2.0 9e9, 9e9 9e9,
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
+		});
 		Ok(())
 	}
 
 	#[test]
 	fn leq() -> Result<()> {
-		assert_eq!(funcs::leq(&_n_![13.5], &_n_![4.0]), false);
-		assert_eq!(funcs::leq(&_n_![0.5], &_n_![64.0]), true);
-		assert_eq!(funcs::leq(&_n_![-0.05], &_n_![-1.0]), false);
-		assert_eq!(funcs::leq(&_n_![2.0], &_n_![9e9]), true);
-		assert_eq!(funcs::leq(&_n_![9e9], &_n_![9e9]), true);
-
-		assert_eq!(funcs::leq(&_n_![-1.0], &_n_![-2.0]), false);
-		assert_eq!(funcs::leq(&_n_![-1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::leq(&_n_![-1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::leq(&_n_![-1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::leq(&_n_![ 0.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::leq(&_n_![ 0.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::leq(&_n_![ 0.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::leq(&_n_![ 1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::leq(&_n_![ 1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::leq(&_n_![ 1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::leq(&_n_![ 1.0], &_n_![ 2.0]),  true);
-
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![INF]), false);
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![NAN]), false);
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![0.0]), false);
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![-1.0]), false);
-		assert_eq!(funcs::leq(&_n_![NAN], &_n_![1.0]), false);
-
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![INF]), true);
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![NAN]), false);
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![0.0]), true);
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::leq(&_n_![NEG_INF], &_n_![1.0]), true);
-
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![INF]), true);
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![NAN]), false);
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![0.0]), false);
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::leq(&_n_![INF], &_n_![1.0]), false);
-	Ok(())
+		assert_call_eq!(LEQ leq Boolean {
+			13.5 4.0, 0.5 64.0, (-0.05) (-1.0), 2.0 9e9, 9e9 9e9,
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
+		});
+		Ok(())
 	}
 
 	#[test]
 	fn gth() -> Result<()> {
-		assert_eq!(funcs::gth(&_n_![13.5], &_n_![4.0]), true);
-		assert_eq!(funcs::gth(&_n_![0.5], &_n_![64.0]), false);
-		assert_eq!(funcs::gth(&_n_![-0.05], &_n_![-1.0]), true);
-		assert_eq!(funcs::gth(&_n_![2.0], &_n_![9e9]), false);
-		assert_eq!(funcs::gth(&_n_![9e9], &_n_![9e9]), false);
-
-		assert_eq!(funcs::gth(&_n_![-1.0], &_n_![-2.0]),  true);
-		assert_eq!(funcs::gth(&_n_![-1.0], &_n_![-1.0]), false);
-		assert_eq!(funcs::gth(&_n_![-1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::gth(&_n_![-1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::gth(&_n_![ 0.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::gth(&_n_![ 0.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::gth(&_n_![ 0.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::gth(&_n_![ 1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::gth(&_n_![ 1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::gth(&_n_![ 1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::gth(&_n_![ 1.0], &_n_![ 2.0]), false);
-
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![INF]), false);
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![NAN]), false);
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![0.0]), false);
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![-1.0]), false);
-		assert_eq!(funcs::gth(&_n_![NAN], &_n_![1.0]), false);
-
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![INF]), false);
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![NAN]), false);
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![0.0]), false);
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::gth(&_n_![NEG_INF], &_n_![1.0]), false);
-
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![INF]), false);
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![NAN]), false);
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![0.0]), true);
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::gth(&_n_![INF], &_n_![1.0]), true);
+		assert_call_eq!(GTH gth Boolean {
+			13.5 4.0, 0.5 64.0, (-0.05) (-1.0), 2.0 9e9, 9e9 9e9,
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
+		});
 		Ok(())
 	}
 
 	#[test]
 	fn geq() -> Result<()> {
-		assert_eq!(funcs::geq(&_n_![13.5], &_n_![4.0]), true);
-		assert_eq!(funcs::geq(&_n_![0.5], &_n_![64.0]), false);
-		assert_eq!(funcs::geq(&_n_![-0.05], &_n_![-1.0]), true);
-		assert_eq!(funcs::geq(&_n_![2.0], &_n_![9e9]), false);
-		assert_eq!(funcs::geq(&_n_![9e9], &_n_![9e9]), true);
-
-		assert_eq!(funcs::geq(&_n_![-1.0], &_n_![-2.0]),  true);
-		assert_eq!(funcs::geq(&_n_![-1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::geq(&_n_![-1.0], &_n_![ 0.0]), false);
-		assert_eq!(funcs::geq(&_n_![-1.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::geq(&_n_![ 0.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::geq(&_n_![ 0.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::geq(&_n_![ 0.0], &_n_![ 1.0]), false);
-		assert_eq!(funcs::geq(&_n_![ 1.0], &_n_![-1.0]),  true);
-		assert_eq!(funcs::geq(&_n_![ 1.0], &_n_![ 0.0]),  true);
-		assert_eq!(funcs::geq(&_n_![ 1.0], &_n_![ 1.0]),  true);
-		assert_eq!(funcs::geq(&_n_![ 1.0], &_n_![ 2.0]), false);
-
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![NEG_INF]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![NEG_INF+1.0]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![INF]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![NAN]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![0.0]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![-1.0]), false);
-		assert_eq!(funcs::geq(&_n_![NAN], &_n_![1.0]), false);
-
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![INF]), false);
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![NAN]), false);
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![0.0]), false);
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![-1.0]), false);
-		assert_eq!(funcs::geq(&_n_![NEG_INF], &_n_![1.0]), false);
-
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![NEG_INF]), true);
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![INF]), true);
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![NAN]), false);
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![0.0]), true);
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![-1.0]), true);
-		assert_eq!(funcs::geq(&_n_![INF], &_n_![1.0]), true);
+		assert_call_eq!(GEQ geq Boolean {
+			13.5 4.0, 0.5 64.0, (-0.05) (-1.0), 2.0 9e9, 9e9 9e9,
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0)  0.0, (-1.0)  1.0,
+			0.0 (-1.0), 0.0  0.0, 0.0  1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0  1.0, 1.0  2.0,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
+		});
 		Ok(())
 	}
 
 	#[test]
 	fn cmp() -> Result<()> {
-		use super::Number;
-		assert_eq!(funcs::cmp(&_n_![13.5], &_n_![4.0]).downcast::<Number>().unwrap(), 1.0);
-		assert_eq!(funcs::cmp(&_n_![0.5], &_n_![64.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![-0.05], &_n_![-1.0]).downcast::<Number>().unwrap(), 1.0);
-		assert_eq!(funcs::cmp(&_n_![2.0], &_n_![9e9]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![9e9], &_n_![9e9]).downcast::<Number>().unwrap(), 0.0);
-
-		assert_eq!(funcs::cmp(&_n_![-1.0], &_n_![-1.0]).downcast::<Number>().unwrap(),  0.0);
-		assert_eq!(funcs::cmp(&_n_![-1.0], &_n_![ 0.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![-1.0], &_n_![ 1.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![ 0.0], &_n_![-1.0]).downcast::<Number>().unwrap(),  1.0);
-		assert_eq!(funcs::cmp(&_n_![ 0.0], &_n_![ 0.0]).downcast::<Number>().unwrap(),  0.0);
-		assert_eq!(funcs::cmp(&_n_![ 0.0], &_n_![ 1.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![ 1.0], &_n_![-1.0]).downcast::<Number>().unwrap(),  1.0);
-		assert_eq!(funcs::cmp(&_n_![ 1.0], &_n_![ 0.0]).downcast::<Number>().unwrap(),  1.0);
-		assert_eq!(funcs::cmp(&_n_![ 1.0], &_n_![ 1.0]).downcast::<Number>().unwrap(),  0.0);
-
-		assert!(funcs::cmp(&_n_![NAN], &_n_![NEG_INF]).is_null());
-		assert!(funcs::cmp(&_n_![NAN], &_n_![INF]).is_null());
-		assert!(funcs::cmp(&_n_![NAN], &_n_![NAN]).is_null());
-		assert!(funcs::cmp(&_n_![NAN], &_n_![0.0]).is_null());
-		assert!(funcs::cmp(&_n_![NAN], &_n_![-1.0]).is_null());
-		assert!(funcs::cmp(&_n_![NAN], &_n_![1.0]).is_null());
-
-		assert_eq!(funcs::cmp(&_n_![NEG_INF], &_n_![NEG_INF]).downcast::<Number>().unwrap(), 0.0);
-		assert_eq!(funcs::cmp(&_n_![NEG_INF], &_n_![INF]).downcast::<Number>().unwrap(), -1.0);
-		assert!(funcs::cmp(&_n_![NEG_INF], &_n_![NAN]).is_null());
-		assert_eq!(funcs::cmp(&_n_![NEG_INF], &_n_![0.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![NEG_INF], &_n_![-1.0]).downcast::<Number>().unwrap(), -1.0);
-		assert_eq!(funcs::cmp(&_n_![NEG_INF], &_n_![1.0]).downcast::<Number>().unwrap(), -1.0);
-
-		assert_eq!(funcs::cmp(&_n_![INF], &_n_![NEG_INF]).downcast::<Number>().unwrap(), 1.0);
-		assert_eq!(funcs::cmp(&_n_![INF], &_n_![INF]).downcast::<Number>().unwrap(), 0.0);
-		assert!(funcs::cmp(&_n_![INF], &_n_![NAN]).is_null());
-		assert_eq!(funcs::cmp(&_n_![INF], &_n_![0.0]).downcast::<Number>().unwrap(), 1.0);
-		assert_eq!(funcs::cmp(&_n_![INF], &_n_![-1.0]).downcast::<Number>().unwrap(), 1.0);
-		assert_eq!(funcs::cmp(&_n_![INF], &_n_![1.0]).downcast::<Number>().unwrap(), 1.0);
-		Ok(())
-	}
-
-	#[test]
-	fn pos() -> Result<()> {
-		assert_eq!(funcs::pos(&_n_![-9e9]), 9e9);
-		assert_eq!(funcs::pos(&_n_![-2.0]), 2.0);
-		assert_eq!(funcs::pos(&_n_![-1.0]), 1.0);
-		assert_eq!(funcs::pos(&_n_![-0.5]), 0.5);
-		assert_eq!(funcs::pos(&_n_![ 0.0]), 0.0);
-		assert_eq!(funcs::pos(&_n_![ 1.0]), 1.0);
-		assert_eq!(funcs::pos(&_n_![ 2.0]), 2.0);
-		assert!(funcs::pos(&_n_![NAN]).is_nan());
-		assert_eq!(funcs::pos(&_n_![NEG_INF]), INF);
-		assert_eq!(funcs::pos(&_n_![INF]), INF);
-
-		let n = Object::new_number(3.14);
-		assert_obj_duplicated!(n, funcs::pos(&n));
-		Ok(())
-	}
-}
-/*
-#[cfg(test)]
-mod fn_tests_ {
-	use super::*;
-	use crate::object::types::{Boolean, Text};
-	use crate::err::Error;
-	use std::f64::{INF, NEG_INF, NAN, consts::{PI, E}};
-
-	macro_rules! n {
-		($num:expr) => (Object::new_number($num).as_any())
-	}
-
-	macro_rules! assert_num_call_eq {
-		($attr:tt $type:ty; $(($obj:expr, $args:tt) => $expected:expr),*) => {
-			$(
-				assert_eq!(*n!($obj).call_attr($attr, &$args)?.downcast_or_err::<$type>()?.unwrap_data(), $expected);
-			)*
+		macro_rules! assert_call_cmp {
+			($($n:tt $narg:tt),*) => {
+				$({
+					let ref n = Object::new_number($n);
+					let ref a = Object::new_number($narg);
+					let ref x = n.as_any().call_attr(CMP, &[&a.as_any()])?;
+					let ref y = funcs::cmp(n, a);
+					assert_eq!(x,  y);
+				})*
+			}
 		}
-	}
 
-	#[test]
-	fn at_bool() -> Result<()> {
-		assert_num_call_eq!(AT_BOOL Boolean;
-			(0.0, []) => false,
-			(-0.0, []) => false,
-			(NAN, []) => false,
-			(13.4, []) => true,
-			(INF, []) => true,
-			(PI, []) => true,
-			(E, []) => true,
-			(-123.0, []) => true,
-			(12e49, [&n!(34.0)]) => true // ensure extra args are ignored
+		assert_param_missing!(Object::new_number(2.0).as_any().call_attr(CMP, &[]));
+
+		assert_call_cmp!(
+			13.5 4.0, 0.5 64.0, (-0.05) (-1.0), 2.0 9e9, 9e9 9e9,
+			(-1.0) (-2.0), (-1.0) (-1.0), (-1.0) 0.0, (-1.0) 1.0,
+			0.0 (-1.0), 0.0 0.0, 0.0 1.0,
+			1.0 (-1.0), 1.0  0.0, 1.0 1.0, 1.0 1.2,
+			NAN NEG_INF, NAN INF, NAN NAN, NAN 0.0, NAN (-1.0), NAN 1.0,
+			NEG_INF NEG_INF, NEG_INF INF, NEG_INF NAN, NEG_INF 0.0, NEG_INF (-1.0), NEG_INF 1.0,
+			INF NEG_INF, INF INF, INF NAN, INF 0.0, INF (-1.0), INF 1.0
 		);
 
 		Ok(())
-	}
 
-	#[test]
-	fn at_text() -> Result<()> {
-		assert_num_call_eq!(AT_TEXT Text;
-			(0.0, []) => *"0",
-			(1.0, []) => *"1",
-			(-1.0, []) => *"-1",
-			(123.4, []) => *"123.4",
-			(-1.23, []) => *"-1.23",
-			(NAN, []) => *"NaN",
-			(INF, []) => *"inf",
-			(NEG_INF, []) => *"-inf",
-			(-999.0, [&n!(12.0)]) => *"-999" // ensure extra args are ignored
-		);
-
-		// Note: There isn't a specified way large numbers (eg `1e9`) will be displayed
-		// Also of note: There isn't a specified length of characters for `E` or `PI`.
-		Ok(())
-	}
-
-	#[test]
-	fn at_num() -> Result<()> {
-		assert_num_call_eq!(AT_NUM Number; 
-			(13.4, []) => 13.4,
-			(INF, []) => INF,
-			(PI, []) => PI,
-			(E, []) => E,
-			(-123.0, []) => -123.0,
-			(12.0, [&n!(34.0)]) => 12.0 // ensure extra args are ignored
-		);
-
-		// make sure that it acutally duplicates the map
-		let obj = Object::new_number(12.45);
-		let dup = obj.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?;
-		assert_eq!(obj.unwrap_data(), dup.unwrap_data());
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
-		Ok(())
-	}
-
-	#[test]
-	fn add() -> Result<()> {
-		assert_num_call_eq!(ADD Number;
-			(13.4, [&n!(-4.0)]) => 9.4,
-			(PI, [&n!(PI)]) => 2f64 * PI,
-			(E, [&n!(E)]) => 2f64 * E,
-			(8e9, [&n!(1e9), &n!(PI)]) => 9e9 // ensure extra args are ignored
-		);
-
-		assert!(n!(NAN).call_attr(ADD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(ADD, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
-		assert!(n!(INF).call_attr(ADD, &[&n!(NEG_INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		assert_param_missing!(n!(4.0).call_attr(ADD, &[]));
-
-		Ok(())
-	}
-	
-
-	#[test]
-	fn sub() -> Result<()> {
-		assert_num_call_eq!(SUB Number;
-			(13.4, [&n!(-4.0)]) => 17.4,
-			(PI, [&n!(PI)]) => 0.0,
-			(E, [&n!(PI)]) => E - PI,
-			(9e9, [&n!(1e9), &n!(PI)]) => 8e9 // ensure extra args are ignored
-		);
-
-		assert!(n!(NAN).call_attr(SUB, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(SUB, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(SUB, &[&n!(NEG_INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
-
-		assert_param_missing!(n!(4.0).call_attr(SUB, &[]));
-
-		Ok(())
-	}
-	
-	#[test]
-	fn mul() -> Result<()> {
-		assert_num_call_eq!(MUL Number;
-			(13.4, [&n!(-4.0)]) => -53.6,
-			(PI, [&n!(PI)]) => PI * PI,
-			(E, [&n!(-1e-4)]) => E * -1e-4,
-			(9e3, [&n!(8e3), &n!(PI)]) => 7.2e7 // ensure extra args are ignored
-		);
-
-
-		assert!(n!(NAN).call_attr(MUL, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(MUL, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
-		assert!(n!(INF).call_attr(MUL, &[&n!(NEG_INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
-
-		assert_param_missing!(n!(4.0).call_attr(MUL, &[]));
-
-		Ok(())
-	}
-	
-
-	#[test]
-	fn div() -> Result<()> {
-		assert_num_call_eq!(DIV Number;
-			(13.4, [&n!(-4.0)]) => -3.35,
-			(PI, [&n!(E)]) => PI / E,
-			(9e7, [&n!(-8e-2)]) => -1.125e9,
-			(4.0, [&n!(1.0), &n!(PI)]) => 4.0 // ensure extra args are ignored
-		);
-
-		// make sure to test for negative stuff here
-		assert!(n!(1.0).call_attr(DIV, &[&n!(0.0)])?.downcast_or_err::<Number>()?.unwrap_data().is_infinite());
-
-		assert!(n!(NAN).call_attr(DIV, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(DIV, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(DIV, &[&n!(NEG_INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		assert_param_missing!(n!(4.0).call_attr(DIV, &[]));
-
-		Ok(())
-	}
-	
-
-	#[test]
-	fn r#mod() -> Result<()> {
-		// Note: Rust implements negative modulos differently than other languages:
-		// n % d == n - (n/d).to_integer() * d
-		assert_num_call_eq!(MOD Number;
-			(13.5, [&n!(-4.0)]) => 1.5, 
-			(13.4, [&n!(3.1)]) => 1.0,
-			(PI, [&n!(E)]) => PI % E,
-			(9e19, [&n!(9.0)]) => 0.0,
-			(-1234.0, [&n!(39.0), &n!(PI)]) => -25.0 // ensure extra args are ignored
-		);
-
-		assert!(n!(1.0).call_attr(MOD, &[&n!(0.0)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		assert!(n!(NAN).call_attr(MOD, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(MOD, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(INF).call_attr(MOD, &[&n!(NEG_INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		assert_param_missing!(n!(4.0).call_attr(MOD, &[]));
-
-		Ok(())
-	}
-	
-	#[test]
-	fn pow() -> Result<()> {
-		assert_num_call_eq!(POW Number;
-			(13.5, [&n!(4.0)]) => 33215.0625, 
-			(64.0, [&n!(0.5)]) => 8.0,
-			(-0.05, [&n!(-1.0)]) => -20.0,
-			(9e9, [&n!(2.0)]) => 8.1e19,
-			(NAN, [&n!(0.0)]) => 1.0,
-			(INF, [&n!(0.0)]) => 1.0,
-			(1234.0, [&n!(NEG_INF)]) => 0.0,
-			(1234.0, [&n!(INF)]) => INF,
-			(12.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
-		);
-
-		assert!(n!(NAN).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(NAN).call_attr(POW, &[&n!(INF)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-		assert!(n!(NEG_INF).call_attr(POW, &[&n!(NAN)])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-		assert_param_missing!(n!(4.0).call_attr(POW, &[]));
-
-		Ok(())
-	}
-
-
-	#[test]
-	fn eql() -> Result<()> {
-		assert_num_call_eq!(EQL Boolean;
-			(13.5, [&n!(13.5)]) => true, 
-			(-123.0, [&n!(-123.0)]) => true,
-			(-0.0, [&n!(0.0)]) => true,
-			(9.123e9, [&n!(-9.123e9)]) => false,
-			(INF, [&n!(INF)]) => true,
-			(INF, [&n!(NEG_INF)]) => false,
-			(NAN, [&n!(NAN)]) => false,
-			(1.0, [&n!(1.0), &n!(2.0)]) => true // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(EQL, &[]));
-
-		Ok(())
-	}
-
-	#[test]
-	fn neq() -> Result<()> {
-		assert_num_call_eq!(NEQ Boolean;
-			(13.5, [&n!(13.5)]) => false, 
-			(-123.0, [&n!(-123.0)]) => false,
-			(-0.0, [&n!(0.0)]) => false,
-			(9.123e9, [&n!(-9.123e9)]) => true,
-			(INF, [&n!(INF)]) => false,
-			(INF, [&n!(NEG_INF)]) => true,
-			(NAN, [&n!(NAN)]) => true,
-			(1.0, [&n!(1.0), &n!(2.0)]) => false // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(NEQ, &[]));
-
-		Ok(())
-	}
-
-	#[test]
-	fn cmp() -> Result<()> {
-		assert_num_call_eq!(CMP Number;
-			(13.5, [&n!(4.0)]) => 1.0, 
-			(0.5, [&n!(64.0)]) => -1.0,
-			(-0.05, [&n!(-1.0)]) => 1.0,
-			(2.0, [&n!(9e9)]) => -1.0,
-			(9e9, [&n!(9e9)]) => 0.0,
-			(NEG_INF, [&n!(INF)]) => -1.0,
-			(1.0, [&n!(0.0), &n!(PI)]) => 1.0 // ensure extra args are ignored
-		);
-
-		assert!(n!(NAN).call_attr(CMP, &[&n!(9.0)])?.is_null());
-		assert!(n!(NAN).call_attr(CMP, &[&n!(NAN)])?.is_null());
-		assert!(n!(NEG_INF).call_attr(CMP, &[&n!(NAN)])?.is_null());
-
-
-		assert_param_missing!(n!(4.0).call_attr(CMP, &[]));
-
-		Ok(())
-	}
-
-	#[test]
-	fn lth() -> Result<()> {
-		assert_num_call_eq!(LTH Boolean;
-			(13.5, [&n!(4.0)]) => false, 
-			(0.5, [&n!(64.0)]) => true,
-			(-0.05, [&n!(-1.0)]) => false,
-			(2.0, [&n!(9e9)]) => true,
-			(9e9, [&n!(9e9)]) => false,
-			(NAN, [&n!(9.0)]) => false,
-			(NAN, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(INF)]) => true,
-			(1.0, [&n!(0.0), &n!(PI)]) => false // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(LTH, &[]));
-
-		Ok(())
-	}
-
-	#[test]
-	fn leq() -> Result<()> {
-		assert_num_call_eq!(LEQ Boolean;
-			(13.5, [&n!(4.0)]) => false, 
-			(0.5, [&n!(64.0)]) => true,
-			(-0.05, [&n!(-1.0)]) => false,
-			(2.0, [&n!(9e9)]) => true,
-			(9e9, [&n!(9e9)]) => true,
-			(NAN, [&n!(9.0)]) => false,
-			(NAN, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(INF)]) => true,
-			(NEG_INF, [&n!(NEG_INF)]) => true,
-			(1.0, [&n!(1.0), &n!(-PI)]) => true // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(LEQ, &[]));
-
-		Ok(())
-	}
-
-
-	#[test]
-	fn gth() -> Result<()> {
-		assert_num_call_eq!(GTH Boolean;
-			(13.5, [&n!(4.0)]) => true, 
-			(0.5, [&n!(64.0)]) => false,
-			(-0.05, [&n!(-1.0)]) => true,
-			(9e9, [&n!(2.0)]) => true,
-			(9e9, [&n!(9e9)]) => false,
-			(NAN, [&n!(9.0)]) => false,
-			(NAN, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(INF)]) => false,
-			(1.0, [&n!(0.0), &n!(PI)]) => true // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(GTH, &[]));
-
-		Ok(())
-	}
-
-	#[test]
-	fn geq() -> Result<()> {
-		assert_num_call_eq!(GEQ Boolean;
-			(13.5, [&n!(4.0)]) => true, 
-			(0.5, [&n!(64.0)]) => false,
-			(-0.05, [&n!(-1.0)]) => true,
-			(9e9, [&n!(2.0)]) => true,
-			(9e9, [&n!(9e9)]) => true,
-			(NAN, [&n!(9.0)]) => false,
-			(NAN, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(NAN)]) => false,
-			(NEG_INF, [&n!(INF)]) => false,
-			(1.0, [&n!(0.0), &n!(PI)]) => true // ensure extra args are ignored
-		);
-
-		assert_param_missing!(n!(4.0).call_attr(GEQ, &[]));
-
-		Ok(())
 	}
 
 	#[test]
 	fn pos() -> Result<()> {
-		assert_num_call_eq!(POS Number;
-			(13.5, []) => 13.5, 
-			(-PI, []) => PI,
-			(0.0, []) => 0.0,
-			(9e9, []) => 9e9,
-			(NEG_INF, []) => INF,
-			(INF, []) => INF,
-			(1.0, [&n!(-PI)]) => 1.0 // ensure extra args are ignored
-		);
+		assert_call_eq!(UNARY; POS pos Number {
+			(-9e9) (-2.612) (-1.0) (-0.05)
+			0.05 0.0 1.0 2.0 INF NEG_INF
+		});
 
-		assert!(n!(NAN).call_attr(POS, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
-
-
-		// make sure that it acutally duplicates the map
-		let obj = Object::new_number(12.45);
-		let dup = obj.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?;
-		assert_obj_duplicated!(obj, dup);
-
+		assert_call_nan!(UNARY; POS pos { NAN });
 		Ok(())
 	}
 
 	#[test]
 	fn neg() -> Result<()> {
-		assert_num_call_eq!(NEG Number;
-			(13.5, []) => -13.5, 
-			(-PI, []) => PI,
-			(0.0, []) => 0.0,
-			(9e9, []) => -9e9,
-			(NEG_INF, []) => INF,
-			(INF, []) => NEG_INF,
-			(1.0, [&n!(PI)]) => -1.0 // ensure extra args are ignored
-		);
-
-		assert!(n!(NAN).call_attr(NEG, &[])?.downcast_or_err::<Number>()?.unwrap_data().is_nan());
+		assert_call_eq!(UNARY; NEG neg Number {
+			(-9e9) (-2.612) (-1.0) (-0.05)
+			0.05 0.0 1.0 2.0 INF NEG_INF
+		});
+		
+		assert_call_nan!(UNARY; NEG neg { NAN });
 
 		Ok(())
 	}
-}*/
-
+}
 
 #[cfg(test)]
 mod tests {
