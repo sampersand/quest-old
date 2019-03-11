@@ -10,7 +10,7 @@ pub enum Error {
 	BadArgument { pos: usize, arg: AnyObject, msg: &'static str },
 	Boxed(Box<dyn ErrorTrait>),
 	#[cfg(test)]
-	__Testing
+	__Testing // this error is used to throw custom errors when testing
 }
 
 #[must_use]

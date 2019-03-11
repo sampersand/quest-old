@@ -86,6 +86,12 @@ impl From<String> for Variable {
 	}
 }
 
+impl PartialEq<&'_ str> for Object<Variable> {
+	fn eq(&self, rhs: &&'_ str) -> bool {
+		self.data().read().expect("read error in Object<Variable>::eq").as_ref() == rhs
+	}
+}
+
 impl_type! { for Variable;
 	AT_VAR => |obj, _| Ok(Object::new_variable(**obj.data().read().expect(data_err![read in Variable, AT_VAR])))
 }

@@ -42,7 +42,7 @@ macro_rules! getarg {
 }
 
 macro_rules! define_blank {
-	(struct $struct:ident;) => { define_blank!(struct $struct, BLANK_MAP;); };
+	(struct $struct:ident; $($impl_type_block:tt)*) => { define_blank!(struct $struct, BLANK_MAP; $($impl_type_block)*); };
 	(struct $struct:ident, $map:ident; $($impl_type_block:tt)*) => {
 		struct $struct;
 		impl ::std::hash::Hash for $struct {
