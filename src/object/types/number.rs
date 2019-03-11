@@ -3,13 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::object::{Object, AnyObject};
 use crate::err::{Result, Error};
 use std::ops::Deref;
-use super::quest_funcs::{
-	AT_BOOL, AT_NUM, AT_TEXT,
-	CALL,
-	ADD, SUB, MUL, DIV, MOD, POW,
-	EQL, NEQ, LTH, GTH, LEQ, GEQ, CMP,
-	POS, NEG
-};
+use super::quest_funcs;
 
 type Inner = f64;
 
@@ -73,7 +67,7 @@ impl Object<Number> {
 
 impl AnyObject {
 	pub fn to_number(&self) -> Result<Object<Number>> {
-		self.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()
+		self.call_attr(quest_funcs::AT_NUM, &[])?.downcast_or_err::<Number>()
 	}
 }
 
@@ -279,29 +273,29 @@ mod funcs {
 }
 
 impl_type! { for Number;
-	AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
-	AT_NUM => |n, _| Ok(funcs::at_num(n)),
-	AT_TEXT => |n, _| Ok(funcs::at_text(n)),
+	quest_funcs::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
+	quest_funcs::AT_NUM => |n, _| Ok(funcs::at_num(n)),
+	quest_funcs::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
 
-	CALL => funcs::call,
+	quest_funcs::CALL => funcs::call,
 
-	ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] @ to_number)?)),
-	SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] @ to_number)?)),
-	MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] @ to_number)?)),
-	DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] @ to_number)?)),
-	MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
-	POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
 
-	EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0] @ to_number)?)),
-	NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
-	LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
-	GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),
-	LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] @ to_number)?)),
-	GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] @ to_number)?)),
-	CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] @ to_number)?)),
+	quest_funcs::CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] @ to_number)?)),
 
-	POS => |n, _| Ok(funcs::pos(n)),
-	NEG => |n, _| Ok(funcs::neg(n)),
+	quest_funcs::POS => |n, _| Ok(funcs::pos(n)),
+	quest_funcs::NEG => |n, _| Ok(funcs::neg(n)),
 }
 #[cfg(test)]
 mod fn_tests {
