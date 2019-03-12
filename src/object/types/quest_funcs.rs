@@ -65,9 +65,10 @@ define_consts!{
 	L_CLONE = "clone";
 	L_LEN = "len";
 	L_EVAL = "eval";
-	L___ID__ = "__id__";
-	L___MAP__ = "__map__";
-	L___ENV__ = "__env__";
+	L_ID = "__id__";
+	L_MAP = "__map__";
+	L_ENV = "__env__";
+	L_PARENT = "parent";
 }
 
 

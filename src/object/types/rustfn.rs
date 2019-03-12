@@ -2,6 +2,7 @@ use crate::object::{Object, AnyObject};
 use crate::err::{Error, Result};
 use std::any::Any;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use std::fmt::{self, Debug, Formatter};
 
 use super::quest_funcs::{
@@ -10,9 +11,10 @@ use super::quest_funcs::{
 
 type Inner = dyn Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> + Send + Sync;
 
+#[derive(Clone)]
 pub struct RustFn {
 	name: Option<&'static str>,
-	func: Box<Inner>
+	func: Arc<Inner>
 }
 
 impl RustFn {
@@ -36,7 +38,7 @@ impl RustFn {
 			      T: Send + Sync + 'static {
 		RustFn {
 			name,
-			func: Box::new(move |obj, args| (func)(&obj.downcast_or_err::<T>()?, args))
+			func: Arc::new(move |obj, args| (func)(&obj.downcast_or_err::<T>()?, args))
 		}
 	}
 
@@ -55,7 +57,7 @@ impl RustFn {
 	fn _new_untyped<F>(name: Option<&'static str>, func: F) -> RustFn
 			where F: Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject>,
 			      F: Send + Sync + 'static {
-		RustFn { name, func: Box::new(func) }
+		RustFn { name, func: Arc::new(func) }
 	}
 
 
@@ -64,6 +66,7 @@ impl RustFn {
 	}
 
 	pub fn call(&self, obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+
 		(self.func)(obj, args)
 	}
 }

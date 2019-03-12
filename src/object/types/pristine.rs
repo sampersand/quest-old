@@ -59,9 +59,9 @@ lazy_static! {
 	pub static ref GETTER: Object<RustFn> = Object::new_named_untyped_rustfn(const_concat!("Pristine::`", quest_funcs::COLON_COLON, "`"), colon_colon);
 
 	pub static ref PRISTINE_MAP: Shared<dyn Map> = object_map!{UNTYPED "Pristine", HashMap::new(); 
-		quest_funcs::L___ID__ => |o, _| Ok(funcs::__id__(o)),
-		quest_funcs::L___MAP__ => |o, _| Ok(funcs::__map__(o)),
-		quest_funcs::L___ENV__ => |o, _| Ok(funcs::__env__(o)),
+		quest_funcs::L_ID => |o, _| Ok(funcs::__id__(o)),
+		quest_funcs::L_MAP => |o, _| Ok(funcs::__map__(o)),
+		quest_funcs::L_ENV => |o, _| Ok(funcs::__env__(o)),
 		quest_funcs::COLON_COLON => colon_colon,
 		quest_funcs::ACCESS => |o, a| funcs::access(o, getarg!(a[0])?),
 		quest_funcs::ACCESS_ASSIGN => |o, a| Ok(funcs::access_assign(o, getarg!(a[0])?.clone(), getarg!(a[1])?.clone())),
@@ -73,8 +73,20 @@ lazy_static! {
 
 #[cfg(test)]
 mod fn_tests {
+	use super::*;
+
+	define_blank!(struct Blank;);
+
 	#[test]
 	fn foo() {
+		let ref obj = Object::new_number(1.0).as_any();
+		let ref eql = funcs::access(obj, &Object::new_variable("==").as_any()).unwrap();
+
+		println!("{:?}", eql.call_attr("()", &[&Object::new_number(1.0).as_any(), &Object::new_number(1.0).as_any()]));
+		// println!("{:?}", funcs::access_assign(obj, Object::new_variable("one"), Object::new_number(1.0)));
+		// println!("{:?}", funcs::access(obj, &Object::new_variable("one").as_any()));
+		// println!("{:?}", funcs::access(obj, &Object::new_variable("==").as_any()));
+		// println!("\n\n");
 		unimplemented!()
 	}
 }

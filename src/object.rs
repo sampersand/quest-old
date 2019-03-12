@@ -16,7 +16,8 @@ pub type AnyObject = Object<dyn Any + Send + Sync>;
 
 struct InternalOps {
 	hash: fn(&dyn Any, &mut Hasher),
-	debug: fn(&dyn Any, &mut Formatter) -> fmt::Result
+	debug: fn(&dyn Any, &mut Formatter) -> fmt::Result,
+	duplicate: fn(&AnyObject) -> AnyObject
 }
 
 #[derive(Debug)]
@@ -60,8 +61,16 @@ impl<T: Type + Sized> Object<T> {
 				parent: parent,
 			},
 			ops: InternalOps {
-				hash: |obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to `hasher`").hash(&mut hasher),
-				debug: |obj, f| Debug::fmt(Any::downcast_ref::<T>(obj).expect("bad obj passed to `fmt`"), f)
+				hash: |obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to `hash`").hash(&mut hasher),
+				debug: |obj, f| Debug::fmt(Any::downcast_ref::<T>(obj).expect("bad obj passed to `debug`"), f),
+				duplicate: |obj| Object::_new(
+					{
+						let obj: &dyn Any = &*obj.data().read().expect("read err in InternalOps::duplicate");
+						Any::downcast_ref::<T>(obj).expect("bad obj passed to `duplicate`").clone()
+					},
+					obj.parent().clone(),
+					obj.env().clone()
+				) as AnyObject
 			},
 			weakref: unsafe { std::mem::uninitialized() },
 			data: RwLock::new(data)
@@ -80,11 +89,7 @@ impl<T: Type + Sized> Object<T> {
 
 impl<T: Type + Clone + Sized> Object<T> {
 	pub fn duplicate(&self) -> Object<T> {
-		Object::_new(
-			self.0.data.read().expect("read err in Object::duplicate").clone(),
-			self.0.info.parent.clone(),
-			self.0.info.env.clone()
-		)
+		(self.0.ops.duplicate)(&self.as_any()).downcast::<T>().expect("duplicate returned a different object type?")
 	}
 }
 
@@ -125,11 +130,6 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 		&*self.data().read().expect("read err in Object::data_ptr") as *const _
 	}
 
-
-	pub fn duplicate_add_parent(&self, parent: AnyObject) -> Object<T> {
-		unimplemented!()
-	}
-
 	pub fn id_eq(&self, other: &Object<T>) -> bool {
 		self.0.info.id == other.0.info.id
 	}
@@ -143,6 +143,19 @@ impl AnyObject {
 	pub fn get_attr(&self, attr: &'static str) -> Result<AnyObject> {
 		self.get(&Object::new_variable(attr).as_any())
 	}
+
+	pub fn duplicate(&self) -> AnyObject {
+		(self.0.ops.duplicate)(&self)
+	}
+
+	pub fn duplicate_add_parent(&self, parent: AnyObject) -> AnyObject {
+		// this is extremely hacky, but oh well
+		let dup = self.duplicate();
+		dup.map()
+		   .write().expect("write error")
+		   .set(Object::new_variable(quest_funcs::L_PARENT).as_any(), parent);
+		dup
+	}
 }
 
 impl AnyObject {
@@ -150,7 +163,13 @@ impl AnyObject {
 		let val = self.get(attr)?;
 
 		match val.downcast::<types::RustFn>() {
-			Some(rustfn) => rustfn.data().read().expect("err when calling rustfn").call(self, args),
+			Some(rustfn) => {
+				// if let Some(ref parent) = rustfn.0.map.read().expect("read err in AnyObject::call").get(&Object::new_variable(quest_funcs::L_PARENT).as_any()) {
+					// rustfn.data().read().expect("err when calling rustfn").call(parent, args)
+				// } else {
+					rustfn.data().read().expect("err when calling rustfn").call(self, args)
+				// }
+			},
 			None => {
 				let mut self_args = Vec::with_capacity(args.len() + 1);
 				self_args.push(self);

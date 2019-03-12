@@ -33,7 +33,7 @@ use crate::{shared::Shared, map::Map as MapTrait};
 use std::hash::Hash;
 use std::fmt::Debug;
 
-pub trait Type : Debug + PartialEq + Hash + Send + Sync + 'static {
+pub trait Type : Debug + PartialEq + Hash + Send + Sync + Clone + 'static {
 	fn get_type_map() -> Shared<dyn MapTrait>;
 }
 

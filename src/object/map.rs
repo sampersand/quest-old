@@ -84,10 +84,10 @@ use super::*;
 	use crate::object::Object;
 	use std::any::Any;
 
-	#[derive(Debug, PartialEq, Hash)]
+	#[derive(Clone, Debug, PartialEq, Hash)]
 	struct MyType;
 
-	#[derive(Debug, PartialEq, Eq, Hash)]
+	#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 	struct MyInnerType;
 	impl Type for MyInnerType {
 		fn get_type_map() -> Shared<dyn Map> { unreachable!() }
