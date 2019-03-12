@@ -5,39 +5,90 @@ use crate::{shared::Shared, map::Map, err::Error};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 
-use super::quest_funcs::{
-	L___ID__, L___MAP__, L___ENV__,
-	ACCESS, ACCESS_ASSIGN, ACCESS_DELETE, ACCESS_HAS,
-	COLON_COLON
-};
+use super::quest_funcs;
+
+mod funcs {
+	use crate::map::Map as MapTrait;
+	use crate::err::{Error, Result};
+	use crate::object::types::{quest_funcs, Number, Boolean, Map};
+	use crate::object::{AnyObject, Object};
+
+	pub fn __id__(obj: &AnyObject) -> Object<Number> {
+		Object::new_number(obj.id() as _)
+	}
+
+	pub fn __map__(obj: &AnyObject) -> Object<Map> {
+		// Object::new_map(obj.map())
+		unimplemented!("__map__")
+	}
+
+	pub fn __env__(obj: &AnyObject) -> Object<Map> {
+		unimplemented!("__env__")
+	}
+
+	pub fn colon_colon(obj: &AnyObject, attr: &AnyObject) -> Result<AnyObject>{
+		obj.0.map.read()
+			.expect(const_concat!("read err in Pristine::`", quest_funcs::COLON_COLON, "`"))
+			.get(attr).ok_or_else(|| Error::AttrMissing { obj: obj.clone(), attr: attr.clone()})
+	}
+
+	pub fn access(obj: &AnyObject, attr: &AnyObject) -> Result<AnyObject> {
+		Ok(obj.get(attr)?.duplicate_add_parent(obj.clone()))
+	}
+
+	pub fn access_assign(obj: &AnyObject, attr: AnyObject, val: AnyObject) -> AnyObject {
+		obj.set(attr, val.clone());
+		val
+	}
+
+	pub fn access_delete(obj: &AnyObject, attr: &AnyObject) -> Result<AnyObject> {
+		obj.del(attr)
+	}
+
+	pub fn access_has(obj: &AnyObject, attr: &AnyObject) -> Object<Boolean> {
+		Object::new_boolean(obj.has(attr))
+	}
+}
+
+// so we can have the GETTER object
+fn colon_colon(obj: &AnyObject, args: &[&AnyObject]) -> crate::err::Result<AnyObject> {
+	funcs::colon_colon(obj, getarg!(args[0])?)
+}
 
 lazy_static! {
-	pub static ref GETTER: Object<RustFn> = Object::new_named_untyped_rustfn(const_concat!("Pristine::`", COLON_COLON, "`"), |obj, args| {
-		let attr = getarg!(args[0])?;
-		obj.0.map.read().expect(const_concat!("read err in Pristine::`", COLON_COLON, "`")).get(attr).ok_or_else(|| Error::AttrMissing { obj: obj.clone(), attr: attr.clone()})
-	});
+	pub static ref GETTER: Object<RustFn> = Object::new_named_untyped_rustfn(const_concat!("Pristine::`", quest_funcs::COLON_COLON, "`"), colon_colon);
 
 	pub static ref PRISTINE_MAP: Shared<dyn Map> = object_map!{UNTYPED "Pristine", HashMap::new(); 
-		L___ID__ => |obj, _| Ok(Object::new_number(obj.id() as f64)),
-		L___MAP__ => |obj, _| Ok(unimplemented!("map objects")),
-		L___ENV__ => |obj, _| Ok(unimplemented!("map objects")),
-
-		// there isn't actually a '::' thing here because it's not accessible ever
-		// (although it might be useful for things like `.?`)
-
-		ACCESS => |obj, args| {
-			Ok(obj.get(getarg!(args[0])?)?.duplicate_add_parent(obj.clone()))
-		},
-
-		ACCESS_ASSIGN => |obj, args| {
-			obj.set(getarg!(args[0])?.clone(), getarg!(args[1])?.clone());
-			Ok(getarg!(args[0])?.clone())
-		},
-
-		ACCESS_DELETE => |obj, args| obj.del(getarg!(args[0])?),
-		ACCESS_HAS => |obj, args| Ok(Object::new_boolean(obj.has(getarg!(args[0])?)))
+		quest_funcs::L___ID__ => |o, _| Ok(funcs::__id__(o)),
+		quest_funcs::L___MAP__ => |o, _| Ok(funcs::__map__(o)),
+		quest_funcs::L___ENV__ => |o, _| Ok(funcs::__env__(o)),
+		quest_funcs::COLON_COLON => colon_colon,
+		quest_funcs::ACCESS => |o, a| funcs::access(o, getarg!(a[0])?),
+		quest_funcs::ACCESS_ASSIGN => |o, a| Ok(funcs::access_assign(o, getarg!(a[0])?.clone(), getarg!(a[1])?.clone())),
+		quest_funcs::ACCESS_DELETE => |o, a| funcs::access_delete(o, getarg!(a[0])?),
+		quest_funcs::ACCESS_HAS => |o, a| Ok(funcs::access_has(o, getarg!(a[0])?))
 	};
 }
+
+
+#[cfg(test)]
+mod fn_tests {
+	#[test]
+	fn foo() {
+		unimplemented!()
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

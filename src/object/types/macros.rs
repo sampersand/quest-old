@@ -21,7 +21,7 @@ macro_rules! assert_obj_duplicated {
 		unsafe { 
 			assert_ne!($obj1.data_ptr(), $obj2.data_ptr());
 		}
-		assert!(!$obj1._map_only_for_testing().ptr_eq($obj2._map_only_for_testing()));
+		assert!(!$obj1.map().ptr_eq($obj2.map()));
 	})
 }
 

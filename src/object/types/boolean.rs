@@ -8,7 +8,9 @@ use super::quest_funcs;
 pub struct Boolean(bool);
 
 const TRUE_STR: &str = "true";
+const TRUE_NUM: f64 = 1.0;
 const FALSE_STR: &str = "false";
+const FALSE_NUM: f64 = 0.0;
 
 impl Boolean {
 	#[inline]
@@ -79,12 +81,9 @@ impl Display for Boolean {
 }
 
 mod funcs {
-	use super::{Boolean, TRUE_STR, FALSE_STR};
+	use super::{Boolean, TRUE_STR, FALSE_STR, TRUE_NUM, FALSE_NUM};
 	use crate::object::types::{Number, Text};
 	use crate::object::Object;
-
-	pub const TRUE_NUM: f64 = 1.0;
-	pub const FALSE_NUM: f64 = 0.0;
 
 	pub fn at_bool(obj: &Object<Boolean>) -> Object<Boolean> {
 		obj.duplicate()
@@ -170,9 +169,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert!(!funcs::TRUE_NUM.is_nan() && !funcs::FALSE_NUM.is_nan()); // else these tests break
-		assert_eq!(funcs::at_num(t), funcs::TRUE_NUM);
-		assert_eq!(funcs::at_num(f), funcs::FALSE_NUM);
+		assert_eq!(funcs::at_num(t), super::TRUE_NUM);
+		assert_eq!(funcs::at_num(f), super::FALSE_NUM);
 
 	}
 
@@ -232,115 +230,101 @@ mod fn_tests {
 
 #[cfg(test)]
 mod integration {
-	use super::{Boolean, funcs};
+	use super::{Boolean, funcs, quest_funcs};
 	use crate::err::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Number};
-	use crate::object::types::quest_funcs::{
-		AT_BOOL, AT_TEXT, AT_NUM,
-		NOT, EQL, B_XOR, B_AND, B_OR
-	};
+	use quest_funcs::*;
 
 	#[test]
 	fn at_bool() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, funcs::at_bool(t));
-		assert_eq!(f.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, funcs::at_bool(f));
+		assert_eq!(t.call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, true);
+		assert_eq!(f.call_attr(AT_BOOL, &[t])?.downcast_or_err::<Boolean>()?, false);
 
+		assert_obj_duplicated!(t.downcast_or_err::<Boolean>()?, t.call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?);
 		Ok(())
 	}
 
 	#[test]
 	fn at_text() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, funcs::at_text(t));
-		assert_eq!(f.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, funcs::at_text(f));
+		assert_eq!(t.call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, super::TRUE_STR);
+		assert_eq!(f.call_attr(AT_TEXT, &[t])?.downcast_or_err::<Text>()?, super::FALSE_STR);
 
 		Ok(())
 	}
 
 	#[test]
 	fn at_num() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, funcs::at_num(t));
-		assert_eq!(f.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, funcs::at_num(f));
+		assert_eq!(t.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, super::TRUE_NUM);
+		assert_eq!(f.call_attr(AT_NUM, &[t])?.downcast_or_err::<Number>()?, super::FALSE_NUM);
 
 		Ok(())
 	}
 
 	#[test]
 	fn not() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(NOT, &[])?.downcast_or_err::<Boolean>()?, funcs::not(t));
-		assert_eq!(f.as_any().call_attr(NOT, &[])?.downcast_or_err::<Boolean>()?, funcs::not(f));
+		assert_eq!(t.call_attr(NOT, &[])?.downcast_or_err::<Boolean>()?, false);
+		assert_eq!(f.call_attr(NOT, &[t])?.downcast_or_err::<Boolean>()?, true);
 
 		Ok(())
 	}
 
 	#[test]
 	fn eql() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(EQL, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(t, t));
-		assert_eq!(t.as_any().call_attr(EQL, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(t, f));
-		assert_eq!(f.as_any().call_attr(EQL, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(f, t));
-		assert_eq!(f.as_any().call_attr(EQL, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(f, f));
-
-		assert_param_missing!(t.as_any().call_attr(EQL, &[]));
+		assert_eq!(t.call_attr(EQL, &[t])?.downcast_or_err::<Boolean>()?, true);
+		assert_eq!(t.call_attr(EQL, &[f, t])?.downcast_or_err::<Boolean>()?, false);
+		assert_param_missing!(t.call_attr(EQL, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn b_xor() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(B_XOR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(t, t));
-		assert_eq!(t.as_any().call_attr(B_XOR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(t, f));
-		assert_eq!(f.as_any().call_attr(B_XOR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(f, t));
-		assert_eq!(f.as_any().call_attr(B_XOR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_xor(f, f));
-
-		assert_param_missing!(t.as_any().call_attr(B_XOR, &[]));
+		assert_eq!(t.call_attr(B_XOR, &[t])?.downcast_or_err::<Boolean>()?, false);
+		assert_eq!(t.call_attr(B_XOR, &[f, t])?.downcast_or_err::<Boolean>()?, true);
+		assert_param_missing!(t.call_attr(B_XOR, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn b_and() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(B_AND, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(t, t));
-		assert_eq!(t.as_any().call_attr(B_AND, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(t, f));
-		assert_eq!(f.as_any().call_attr(B_AND, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(f, t));
-		assert_eq!(f.as_any().call_attr(B_AND, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_and(f, f));
-
-		assert_param_missing!(t.as_any().call_attr(B_AND, &[]));
+		assert_eq!(t.call_attr(B_AND, &[t])?.downcast_or_err::<Boolean>()?, true);
+		assert_eq!(t.call_attr(B_AND, &[f, t])?.downcast_or_err::<Boolean>()?, false);
+		assert_param_missing!(t.call_attr(B_AND, &[]));
 
 		Ok(())
 	}
 
 	#[test]
 	fn b_or() -> Result<()> {
-		let ref t = Object::new_boolean(true);
-		let ref f = Object::new_boolean(false);
+		let ref t = Object::new_boolean(true).as_any();
+		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.as_any().call_attr(B_OR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(t, t));
-		assert_eq!(t.as_any().call_attr(B_OR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(t, f));
-		assert_eq!(f.as_any().call_attr(B_OR, &[&t.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(f, t));
-		assert_eq!(f.as_any().call_attr(B_OR, &[&f.as_any()])?.downcast_or_err::<Boolean>()?, funcs::b_or(f, f));
-
-		assert_param_missing!(t.as_any().call_attr(B_OR, &[]));
+		assert_eq!(t.call_attr(B_OR, &[t])?.downcast_or_err::<Boolean>()?, true);
+		assert_eq!(t.call_attr(B_OR, &[f, t])?.downcast_or_err::<Boolean>()?, true);
+		assert_param_missing!(t.call_attr(B_OR, &[]));
 
 		Ok(())
 	}
@@ -349,6 +333,13 @@ mod integration {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn make_sure_not_nan() {
+		assert!(!TRUE_NUM.is_nan());
+		assert!(!FALSE_NUM.is_nan());
+	}
+
 	#[test]
 	fn new() {
 		assert_eq!(Boolean::new(true), Boolean::new(true));

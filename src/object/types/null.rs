@@ -6,6 +6,7 @@ use std::ops::Deref;
 use super::quest_funcs;
 
 const NULL_STR: &str = "null";
+const NULL_NUM: f64 = 0.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Null;
@@ -46,13 +47,13 @@ impl Display for Null {
 }
 
 mod funcs {
-	use super::{Null, NULL_STR};
+	use super::Null;
 	use crate::err::Result;
 	use crate::object::{Object, AnyObject};
 	use crate::object::types::{Text, Boolean, Number};
 
 	pub fn at_text(_: &Object<Null>) -> Object<Text> {
-		Object::new_text_str(NULL_STR)
+		Object::new_text_str(super::NULL_STR)
 	}
 
 	pub fn at_bool(_: &Object<Null>) -> Object<Boolean> {
@@ -60,7 +61,7 @@ mod funcs {
 	}
 
 	pub fn at_num(_: &Object<Null>) -> Object<Number> {
-		Object::new_number(std::f64::NAN)
+		Object::new_number(super::NULL_NUM)
 	}
 
 	pub fn eql(_: &Object<Null>, _: &Object<Null>) -> Object<Boolean> {
@@ -87,20 +88,17 @@ mod fn_tests {
 
 	#[test]
 	fn at_bool() {
-		let ref n = Object::new_null();
-		assert_eq!(funcs::at_bool(n), false);
+		assert_eq!(funcs::at_bool(&Object::new_null()), false);
 	}
 
 	#[test]
 	fn at_text() {
-		let ref n = Object::new_null();
-		assert_eq!(funcs::at_text(n), super::NULL_STR);
+		assert_eq!(funcs::at_text(&Object::new_null()), super::NULL_STR);
 	}
 
 	#[test]
 	fn at_num() {
-		let ref n = Object::new_null();
-		assert!(funcs::at_num(n).is_nan());
+		assert_eq!(funcs::at_num(&Object::new_null()), 0.0);
 	}
 
 	#[test]
@@ -113,34 +111,27 @@ mod fn_tests {
 	#[test]
 	fn call() {
 		let ref n = Object::new_null();
-		match funcs::call(n, &[]) {
-			Ok(ref obj) if obj.is_null() => {},
-			other => panic!("bad result: {:?}", other)
-		}
-
-		match funcs::call(n, &[&Object::new_null().as_any()]) {
-			Ok(ref obj) if obj.is_null() => {},
-			other => panic!("bad result: {:?}", other)
-		}
+		assert!(funcs::call(n, &[]).unwrap().is_null());
+		assert!(funcs::call(n, &[&Object::new_null().as_any()]).unwrap().is_null());
 	}
 }
 
 #[cfg(test)]
 mod integration {
-	use super::funcs;
+	use super::*;
 	use crate::err::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Boolean, Number};
-	use crate::object::types::quest_funcs::{
-		AT_BOOL, AT_TEXT, AT_NUM,
-		EQL, CALL
-	};
+	use quest_funcs::*;
+
+	define_blank!(struct Blank;);
 
 	#[test]
 	fn at_bool() -> Result<()> {
 		let ref n = Object::new_null();
-		
-		assert_eq!(n.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, funcs::at_bool(n));
+
+		assert_eq!(n.as_any().call_attr(AT_BOOL, &[])?.downcast_or_err::<Boolean>()?, false);
+		assert_eq!(n.as_any().call_attr(AT_BOOL, &[&Blank::new_any()])?.downcast_or_err::<Boolean>()?, false);
 
 		Ok(())
 	}
@@ -149,32 +140,29 @@ mod integration {
 	fn at_text() -> Result<()> {
 		let ref n = Object::new_null();
 		
-		assert_eq!(n.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, funcs::at_text(n));
+		assert_eq!(n.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, "null");
+		assert_eq!(n.as_any().call_attr(AT_TEXT, &[&Blank::new_any()])?.downcast_or_err::<Text>()?, "null");
 
 		Ok(())
 	}
 
 	#[test]
 	fn at_num() -> Result<()> {
-		let ref n = Object::new_null();
+		let ref n = Object::new_null().as_any();
 		
-		assert!(n.as_any().call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?.is_nan());
+		assert_eq!(n.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, 0.0);
+		assert_eq!(n.call_attr(AT_NUM, &[&Blank::new_any()])?.downcast_or_err::<Number>()?, 0.0);
 
 		Ok(())
 	}
 
 	#[test]
 	fn eql() -> Result<()> {
-		let ref n = Object::new_null();
-		let ref n2 = Object::new_null();
+		let ref n = Object::new_null().as_any();
 		
-		assert_eq!(n.as_any().call_attr(EQL, &[&n.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(n, n));
-		assert_eq!(n.as_any().call_attr(EQL, &[&n2.as_any()])?.downcast_or_err::<Boolean>()?, funcs::eql(n, n2));
-
-		define_blank!(struct Blank;);
-		assert_eq!(n.as_any().call_attr(EQL, &[&Blank::new_any()])?.downcast_or_err::<Boolean>()?, false);
-
-		assert_param_missing!(n.as_any().call_attr(EQL, &[]));
+		assert_eq!(n.call_attr(EQL, &[&n])?.downcast_or_err::<Boolean>()?, true);
+		assert_eq!(n.call_attr(EQL, &[&Blank::new_any()])?.downcast_or_err::<Boolean>()?, false);
+		assert_param_missing!(n.call_attr(EQL, &[]));
 
 		Ok(())
 	
@@ -182,11 +170,10 @@ mod integration {
 
 	#[test]
 	fn call() -> Result<()> {
-		let ref n = Object::new_null();
-		let ref n2 = Object::new_null().as_any();
+		let ref n = Object::new_null().as_any();
 
-		assert!(n.as_any().call_attr(CALL, &[])? == funcs::call(n, &[])?);
-		assert!(n.as_any().call_attr(CALL, &[n2])? == funcs::call(n, &[n2])?);
+		assert!(n.call_attr(CALL, &[])?.is_null());
+		assert!(n.call_attr(CALL, &[&Blank::new_any()])?.is_null());
 
 		Ok(())
 	}

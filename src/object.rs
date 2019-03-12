@@ -116,8 +116,7 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 		&self.0.data
 	}
 
-	#[cfg(test)]
-	pub fn _map_only_for_testing(&self) -> &Shared<ObjectMap> {
+	pub fn map(&self) -> &Shared<ObjectMap> {
 		&self.0.map
 	}
 

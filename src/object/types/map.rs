@@ -27,7 +27,7 @@ impl Map {
 }
 
 impl Object<Map> {
-	pub fn new_list(map: ObjMap) -> Object<Map> {
+	pub fn new_map(map: ObjMap) -> Object<Map> {
 		Object::new(Map::new(map))
 	}
 }

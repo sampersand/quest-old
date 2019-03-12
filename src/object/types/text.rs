@@ -307,7 +307,7 @@ mod fn_tests {
 		let dup = obj.as_any().call_attr(ADD, &[&t!("world")])?.downcast_or_err::<Text>()?;
 		assert_eq!(*obj.unwrap_data(), "Hello, "); // make sure it's not edited in-place
 		assert_eq!(*dup.unwrap_data(), "Hello, world");
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		assert!(!obj.map().ptr_eq(dup.map()));
 
 		assert_param_missing!(t!("lol").call_attr(ADD, &[]));
 
@@ -339,7 +339,7 @@ mod fn_tests {
 		let dup = obj.as_any().call_attr(MUL, &[&n!(3)])?.downcast_or_err::<Text>()?;
 		assert_eq!(*obj.unwrap_data(), "foo"); // make sure it's not edited in-place
 		assert_eq!(*dup.unwrap_data(), "foofoofoo");
-		assert!(!obj._map_only_for_testing().ptr_eq(dup._map_only_for_testing()));
+		assert!(!obj.map().ptr_eq(dup.map()));
 
 		// make sure texts (that are numbers) can be multiplied by themselves
 		let t = t!("4");
