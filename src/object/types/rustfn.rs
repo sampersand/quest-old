@@ -119,7 +119,7 @@ impl Debug for RustFn {
 
 impl_type! { for RustFn;
 	// AT_TEXT => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
-	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(obj, args)
+	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(&obj.as_any(), args)
 }
 
 
