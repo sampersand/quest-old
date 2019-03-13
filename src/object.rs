@@ -165,13 +165,7 @@ impl AnyObject {
 		let val = self.get(attr)?;
 
 		match val.downcast::<types::RustFn>() {
-			Some(rustfn) => {
-				// if let Some(ref parent) = rustfn.0.map.read().expect("read err in AnyObject::call").get(&Object::new_variable(literals::L_PARENT).as_any()) {
-					// rustfn.data().read().expect("err when calling rustfn").call(parent, args)
-				// } else {
-					rustfn.data().read().expect("err when calling rustfn").call(self, args)
-				// }
-			},
+			Some(rustfn) => rustfn.data().read().expect("err when calling rustfn").call(self, args),
 			None => {
 				let mut self_args = Vec::with_capacity(args.len() + 1);
 				self_args.push(self);

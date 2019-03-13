@@ -80,12 +80,12 @@ mod fn_tests {
 		let ref obj = Object::new_number(1.0).as_any();
 		let ref eql = funcs::access(obj, &Object::new_variable_testing("==").as_any()).unwrap();
 
-		// println!("{:?}", eql.call_attr("()", &[&Object::new_number(1.0).as_any(), &Object::new_number(1.0).as_any()]));
+		println!("{:?}", eql.call_attr(literals::CALL, &[&Object::new_number(1.0).as_any(), &Object::new_number(1.0).as_any()]));
 		// println!("{:?}", funcs::access_assign(obj, Object::new_variable("one"), Object::new_number(1.0)));
 		// println!("{:?}", funcs::access(obj, &Object::new_variable("one").as_any()));
 		// println!("{:?}", funcs::access(obj, &Object::new_variable("==").as_any()));
 		// println!("\n\n");
-		// unimplemented!()
+		unimplemented!()
 	}
 }
 

@@ -62,7 +62,6 @@ impl RustFn {
 	}
 
 	pub fn call(&self, obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-
 		(self.func)(obj, args)
 	}
 }
@@ -120,7 +119,7 @@ impl Debug for RustFn {
 
 impl_type! { for RustFn;
 	// AT_TEXT => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
-	// CALL => |obj, args| obj.as_any().call_attr(CALL, args)
+	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(obj, args)
 }
 
 
