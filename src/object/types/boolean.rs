@@ -1,8 +1,7 @@
 use std::fmt::{self, Display, Formatter};
-use crate::object::{Object, AnyObject};
+use crate::object::{literals, Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
-use super::quest_funcs;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boolean(bool);
@@ -35,7 +34,7 @@ impl Object<Boolean> {
 
 impl AnyObject {
 	pub fn to_boolean(&self) -> Result<Object<Boolean>> {
-		self.call_attr(quest_funcs::AT_BOOL, &[])?.downcast_or_err::<Boolean>()
+		self.call_attr(literals::AT_BOOL, &[])?.downcast_or_err::<Boolean>()
 	}
 }
 
@@ -128,15 +127,15 @@ mod funcs {
 }
 
 impl_type! { for Boolean;
-	quest_funcs::AT_BOOL => |b, _| Ok(funcs::at_bool(b)),
-	quest_funcs::AT_NUM => |b, _| Ok(funcs::at_num(b)),
-	quest_funcs::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
+	literals::AT_BOOL => |b, _| Ok(funcs::at_bool(b)),
+	literals::AT_NUM => |b, _| Ok(funcs::at_num(b)),
+	literals::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
 
-	quest_funcs::NOT => |b, _| Ok(funcs::not(b)),
-	quest_funcs::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] @ to_boolean)?)),
-	quest_funcs::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::NOT => |b, _| Ok(funcs::not(b)),
+	literals::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] @ to_boolean)?)),
 }
 
 #[cfg(test)]
@@ -230,11 +229,11 @@ mod fn_tests {
 
 #[cfg(test)]
 mod integration {
-	use super::{Boolean, funcs, quest_funcs};
+	use super::{Boolean, funcs, literals};
 	use crate::err::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Number};
-	use quest_funcs::*;
+	use literals::*;
 
 	#[test]
 	fn at_bool() -> Result<()> {

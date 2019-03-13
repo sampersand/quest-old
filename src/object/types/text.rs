@@ -7,7 +7,7 @@ use crate::err::{Result, Error};
 use lazy_static::lazy_static;
 use crate::util::{self, IndexError};
 
-use super::quest_funcs::{
+use crate::object::literals::{self,
 	AT_TEXT, AT_VAR, AT_BOOL, AT_NUM,
 	CALL, L_EVAL, L_LEN,
 	ADD, MUL,

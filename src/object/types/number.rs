@@ -1,9 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use crate::object::{Object, AnyObject};
+use crate::object::{literals, Object, AnyObject};
 use crate::err::{Result, Error};
 use std::ops::Deref;
-use super::quest_funcs;
 
 type Inner = f64;
 
@@ -67,7 +66,7 @@ impl Object<Number> {
 
 impl AnyObject {
 	pub fn to_number(&self) -> Result<Object<Number>> {
-		self.call_attr(quest_funcs::AT_NUM, &[])?.downcast_or_err::<Number>()
+		self.call_attr(literals::AT_NUM, &[])?.downcast_or_err::<Number>()
 	}
 }
 
@@ -138,8 +137,8 @@ impl Display for Number {
 mod funcs {
 	use super::Number;
 	use crate::err::Result;
-	use crate::object::{Object, AnyObject};
-	use crate::object::types::{quest_funcs, Boolean, Text};
+	use crate::object::{literals, Object, AnyObject};
+	use crate::object::types::{Boolean, Text};
 
 	macro_rules! f64_func {
 		(math $oper:tt $name:ident) => { |num, args| {
@@ -170,89 +169,89 @@ mod funcs {
 	}
 
 	pub fn at_text(num: &Object<Number>) -> Object<Text> {
-		Object::new_text(num.data().read().expect(const_concat!("read error in Number::", quest_funcs::AT_TEXT)).as_ref().to_string())
+		Object::new_text(num.data().read().expect(const_concat!("read error in Number::", literals::AT_TEXT)).as_ref().to_string())
 	}
 
 
 	pub fn call(num: &Object<Number>, args: &[&AnyObject]) -> Result<AnyObject> {
-		num.as_any().call_attr(quest_funcs::MUL, args)
+		num.as_any().call_attr(literals::MUL, args)
 	}
 
 	pub fn add(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::ADD]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::ADD]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::ADD]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::ADD]);
 		Object::new_number(lhs + rhs)
 	}
 
 	pub fn sub(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::SUB]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::SUB]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::SUB]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::SUB]);
 		Object::new_number(lhs - rhs)
 	}
 
 	pub fn mul(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::MUL]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::MUL]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::MUL]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::MUL]);
 		Object::new_number(lhs * rhs)
 	}
 
 	pub fn div(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::DIV]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::DIV]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::DIV]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::DIV]);
 		Object::new_number(lhs / rhs)
 	}
 
 	pub fn r#mod(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::MOD]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::MOD]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::MOD]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::MOD]);
 		Object::new_number(lhs % rhs)
 	}
 
 	pub fn pow(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::POW]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::POW]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::POW]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::POW]);
 		Object::new_number(lhs.powf(rhs))
 	}
 
 
 	pub fn eql(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::EQL]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::EQL]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::EQL]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::EQL]);
 		Object::new_boolean(lhs == rhs)
 	}
 
 	pub fn neq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::NEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::NEQ]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::NEQ]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::NEQ]);
 		Object::new_boolean(lhs != rhs)
 	}
 
 	pub fn lth(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::LTH]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::LTH]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::LTH]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::LTH]);
 		Object::new_boolean(lhs < rhs)
 	}
 	pub fn gth(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::GTH]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::GTH]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::GTH]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::GTH]);
 		Object::new_boolean(lhs > rhs)
 	}
 	pub fn leq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::LEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::LEQ]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::LEQ]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::LEQ]);
 		Object::new_boolean(lhs <= rhs)
 	}
 	pub fn geq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::GEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::GEQ]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::GEQ]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::GEQ]);
 		Object::new_boolean(lhs >= rhs)
 	}
 
 	pub fn cmp(lhs: &Object<Number>, rhs: &Object<Number>) -> AnyObject {
 		use std::cmp::{Ord, Ordering};
 
-		let lhs = **lhs.data().read().expect(data_err![read in Number, quest_funcs::CMP]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, quest_funcs::CMP]);
+		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::CMP]);
+		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::CMP]);
 		match lhs.partial_cmp(&rhs) {
 			None => Object::new_null(),
 			Some(Ordering::Less) => Object::new_number(-1.0),
@@ -263,39 +262,39 @@ mod funcs {
 
 
 	pub fn pos(num: &Object<Number>) -> Object<Number> {
-		Object::new_number(num.data().read().expect(data_err![read in Number, quest_funcs::POS]).abs())
+		Object::new_number(num.data().read().expect(data_err![read in Number, literals::POS]).abs())
 	}
 
 	pub fn neg(num: &Object<Number>) -> Object<Number> {
-		Object::new_number(-num.data().read().expect(data_err![read in Number, quest_funcs::POS]).as_ref())
+		Object::new_number(-num.data().read().expect(data_err![read in Number, literals::POS]).as_ref())
 	}
 
 }
 
 impl_type! { for Number;
-	quest_funcs::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
-	quest_funcs::AT_NUM => |n, _| Ok(funcs::at_num(n)),
-	quest_funcs::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
+	literals::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
+	literals::AT_NUM => |n, _| Ok(funcs::at_num(n)),
+	literals::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
 
-	quest_funcs::CALL => funcs::call,
+	literals::CALL => funcs::call,
 
-	quest_funcs::ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
+	literals::ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] @ to_number)?)),
+	literals::SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] @ to_number)?)),
+	literals::MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] @ to_number)?)),
+	literals::DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] @ to_number)?)),
+	literals::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
+	literals::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
 
-	quest_funcs::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] @ to_number)?)),
-	quest_funcs::CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] @ to_number)?)),
+	literals::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0] @ to_number)?)),
+	literals::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
+	literals::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
+	literals::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),
+	literals::LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] @ to_number)?)),
+	literals::GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] @ to_number)?)),
+	literals::CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] @ to_number)?)),
 
-	quest_funcs::POS => |n, _| Ok(funcs::pos(n)),
-	quest_funcs::NEG => |n, _| Ok(funcs::neg(n)),
+	literals::POS => |n, _| Ok(funcs::pos(n)),
+	literals::NEG => |n, _| Ok(funcs::neg(n)),
 }
 #[cfg(test)]
 mod fn_tests {
@@ -766,7 +765,7 @@ mod integration {
 	use super::{funcs, consts::*, Number};
 	use crate::object::Object;
 	use crate::object::types::{Boolean, Text};
-	use crate::object::types::quest_funcs::{
+	use crate::object::literals::{
 		AT_BOOL, AT_TEXT, AT_NUM,
 		ADD, SUB, MUL, DIV, MOD, POW, 
 		EQL, NEQ, LTH, LEQ, GTH, GEQ, CMP,

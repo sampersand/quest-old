@@ -1,8 +1,10 @@
 mod types;
 mod map;
+mod literal;
 
-use self::types::{Type, quest_funcs};
+use self::types::Type;
 use self::map::ObjectMap;
+pub use self::literal::{Literal, consts as literals};
 
 use std::sync::{Arc, RwLock, Weak};
 use std::any::Any;
@@ -136,11 +138,11 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 }
 
 impl AnyObject {
-	pub fn call_attr(&self, attr: &'static str, args: &[&AnyObject]) -> Result<AnyObject> {
+	pub fn call_attr(&self, attr: Literal, args: &[&AnyObject]) -> Result<AnyObject> {
 		self.call(&Object::new_variable(attr).as_any(), args)
 	}
 
-	pub fn get_attr(&self, attr: &'static str) -> Result<AnyObject> {
+	pub fn get_attr(&self, attr: Literal) -> Result<AnyObject> {
 		self.get(&Object::new_variable(attr).as_any())
 	}
 
@@ -153,7 +155,7 @@ impl AnyObject {
 		let dup = self.duplicate();
 		dup.map()
 		   .write().expect("write error")
-		   .set(Object::new_variable(quest_funcs::L_PARENT).as_any(), parent);
+		   .set(Object::new_variable(literals::L_PARENT).as_any(), parent);
 		dup
 	}
 }
@@ -164,7 +166,7 @@ impl AnyObject {
 
 		match val.downcast::<types::RustFn>() {
 			Some(rustfn) => {
-				// if let Some(ref parent) = rustfn.0.map.read().expect("read err in AnyObject::call").get(&Object::new_variable(quest_funcs::L_PARENT).as_any()) {
+				// if let Some(ref parent) = rustfn.0.map.read().expect("read err in AnyObject::call").get(&Object::new_variable(literals::L_PARENT).as_any()) {
 					// rustfn.data().read().expect("err when calling rustfn").call(parent, args)
 				// } else {
 					rustfn.data().read().expect("err when calling rustfn").call(self, args)
@@ -174,19 +176,19 @@ impl AnyObject {
 				let mut self_args = Vec::with_capacity(args.len() + 1);
 				self_args.push(self);
 				self_args.extend(args);
-				val.call_attr(quest_funcs::CALL, self_args.as_ref())
+				val.call_attr(literals::CALL, self_args.as_ref())
 			}
 		}
 	}
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
 		if let Some(var) = attr.downcast::<self::types::Variable>() {
-			if *var.data().read().expect("read err in AnyObject::get").as_ref() == quest_funcs::COLON_COLON {
+			if *var.data().read().expect("read err in AnyObject::get").as_ref() == literals::COLON_COLON {
 				return Ok(self::types::pristine::GETTER.as_any())
 			}
 		}
 
-		self.call_attr(quest_funcs::COLON_COLON, &[attr])
+		self.call_attr(literals::COLON_COLON, &[attr])
 	}
 
 	pub fn set(&self, attr: AnyObject, val: AnyObject) {
@@ -250,14 +252,14 @@ impl PartialEq for AnyObject {
 		use self::types::{Variable, Boolean};
 
 		if let (Some(lhs), Some(rhs)) = (self.downcast::<Variable>(), rhs.downcast::<Variable>()) {
-			let lhs = lhs.data().read().expect(const_concat!("lhs read err in AnyObject::", quest_funcs::EQL));
-			let rhs = rhs.data().read().expect(const_concat!("rhs read err in AnyObject::", quest_funcs::EQL));
+			let lhs = lhs.data().read().expect(const_concat!("lhs read err in AnyObject::", literals::EQL));
+			let rhs = rhs.data().read().expect(const_concat!("rhs read err in AnyObject::", literals::EQL));
 			*lhs == *rhs
 		} else {
-			self.call_attr(quest_funcs::EQL, &[rhs])
+			self.call_attr(literals::EQL, &[rhs])
 				.ok()
 				.and_then(|x| x.to_boolean().ok())
-				.map(|x| x.data().read().expect(const_concat!("read err in AnyObject::", quest_funcs::EQL)).is_true())
+				.map(|x| x.data().read().expect(const_concat!("read err in AnyObject::", literals::EQL)).is_true())
 				.unwrap_or(false)
 		}
 	}
@@ -337,7 +339,7 @@ mod tests {
 	impl Type for MyType {
 		fn get_type_map() -> Shared<dyn Map> {
 			let mut m = HashMap::<AnyObject, AnyObject>::new();
-			m.insert(Object::new_variable(quest_funcs::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
+			m.insert(Object::new_variable(literals::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
 				Ok(Object::new_boolean(arg[0].downcast::<MyType>().map(|x| obj.unwrap_data() == x.unwrap_data()).unwrap_or(false)))
 			}));
 			Shared::new(m)

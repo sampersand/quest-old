@@ -49,7 +49,7 @@ impl<M: Map> Map for ParentMap<M> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::object::Object;
+	use crate::object::{Object, Literal};
 
 	macro_rules! map {
 		(shared; $($key:expr => $val:expr),*) => {Shared::new(map!($($key => $val),*)) as Shared<dyn Map>};
@@ -61,7 +61,7 @@ mod tests {
 	}
 
 	macro_rules! var {
-		($id:expr) => (Object::new_variable($id).as_any())
+		($id:expr) => (Object::new_variable(Literal::new_testing($id)).as_any())
 	}
 	macro_rules! num {
 		($num:expr) => (Object::new_number($num as f64).as_any())

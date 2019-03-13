@@ -3,7 +3,7 @@ use crate::object::{Object, AnyObject};
 use crate::err::{Result, Error};
 use std::ops::Deref;
 
-use super::quest_funcs::{
+use crate::object::literal::consts::{
 	AT_LIST, AT_TEXT, AT_BOOL, AT_MAP,
 	EQL,
 	ADD, SUB, MUL,

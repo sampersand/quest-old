@@ -1,13 +1,9 @@
-use crate::object::{Object, AnyObject};
+use crate::object::{literals, Object, AnyObject};
 use crate::err::{Error, Result};
 use std::any::Any;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::fmt::{self, Debug, Formatter};
-
-use super::quest_funcs::{
-	AT_TEXT, CALL
-};
 
 type Inner = dyn Fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> + Send + Sync;
 
@@ -162,7 +158,7 @@ mod tests {
 	#[test]
 	fn call_wrong_self() {
 		let func = RustFn::new::<_, !>(|_, _| unreachable!());
-		match func.call(&Object::new_variable("lol error").as_any(), &[]).unwrap_err() {
+		match func.call(&Object::new_variable_testing("lol error").as_any(), &[]).unwrap_err() {
 			Error::CastError { .. } => {},
 			other => panic!("Unexpected error returned: {:?}", other)
 		}
@@ -185,7 +181,7 @@ mod tests {
 		});
 
 		assert_eq!(&func.call(&Object::new_number(123.0).as_any(), &[])?, &Object::new_boolean(true).as_any());
-		assert_eq!(&func.call(&Object::new_variable("A").as_any(), &[])?, &Object::new_boolean(false).as_any());
+		assert_eq!(&func.call(&Object::new_variable_testing("A").as_any(), &[])?, &Object::new_boolean(false).as_any());
 
 		Ok(())
 	}

@@ -12,8 +12,6 @@ mod map;
 mod list;
 mod oper;
 mod block;
-pub mod quest_funcs;
-
 pub(super) mod pristine;
 
 pub use self::{

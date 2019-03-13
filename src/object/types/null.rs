@@ -1,9 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use crate::object::{Object, AnyObject};
+use crate::object::{literals, Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
-use super::quest_funcs;
 
 const NULL_STR: &str = "null";
 const NULL_NUM: f64 = 0.0;
@@ -74,11 +73,11 @@ mod funcs {
 }
 
 impl_type! { for Null;
-	quest_funcs::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
-	quest_funcs::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
-	quest_funcs::AT_NUM => |n, _| Ok(funcs::at_num(n)),
-	quest_funcs::EQL => |n, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(n, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
-	quest_funcs::CALL => funcs::call
+	literals::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
+	literals::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
+	literals::AT_NUM => |n, _| Ok(funcs::at_num(n)),
+	literals::EQL => |n, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(n, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
+	literals::CALL => funcs::call
 }
 
 #[cfg(test)]
@@ -122,7 +121,7 @@ mod integration {
 	use crate::err::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Boolean, Number};
-	use quest_funcs::*;
+	use literals::*;
 
 	define_blank!(struct Blank;);
 

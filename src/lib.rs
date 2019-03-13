@@ -11,20 +11,20 @@ mod env;
 mod err;
 
 pub fn _test() {
-	macro_rules! n {
-		($obj:expr) => (Object::new_number($obj).as_any())
-	}
-	macro_rules! t {
-		($obj:expr) => (Object::new_text_str($obj).as_any())
-	}
-	use object::Object;
+	// macro_rules! n {
+	// 	($obj:expr) => (Object::new_number($obj).as_any())
+	// }
+	// macro_rules! t {
+	// 	($obj:expr) => (Object::new_text_str($obj).as_any())
+	// }
+	// use object::Object;
 
-	let ref text = Object::new_text_str("abc").as_any();
-	let ref num1 = Object::new_number(1.0).as_any();
-	let ref num2 = Object::new_number(2.0).as_any();
+	// let ref text = Object::new_text_str("abc").as_any();
+	// let ref num1 = Object::new_number(1.0).as_any();
+	// let ref num2 = Object::new_number(2.0).as_any();
 
-	println!("{:?}", text.call_attr("[]=", &[&n!(1.0), &n!(1.0), &t!("")]));
-	println!("{:?}", text.get_attr("[]").unwrap().call_attr("()", &[text]));
+	// println!("{:?}", text.call_attr("[]=", &[&n!(1.0), &n!(1.0), &t!("")]));
+	// println!("{:?}", text.get_attr("[]").unwrap().call_attr("()", &[text]));
 	// let num2 = object::Object::new_number(000.123);
 	// use crate::map::Map;
 

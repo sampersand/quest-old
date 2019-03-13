@@ -7,9 +7,7 @@ use crate::object::{Type, Object, AnyObject};
 use crate::shared::Shared;
 use crate::map::{Map, ParentMap};
 use crate::err::Result;
-use crate::object::types::pristine::PRISTINE_MAP;
-
-use super::quest_funcs;
+use crate::object::{literals, types::pristine::PRISTINE_MAP};
 
 mod funcs {
 	use super::*;
@@ -33,25 +31,25 @@ mod funcs {
 	}
 
 	pub fn strict_neq(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
-		obj.call_attr(quest_funcs::STRICT_EQL, &[rhs])?
-		   .call_attr(quest_funcs::NOT, &[])?
+		obj.call_attr(literals::STRICT_EQL, &[rhs])?
+		   .call_attr(literals::NOT, &[])?
 		   .downcast_or_err::<Boolean>()
 	}
 
 	pub fn eql(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
-		obj.call_attr(quest_funcs::STRICT_EQL, &[rhs])?
+		obj.call_attr(literals::STRICT_EQL, &[rhs])?
 		   .downcast_or_err::<Boolean>()
 	}
 
 	pub fn neq(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
-		obj.call_attr(quest_funcs::EQL, &[rhs])?
-		   .call_attr(quest_funcs::NOT, &[])?
+		obj.call_attr(literals::EQL, &[rhs])?
+		   .call_attr(literals::NOT, &[])?
 		   .downcast_or_err::<Boolean>()
 	}
 
 	pub fn not(obj: &AnyObject,) -> Result<Object<Boolean>> {
 		obj.to_boolean()?.as_any()
-		   .call_attr(quest_funcs::NOT, &[])?
+		   .call_attr(literals::NOT, &[])?
 		   .downcast_or_err::<Boolean>()
 	}
 
@@ -72,26 +70,26 @@ mod funcs {
 	}
 
 	pub fn arrow_right(obj: &AnyObject, rhs: &AnyObject) -> Result<AnyObject> {
-		rhs.call_attr(quest_funcs::ARROW_LEFT, &[&obj])
+		rhs.call_attr(literals::ARROW_LEFT, &[&obj])
 	}
 }
 
 lazy_static! {
 	pub static ref BASIC_MAP: Shared<dyn Map> = object_map!{UNTYPED "Basic", ParentMap::new(PRISTINE_MAP.clone(), HashMap::new());
-		quest_funcs::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
-		quest_funcs::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
-		quest_funcs::L_CLONE => |o, _| Ok(funcs::clone(o)),
+		literals::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
+		literals::AT_TEXT => |o, _| Ok(funcs::at_text(o)),
+		literals::L_CLONE => |o, _| Ok(funcs::clone(o)),
 
-		quest_funcs::STRICT_EQL => |o, a| Ok(funcs::strict_eql(o, getarg!(a[0])?)),
-		quest_funcs::STRICT_NEQ => |o, a| Ok(funcs::strict_neq(o, getarg!(a[0])?)?),
-		quest_funcs::EQL => |o, a| Ok(funcs::eql(o, getarg!(a[0])?)?),
-		quest_funcs::NEQ => |o, a| Ok(funcs::neq(o, getarg!(a[0])?)?),
+		literals::STRICT_EQL => |o, a| Ok(funcs::strict_eql(o, getarg!(a[0])?)),
+		literals::STRICT_NEQ => |o, a| Ok(funcs::strict_neq(o, getarg!(a[0])?)?),
+		literals::EQL => |o, a| Ok(funcs::eql(o, getarg!(a[0])?)?),
+		literals::NEQ => |o, a| Ok(funcs::neq(o, getarg!(a[0])?)?),
 
-		quest_funcs::NOT => |o, _| Ok(funcs::not(o)?),
-		quest_funcs::AND => |o, a| funcs::and(o, getarg!(a[0])?),
-		quest_funcs::OR => |o, a| funcs::or(o, getarg!(a[0])?),
+		literals::NOT => |o, _| Ok(funcs::not(o)?),
+		literals::AND => |o, a| funcs::and(o, getarg!(a[0])?),
+		literals::OR => |o, a| funcs::or(o, getarg!(a[0])?),
 
-		quest_funcs::ARROW_RIGHT => |o, a| funcs::arrow_right(o, getarg!(a[0])?),
+		literals::ARROW_RIGHT => |o, a| funcs::arrow_right(o, getarg!(a[0])?),
 	};
 }
 
@@ -101,17 +99,17 @@ define_blank!(struct BlankObject;);
 
 #[cfg(test)]
 define_blank!(struct BlankButFalse, BLANK_BUT_FALSE_MAP;
-	quest_funcs::AT_BOOL => |_, _| Ok(Object::new_boolean(false))
+	literals::AT_BOOL => |_, _| Ok(Object::new_boolean(false))
 );
 
 #[cfg(test)]
 define_blank!(struct BooleanError, BOOLEAN_ERROR;
-	quest_funcs::AT_BOOL => |_, _| Err(crate::err::Error::__Testing)
+	literals::AT_BOOL => |_, _| Err(crate::err::Error::__Testing)
 );
 
 #[cfg(test)]
 define_blank!(struct InvertStrictEql, INVERT_STRICT_EQL; 
-	quest_funcs::STRICT_EQL => |o, a| Ok(Object::new_boolean(!funcs::strict_eql(&o.as_any(), getarg!(a[0]).unwrap()).is_true()))
+	literals::STRICT_EQL => |o, a| Ok(Object::new_boolean(!funcs::strict_eql(&o.as_any(), getarg!(a[0]).unwrap()).is_true()))
 );
 
 #[cfg(test)]
@@ -129,11 +127,11 @@ mod fn_tests {
 
 	#[test]
 	#[ignore]
-	fn at_text() { unimplemented!("{}", quest_funcs::AT_TEXT) }
+	fn at_text() { unimplemented!("{}", literals::AT_TEXT) }
 
 	#[test]
 	#[ignore]
-	fn clone() { unimplemented!("{}", quest_funcs::L_CLONE); }
+	fn clone() { unimplemented!("{}", literals::L_CLONE); }
 
 	// Object are strictly equal if they have the same pointer
 	#[test]
@@ -189,7 +187,7 @@ mod fn_tests {
 
 		// check to make sure overriding `==` works properly
 		define_blank!(struct InvertEql; 
-			quest_funcs::EQL => |o, a| Ok(Object::new_boolean(!funcs::eql(&o.as_any(), getarg!(a[0])?)?.is_true()))
+			literals::EQL => |o, a| Ok(Object::new_boolean(!funcs::eql(&o.as_any(), getarg!(a[0])?)?.is_true()))
 		);
 
 		let ref obj = InvertEql::new_any();
@@ -272,7 +270,7 @@ mod fn_tests {
 		match funcs::arrow_right(obj1, obj2) {
 			Err(Error::AttrMissing { attr, obj }) => {
 				assert!(obj.id_eq(&obj2));
-				assert_eq!(attr.downcast_or_err::<Variable>()?, quest_funcs::ARROW_LEFT);
+				assert_eq!(attr.downcast_or_err::<Variable>()?, literals::ARROW_LEFT);
 			},
 			/* this might cause a bad instruction if it prints out an object and not an error */
 			other => panic!("got bad response from funcs::arrow_right: {:?}", other)
@@ -284,7 +282,7 @@ mod fn_tests {
 
 		// now make sure it correctly reroutes
 		define_blank!(struct CanTakeArrow, CAN_TAKE_ARROW;
-			quest_funcs::ARROW_LEFT => |obj, args| {
+			literals::ARROW_LEFT => |obj, args| {
 				*RECEIVED.try_lock().unwrap() = Some((obj.clone(), getarg!(args[0])?.clone()));
 				Ok(Object::new_null())
 			}
@@ -304,7 +302,7 @@ mod fn_tests {
 #[cfg(test)]
 mod integration {
 	use super::*;
-	use quest_funcs::*;
+	use literals::*;
 	use crate::object::types::Boolean;
 
 	#[test]

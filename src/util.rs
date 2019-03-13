@@ -20,7 +20,7 @@ macro_rules! const_concat {
 		::lazy_static::lazy_static!{
 			static ref VAL: &'static str = {
 				let mut x = String::new();
-				$(x.push_str(&$arg);)*
+				$(x.push_str(&$arg.as_ref());)*
 				Box::leak(x.into_boxed_str())
 			};
 		}

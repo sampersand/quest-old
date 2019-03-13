@@ -5,7 +5,7 @@ use std::hash::{Hasher, Hash};
 use std::ops::Deref;
 use std::collections::HashMap;
 
-use super::quest_funcs::{
+use crate::object::literal::consts::{self as literals,
 	AT_MAP, AT_LIST, AT_TEXT, AT_BOOL,
 	EQL,
 	ADD, SUB, MUL,
@@ -34,7 +34,7 @@ impl Object<Map> {
 
 impl AnyObject {
 	pub fn tp_map(&self) -> Result<Object<Map>> {
-		self.call_attr("@map", &[])?
+		self.call_attr(literals::AT_MAP, &[])?
 			.downcast_or_err::<Map>()
 	}
 }
