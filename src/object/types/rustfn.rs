@@ -61,8 +61,9 @@ impl RustFn {
 		self.name
 	}
 
-	pub fn call(&self, obj: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-		(self.func)(obj, args)
+	pub fn call(&self, args: &[&AnyObject]) -> Result<AnyObject> {
+		let obj = args.get(0).expect("no `self` passed? <todo make this a thrown error>");
+		(self.func)(obj, &args[1..])
 	}
 }
 
@@ -119,7 +120,7 @@ impl Debug for RustFn {
 
 impl_type! { for RustFn;
 	// AT_TEXT => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
-	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(&obj.as_any(), args)
+	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(args)
 }
 
 
@@ -150,14 +151,14 @@ mod tests {
 	fn call_valid() -> Result<()> {
 		let func = RustFn::new::<_, Number>(|num, _| Ok(Object::new_number(*num.unwrap_data() + 1.0)));
 
-		assert_eq!(&func.call(&Object::new_number(123.0).as_any(), &[])?, &Object::new_number(124.0).as_any());
+		assert_eq!(&func.call(&[&Object::new_number(123.0).as_any()])?, &Object::new_number(124.0).as_any());
 		Ok(())
 	}
 
 	#[test]
 	fn call_wrong_self() {
 		let func = RustFn::new::<_, !>(|_, _| unreachable!());
-		match func.call(&Object::new_variable_testing("lol error").as_any(), &[]).unwrap_err() {
+		match func.call(&[&Object::new_variable_testing("lol error").as_any()]).unwrap_err() {
 			Error::CastError { .. } => {},
 			other => panic!("Unexpected error returned: {:?}", other)
 		}
@@ -167,7 +168,7 @@ mod tests {
 	fn call_function_err() {
 		let func = RustFn::new::<_, Number>(|_, _| Err(Error::__Testing));
 
-		match func.call(&Object::new_number(1.0).as_any(), &[]).unwrap_err() {
+		match func.call(&[&Object::new_number(1.0).as_any()]).unwrap_err() {
 			Error::__Testing => {},
 			other => panic!("Unexpected error returned: {:?}", other)
 		}
@@ -179,8 +180,8 @@ mod tests {
 			Ok(Object::new_boolean(val.data().read().unwrap().is::<Number>()))
 		});
 
-		assert_eq!(&func.call(&Object::new_number(123.0).as_any(), &[])?, &Object::new_boolean(true).as_any());
-		assert_eq!(&func.call(&Object::new_variable_testing("A").as_any(), &[])?, &Object::new_boolean(false).as_any());
+		assert_eq!(&func.call(&[&Object::new_number(123.0).as_any()])?, &Object::new_boolean(true).as_any());
+		assert_eq!(&func.call(&[&Object::new_variable_testing("A").as_any()])?, &Object::new_boolean(false).as_any());
 
 		Ok(())
 	}

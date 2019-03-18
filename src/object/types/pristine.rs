@@ -48,6 +48,8 @@ mod funcs {
 	}
 }
 
+pub use self::funcs::colon_colon as _colon_colon;
+
 // so we can have the GETTER object
 fn colon_colon(obj: &AnyObject, args: &[&AnyObject]) -> crate::err::Result<AnyObject> {
 	funcs::colon_colon(obj, getarg!(args[0])?)

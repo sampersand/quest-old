@@ -164,25 +164,32 @@ impl AnyObject {
 
 impl AnyObject {
 	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
-		let val = self.get(attr)?;
-
-		match val.downcast::<types::RustFn>() {
-			Some(rustfn) => rustfn.data().read().expect("err when calling rustfn").call(self, args),
-			None => {
-				let mut self_args = Vec::with_capacity(args.len() + 1);
-				self_args.push(self);
-				self_args.extend(args);
-				val.call_attr(literals::CALL, self_args.as_ref())
+		if let Some(rustfn) = self.downcast::<types::RustFn>() {
+			if let Some(var) = attr.downcast::<types::Variable>() {
+				if var == literals::CALL {
+					return rustfn.data().read().expect("err when calling rustfn").call(args);
+				}
 			}
 		}
+
+		let val = self.get(attr)?;
+		let mut self_args = Vec::with_capacity(args.len() + 1);
+		self_args.push(self);
+		self_args.extend(args);
+
+		val.call_attr(literals::CALL, &self_args)
 	}
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
 		if let Some(var) = attr.downcast::<self::types::Variable>() {
 			if var == literals::COLON_COLON {
-				return Ok(self::types::pristine::GETTER.as_any())
+				return Ok(types::pristine::GETTER.as_any())
 			}
 		}
+
+
+		// types::pristine::_colon_colon(self, &Object::new_variable(literals::ACCESS).as_any())?
+		// 	.call_attr(literals::CALL, &[self, attr])
 
 		self.call_attr(literals::COLON_COLON, &[attr])
 	}
