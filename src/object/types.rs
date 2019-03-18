@@ -14,6 +14,8 @@ mod oper;
 mod block;
 pub(super) mod pristine;
 
+pub use self::{basic::BASIC_MAP, pristine::PRISTINE_MAP};
+
 pub use self::{
 	number::Number,
 	rustfn::RustFn,

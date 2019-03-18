@@ -31,7 +31,7 @@ mod funcs {
 	}
 
 	pub fn access(obj: &AnyObject, attr: &AnyObject) -> Result<AnyObject> {
-		Ok(obj.get(attr)?.duplicate_add_parent(obj.clone()))
+		Ok(colon_colon(obj, attr)?.duplicate_add_parent(obj.clone()))
 	}
 
 	pub fn access_assign(obj: &AnyObject, attr: AnyObject, val: AnyObject) -> AnyObject {

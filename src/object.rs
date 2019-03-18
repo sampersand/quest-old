@@ -188,11 +188,10 @@ impl AnyObject {
 		}
 
 
-		// types::pristine::_colon_colon(self, &Object::new_variable(literals::ACCESS).as_any())?
-		// 	.call_attr(literals::CALL, &[self, attr])
-
-		self.call_attr(literals::COLON_COLON, &[attr])
+		types::pristine::_colon_colon(self, &Object::new_variable(literals::ACCESS).as_any())?
+			.call_attr(literals::CALL, &[self, attr])
 	}
+
 
 	pub fn set(&self, attr: AnyObject, val: AnyObject) {
 		self.0.map.write().expect("write err in AnyObject::set").set(attr, val);
@@ -207,6 +206,14 @@ impl AnyObject {
 		self.0.map.read().expect("get err in AnyObject::has").has(attr)
 	}
 }
+
+	// #[test]
+	// fn __foo() {
+	// 	let ref x = Object::new_boolean(true).as_any();
+	// 	println!("{:#?}", x.get_attr(literals::EQL));
+	// 	unimplemented!();
+	// }
+
 
 impl<T: 'static + Send + Sync + Sized> Object<T> {
 	pub fn as_any(&self) -> AnyObject {
@@ -345,11 +352,16 @@ mod tests {
 
 	impl Type for MyType {
 		fn get_type_map() -> Shared<dyn Map> {
-			let mut m = HashMap::<AnyObject, AnyObject>::new();
-			m.insert(Object::new_variable(literals::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
-				Ok(Object::new_boolean(arg[0].downcast::<MyType>().map(|x| obj.unwrap_data() == x.unwrap_data()).unwrap_or(false)))
-			}));
-			Shared::new(m)
+			lazy_static! {
+				static ref MAP: Shared<dyn Map> = {
+					let mut map = crate::map::ParentMap::<HashMap<_, _>>::new_default(types::BASIC_MAP.clone());
+					map.set(Object::new_variable(literals::EQL).as_any(), Object::new_rustfn::<_, MyType>(|obj, arg| {
+						Ok(Object::new_boolean(arg[0].downcast::<MyType>().map(|x| obj.unwrap_data() == x.unwrap_data()).unwrap_or(false)))
+					}));
+					Shared::new(map)
+				};
+			}
+			MAP.clone()
 		}
 	}
 
