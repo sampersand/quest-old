@@ -21,7 +21,7 @@ pub type AnyObject = Object<dyn Any + Send + Sync>;
 struct InternalOps {
 	hash: fn(&dyn Any, &mut Hasher),
 	debug: fn(&dyn Any, &mut Formatter) -> fmt::Result,
-	duplicate: fn(&AnyObject) -> AnyObject
+	duplicate: fn(&AnyObject, Option<AnyObject>) -> AnyObject
 }
 
 #[derive(Debug)]
@@ -67,13 +67,13 @@ impl<T: Type + Sized> Object<T> {
 			ops: InternalOps {
 				hash: |obj, mut hasher| Any::downcast_ref::<T>(obj).expect("bad obj passed to `hash`").hash(&mut hasher),
 				debug: |obj, f| Debug::fmt(Any::downcast_ref::<T>(obj).expect("bad obj passed to `debug`"), f),
-				duplicate: |obj| Object::_new(
+				duplicate: |obj, parent| Object::_new(
 					{
 						let obj: &dyn Any = &*obj.data().read().expect("read err in InternalOps::duplicate");
 						Any::downcast_ref::<T>(obj).expect("bad obj passed to `duplicate`").clone()
 					},
-					obj.parent().clone(),
-					obj.env().clone()
+					parent.or_else(|| obj.parent().clone()),
+					obj.env().clone(),
 				) as AnyObject
 			},
 			weakref: unsafe { std::mem::uninitialized() },
@@ -93,7 +93,7 @@ impl<T: Type + Sized> Object<T> {
 
 impl<T: Type + Clone + Sized> Object<T> {
 	pub fn duplicate(&self) -> Object<T> {
-		(self.0.ops.duplicate)(&self.as_any()).downcast::<T>().expect("duplicate returned a different object type?")
+		self.as_any().duplicate().downcast::<T>().expect("duplicate returned a different object type?")
 	}
 }
 
@@ -149,45 +149,40 @@ impl AnyObject {
 	}
 
 	pub fn duplicate(&self) -> AnyObject {
-		(self.0.ops.duplicate)(&self)
+		(self.0.ops.duplicate)(self, None)
 	}
 
 	pub fn duplicate_add_parent(&self, parent: AnyObject) -> AnyObject {
-		// this is extremely hacky, but oh well
-		let dup = self.duplicate();
-		dup.map()
-		   .write().expect("write error")
-		   .set(Object::new_variable(literals::L_PARENT).as_any(), parent);
-		dup
+		(self.0.ops.duplicate)(self, Some(parent))
 	}
 }
 
 impl AnyObject {
 	pub fn call(&self, attr: &AnyObject, args: &[&AnyObject]) -> Result<AnyObject> {
+		// if `self` is a RustFn (ie a function written in rust, not Quest)...
 		if let Some(rustfn) = self.downcast::<types::RustFn>() {
+			// ...and `attr` is a Variable...
 			if let Some(var) = attr.downcast::<types::Variable>() {
+				// ...and `attr` is `CALL` (ie we're calling `self`), then:
 				if var == literals::CALL {
-					return rustfn.data().read().expect("err when calling rustfn").call(args);
+					// if we have a parent, have that be the first arg.
+					if let Some(ref parent) = self.parent() {
+						let mut parent_args: Vec<&AnyObject> = Vec::with_capacity(args.len() + 1);
+						parent_args.push(parent);
+						parent_args.extend(args);
+						return rustfn.data().read().expect("err when calling rustfn").call(&parent_args);
+					} else {
+						// otherwise, just call it straight up
+						return rustfn.data().read().expect("err when calling rustfn").call(args);
+					}
 				}
 			}
 		}
 
-		let val = self.get(attr)?;
-		let mut self_args = Vec::with_capacity(args.len() + 1);
-		self_args.push(self);
-		self_args.extend(args);
-
-		val.call_attr(literals::CALL, &self_args)
+		self.get(attr)?.call_attr(literals::CALL, args)
 	}
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
-		if let Some(var) = attr.downcast::<self::types::Variable>() {
-			if var == literals::COLON_COLON {
-				return Ok(types::pristine::GETTER.as_any())
-			}
-		}
-
-
 		types::pristine::_colon_colon(self, &Object::new_variable(literals::ACCESS).as_any())?
 			.call_attr(literals::CALL, &[self, attr])
 	}
