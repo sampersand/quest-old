@@ -179,7 +179,7 @@ impl AnyObject {
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
 		if let Some(var) = attr.downcast::<self::types::Variable>() {
-			if *var.data().read().expect("read err in AnyObject::get").as_ref() == literals::COLON_COLON {
+			if var == literals::COLON_COLON {
 				return Ok(self::types::pristine::GETTER.as_any())
 			}
 		}
@@ -215,8 +215,12 @@ impl AnyObject {
 		})
 	}
 
+	pub fn is<T: Send + Sync + 'static>(&self) -> bool {
+		self.0.data.read().unwrap().is::<T>()
+	}
+
 	pub fn downcast<T: Send + Sync + 'static>(&self) -> Option<Object<T>> {
-		if self.0.data.read().unwrap().is::<T>() {
+		if self.is::<T>() {
 			Some(Object(unsafe {
 				Arc::from_raw(Arc::into_raw(self.0.clone()) as *const Inner<T>)
 			}))
