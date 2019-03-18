@@ -76,6 +76,7 @@ mod fn_tests {
 	define_blank!(struct Blank;);
 
 	#[test]
+	#[ignore]
 	fn foo() {
 		let ref obj = Object::new_number(1.0).as_any();
 		let ref eql = funcs::access(obj, &Object::new_variable_testing("==").as_any()).unwrap();

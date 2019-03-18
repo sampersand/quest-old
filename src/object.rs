@@ -13,6 +13,8 @@ use crate::map::Map;
 use crate::err::{Error, Result};
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
+use lazy_static::lazy_static;
+
 pub struct Object<T: ?Sized + Send + Sync>(Arc<Inner<T>>);
 pub type AnyObject = Object<dyn Any + Send + Sync>;
 
@@ -51,7 +53,7 @@ impl<T: Type + Sized> Object<T> {
 	fn _new(data: T, parent: Option<AnyObject>, env: Shared<dyn Map>) -> Object<T> {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 
-		lazy_static::lazy_static! {
+		lazy_static! {
 			static ref ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 		}
 
