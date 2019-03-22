@@ -183,7 +183,8 @@ impl AnyObject {
 	}
 
 	pub fn get(&self, attr: &AnyObject) -> Result<AnyObject> {
-		types::pristine::_colon_colon(self, &Object::new_variable(literals::ACCESS).as_any())?
+		// TODO: check custom values, eg `id` `parent`, etc
+		types::pristine::_colon_colon(self, &Object::new_variable(literals::ATTR_GET).as_any())?
 			.call_attr(literals::CALL, &[self, attr])
 	}
 
@@ -201,14 +202,6 @@ impl AnyObject {
 		self.0.map.read().expect("get err in AnyObject::has").has(attr)
 	}
 }
-
-	// #[test]
-	// fn __foo() {
-	// 	let ref x = Object::new_boolean(true).as_any();
-	// 	println!("{:#?}", x.get_attr(literals::EQL));
-	// 	unimplemented!();
-	// }
-
 
 impl<T: 'static + Send + Sync + Sized> Object<T> {
 	pub fn as_any(&self) -> AnyObject {
@@ -335,6 +328,30 @@ use std::{marker::Unsize, ops::CoerceUnsized};
 impl<T: Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> CoerceUnsized<Object<U>> for Object<T> {}
 // impl<T: std::marker::Unsize<U> + Send + Sync + ?Sized, U: Send + Sync + ?Sized> std::ops::CoerceUnsized<Object<U>> for Object<T> {}
 
+
+#[cfg(test)]
+mod fn_tests {
+	use super::*;
+	use crate::object::types::Number;
+
+	#[test]
+	fn make_sure_attr_access_works() -> Result<()> {
+		let ref one = Object::new_number(1.0).as_any();
+		let ref two = Object::new_number(2.0).as_any();
+
+		one.call_attr(literals::ATTR_SET, &[two])?;
+		assert!(one.has(two));
+		assert!(one.get(two)?.has(&Object::new_variable(literals::L_PARENT).as_any()));
+		assert!(!two.has(&Object::new_variable(literals::L_PARENT).as_any()));
+
+		Ok(())
+		// two.call
+		// let add = one.get_attr(literals::ADD)?;
+		// let y = add.call_attr(literals::CALL, &[&Object::new_number(2.3).as_any()])?;
+		// assert_eq!(y.downcast_or_err::<Number>()?, 3.5);
+		// Ok(())
+	}
+}
 
 
 #[cfg(test)]

@@ -63,10 +63,10 @@ lazy_static! {
 		literals::L_MAP => |o, _| Ok(funcs::__map__(o)),
 		literals::L_ENV => |o, _| Ok(funcs::__env__(o)),
 		literals::COLON_COLON => colon_colon,
-		literals::ACCESS => |o, a| funcs::access(o, getarg!(a[0])?),
-		literals::ACCESS_ASSIGN => |o, a| Ok(funcs::access_assign(o, getarg!(a[0])?.clone(), getarg!(a[1])?.clone())),
-		literals::ACCESS_DELETE => |o, a| funcs::access_delete(o, getarg!(a[0])?),
-		literals::ACCESS_HAS => |o, a| Ok(funcs::access_has(o, getarg!(a[0])?))
+		literals::ATTR_GET => |o, a| funcs::access(o, getarg!(a[0])?),
+		literals::ATTR_SET => |o, a| Ok(funcs::access_assign(o, getarg!(a[0])?.clone(), getarg!(a[1])?.clone())),
+		literals::ATTR_DEL => |o, a| funcs::access_delete(o, getarg!(a[0])?),
+		literals::ATTR_HAS => |o, a| Ok(funcs::access_has(o, getarg!(a[0])?))
 	};
 }
 

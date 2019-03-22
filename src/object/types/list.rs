@@ -80,5 +80,12 @@ impl_type! { for List;
 	B_OR => |obj, args| unimplemented!(), // union
 	B_AND => |obj, args| unimplemented!(), // intersect
 	B_XOR => |obj, args| unimplemented!(), // symmetric_difference
-} 
+}
+
+
+
+
+
+
+
 

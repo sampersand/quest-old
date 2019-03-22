@@ -123,7 +123,6 @@ impl_type! { for RustFn;
 	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(args)
 }
 
-
 #[cfg(test)]
 mod tests {
 	use super::*;

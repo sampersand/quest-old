@@ -143,10 +143,10 @@ pub mod consts {
 	pub const INDEX_DELETE: Literal = Literal::new("[]~");
 	pub const INDEX_HAS: Literal = Literal::new("[]?");
 
-	pub const ACCESS: Literal = Literal::new(".");
-	pub const ACCESS_ASSIGN: Literal = Literal::new(".=");
-	pub const ACCESS_DELETE: Literal = Literal::new(".~");
-	pub const ACCESS_HAS: Literal = Literal::new(".?");
+	pub const ATTR_GET: Literal = Literal::new(".");
+	pub const ATTR_SET: Literal = Literal::new(".=");
+	pub const ATTR_DEL: Literal = Literal::new(".~");
+	pub const ATTR_HAS: Literal = Literal::new(".?");
 
 	pub const COLON_COLON: Literal = Literal::new("::");
 
