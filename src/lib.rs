@@ -1,5 +1,5 @@
 #![allow(unused)]
-#![feature(unsize, coerce_unsized, core_intrinsics, never_type)]
+#![feature(unsize, coerce_unsized, core_intrinsics, never_type, try_from)]
 
 #[macro_use]
 mod util;

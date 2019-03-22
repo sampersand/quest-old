@@ -1,0 +1,1 @@
+- Do we want to have `Display` implemented on structs? and if so which ones. And if so, do we use `to_string` for `@text` calls?

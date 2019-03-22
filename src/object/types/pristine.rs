@@ -12,7 +12,7 @@ mod funcs {
 	use crate::object::{literals, AnyObject, Object};
 
 	pub fn __id__(obj: &AnyObject) -> Object<Number> {
-		Object::new_number(obj.id() as _)
+		Object::new_number(obj.id() as f64)
 	}
 
 	pub fn __map__(obj: &AnyObject) -> Object<Map> {

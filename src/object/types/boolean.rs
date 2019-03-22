@@ -1,15 +1,11 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{literals, Object, AnyObject};
-use crate::err::Result;
+use crate::err::{Result, Error};
+use std::convert::TryFrom;
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Boolean(bool);
-
-const TRUE_STR: &str = "true";
-const TRUE_NUM: f64 = 1.0;
-const FALSE_STR: &str = "false";
-const FALSE_NUM: f64 = 0.0;
 
 impl Boolean {
 	#[inline]
@@ -29,6 +25,13 @@ impl Object<Boolean> {
 
 	pub fn is_true(&self) -> bool {
 		*self == true
+	}
+}
+
+impl TryFrom<&'_ AnyObject> for Object<Boolean> {
+	type Error = Error;
+	fn try_from(obj: &AnyObject) -> Result<Object<Boolean>> {
+		obj.call_attr(literals::AT_BOOL, &[])?.downcast_or_err::<Boolean>()
 	}
 }
 
@@ -71,16 +74,12 @@ impl AsRef<bool> for Boolean {
 
 impl Display for Boolean {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		if self.0 {
-			write!(f, "{}", TRUE_STR)
-		} else {
-			write!(f, "{}", FALSE_STR)
-		}
+		Display::fmt(if self.0 { "true" } else { "false" }, f)
 	}
 }
 
 mod funcs {
-	use super::{Boolean, TRUE_STR, FALSE_STR, TRUE_NUM, FALSE_NUM};
+	use super::Boolean;
 	use crate::object::types::{Number, Text};
 	use crate::object::Object;
 
@@ -90,19 +89,14 @@ mod funcs {
 	
 	pub fn at_num(obj: &Object<Boolean>) -> Object<Number> {
 		if obj.is_true() {
-			Object::new_number(TRUE_NUM)
+			Object::new_number(1.0)
 		} else {
-			Object::new_number(FALSE_NUM)
+			Object::new_number(0.0)
 		}
 	}
 
 	pub fn at_text(obj: &Object<Boolean>) -> Object<Text> {
-		// this is instead of `is_true().to_string()` in case I want to change something
-		if obj.is_true() {
-			Object::new_text_str(TRUE_STR)
-		} else {
-			Object::new_text_str(FALSE_STR)
-		}
+		Object::new_text_str(if obj.is_true() { "true" } else { "false" })
 	}
 
 	pub fn not(obj: &Object<Boolean>) -> Object<Boolean> {
@@ -132,7 +126,7 @@ impl_type! { for Boolean;
 	literals::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
 
 	literals::NOT => |b, _| Ok(funcs::not(b)),
-	literals::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0]: Boolean)?)),
 	literals::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] @ to_boolean)?)),
 	literals::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] @ to_boolean)?)),
 	literals::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] @ to_boolean)?)),
@@ -159,8 +153,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_text(t), super::TRUE_STR);
-		assert_eq!(funcs::at_text(f), super::FALSE_STR);
+		assert_eq!(funcs::at_text(t), "true");
+		assert_eq!(funcs::at_text(f), "false");
 	}
 
 	#[test]
@@ -168,8 +162,8 @@ mod fn_tests {
 		let ref t = Object::new_boolean(true);
 		let ref f = Object::new_boolean(false);
 
-		assert_eq!(funcs::at_num(t), super::TRUE_NUM);
-		assert_eq!(funcs::at_num(f), super::FALSE_NUM);
+		assert_eq!(funcs::at_num(t), 1.0);
+		assert_eq!(funcs::at_num(f), 0.0);
 
 	}
 
@@ -252,8 +246,8 @@ mod integration {
 		let ref t = Object::new_boolean(true).as_any();
 		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, super::TRUE_STR);
-		assert_eq!(f.call_attr(AT_TEXT, &[t])?.downcast_or_err::<Text>()?, super::FALSE_STR);
+		assert_eq!(t.call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, "true");
+		assert_eq!(f.call_attr(AT_TEXT, &[t])?.downcast_or_err::<Text>()?, "false");
 
 		Ok(())
 	}
@@ -263,8 +257,8 @@ mod integration {
 		let ref t = Object::new_boolean(true).as_any();
 		let ref f = Object::new_boolean(false).as_any();
 
-		assert_eq!(t.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, super::TRUE_NUM);
-		assert_eq!(f.call_attr(AT_NUM, &[t])?.downcast_or_err::<Number>()?, super::FALSE_NUM);
+		assert_eq!(t.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, 1.0);
+		assert_eq!(f.call_attr(AT_NUM, &[t])?.downcast_or_err::<Number>()?, 0.0);
 
 		Ok(())
 	}
@@ -335,8 +329,8 @@ mod tests {
 
 	#[test]
 	fn make_sure_not_nan() {
-		assert!(!TRUE_NUM.is_nan());
-		assert!(!FALSE_NUM.is_nan());
+		assert!(!1.0.is_nan());
+		assert!(!0.0.is_nan());
 	}
 
 	#[test]

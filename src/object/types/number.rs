@@ -59,8 +59,8 @@ impl Number {
 }
 
 impl Object<Number> {
-	pub fn new_number(num: Inner) -> Object<Number> {
-		Object::new(Number::new(num))
+	pub fn new_number<T: Into<Inner>>(num: T) -> Object<Number> {
+		Object::new(Number::new(num.into()))
 	}
 }
 
@@ -285,7 +285,7 @@ impl_type! { for Number;
 	literals::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
 	literals::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
 
-	literals::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0] @ to_number)?)),
+	literals::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0]: Number)?)),
 	literals::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
 	literals::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
 	literals::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),

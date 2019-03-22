@@ -80,7 +80,6 @@ impl AsRef<str> for Text {
 }
 
 
-
 impl_type! { for Text;
 	AT_TEXT => |obj, _| Ok(obj.duplicate()),
 	AT_VAR => |obj, _| Ok(Object::new_variable_from_string(obj.data().read().expect(data_err![read in Text, AT_VAR]).as_ref().to_string())),
@@ -92,7 +91,7 @@ impl_type! { for Text;
 
 	EQL => |obj, args| {
 		let lhs = obj.data().read().expect(data_err![read in Text, EQL]);
-		let rhs = getarg!(args[0] @ to_text)?;
+		let rhs = getarg!(args[0]: Text)?;
 		let rhs = rhs.data().read().expect(data_err![read in Text, EQL]);
 		Ok(Object::new_boolean(*lhs == *rhs))
 	},
