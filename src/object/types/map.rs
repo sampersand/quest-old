@@ -4,15 +4,7 @@ use crate::err::{Result, Error};
 use std::hash::{Hasher, Hash};
 use std::ops::Deref;
 use std::collections::HashMap;
-
-use crate::object::literal::consts::{self as literals,
-	AT_MAP, AT_LIST, AT_TEXT, AT_BOOL,
-	EQL,
-	ADD, SUB, MUL,
-	INDEX, INDEX_ASSIGN, INDEX_DELETE,
-	B_OR, B_AND, B_XOR,
-	L_LEN
-};
+use crate::object::literals;
 
 type ObjMap = HashMap<AnyObject, AnyObject>;
 
@@ -21,37 +13,35 @@ pub struct Map(ObjMap);
 
 impl Map {
 	#[inline]
-	pub fn new(list: ObjMap) -> Map {
-		Map(list)
+	pub fn new(map: ObjMap) -> Map {
+		Map(map)
+	}
+
+	#[inline]
+	pub fn empty() -> Map {
+		Map::default()
 	}
 }
 
 impl Object<Map> {
-	pub fn new_map(map: ObjMap) -> Object<Map> {
-		Object::new(Map::new(map))
+	pub fn new_map<T: Into<Map>>(map: T) -> Object<Map> {
+		Object::new(map.into())
 	}
 }
 
 impl AnyObject {
-	pub fn tp_map(&self) -> Result<Object<Map>> {
+	pub fn to_map(&self) -> Result<Object<Map>> {
 		self.call_attr(literals::AT_MAP, &[])?
 			.downcast_or_err::<Map>()
 	}
 }
 
-
-impl AsRef<ObjMap> for Map {
-	fn as_ref(&self) -> &ObjMap {
-		&self.0
+impl PartialEq<Map> for Object<Map> {
+	fn eq(&self, rhs: &Map) -> bool {
+		*self.data().read().expect("read error in Object<Map>::eq") == *rhs
 	}
 }
 
-impl Deref for Map {
-	type Target = ObjMap;
-	fn deref(&self) -> &ObjMap {
-		&self.0
-	}
-}
 
 impl From<ObjMap> for Map {
 	fn from(map: ObjMap) -> Map {
@@ -73,24 +63,40 @@ impl Hash for Map {
 	}
 }
 
+mod funcs {
+	use super::*;
+	use super::Map;
+	use crate::err::Result;
+	use crate::object::{literals, Object, AnyObject};
+	use crate::object::types::{Boolean, Text, List};
+
+	pub fn at_map(map: &Object<Map>) -> Object<Map> {
+		map.duplicate()
+	}
+
+	pub fn at_list(map: &Object<Map>) -> Object<List> {
+		// List
+		unimplemented!()
+	}
+}
 impl_type! { for Map; 
-	AT_MAP => |obj, _| unimplemented!(),
-	AT_LIST => |obj, _| unimplemented!(),
-	AT_BOOL => |obj, _| unimplemented!(),
-	AT_TEXT => |obj, _| unimplemented!(),
+	literals::AT_MAP => |obj, _| unimplemented!(),
+	literals::AT_LIST => |obj, _| unimplemented!(),
+	literals::AT_BOOL => |obj, _| unimplemented!(),
+	literals::AT_TEXT => |obj, _| unimplemented!(),
 
-	EQL => |obj, args| unimplemented!(),
-	L_LEN => |obj, _| unimplemented!(),
-	ADD => |obj, args| unimplemented!(),
-	SUB => |obj, args| unimplemented!(),
+	literals::EQL => |obj, args| unimplemented!(),
+	literals::L_LEN => |obj, _| unimplemented!(),
+	literals::ADD => |obj, args| unimplemented!(),
+	literals::SUB => |obj, args| unimplemented!(),
 
-	INDEX => |obj, args| unimplemented!(),
-	INDEX_ASSIGN => |obj, args| unimplemented!(),
-	INDEX_DELETE => |obj, args| unimplemented!(),
+	literals::INDEX => |obj, args| unimplemented!(),
+	literals::INDEX_ASSIGN => |obj, args| unimplemented!(),
+	literals::INDEX_DELETE => |obj, args| unimplemented!(),
 
-	B_OR => |obj, args| unimplemented!(), // union
-	B_AND => |obj, args| unimplemented!(), // intersect
-	B_XOR => |obj, args| unimplemented!(), // symmetric_difference
+	literals::B_OR => |obj, args| unimplemented!(), // union
+	literals::B_AND => |obj, args| unimplemented!(), // intersect
+	literals::B_XOR => |obj, args| unimplemented!(), // symmetric_difference
 }
 
 

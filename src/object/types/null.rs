@@ -4,9 +4,6 @@ use crate::object::{literals, Object, AnyObject};
 use crate::err::Result;
 use std::ops::Deref;
 
-const NULL_STR: &str = "null";
-const NULL_NUM: f64 = 0.0;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Null;
 
@@ -41,7 +38,7 @@ impl From<Null> for () {
 
 impl Display for Null {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		write!(f, "{}", NULL_STR)
+		write!(f, "null")
 	}
 }
 
@@ -49,10 +46,10 @@ mod funcs {
 	use super::Null;
 	use crate::err::Result;
 	use crate::object::{Object, AnyObject};
-	use crate::object::types::{Text, Boolean, Number};
+	use crate::object::types::{Text, List, Map, Boolean, Number};
 
 	pub fn at_text(_: &Object<Null>) -> Object<Text> {
-		Object::new_text_str(super::NULL_STR)
+		Object::new_text_str("null")
 	}
 
 	pub fn at_bool(_: &Object<Null>) -> Object<Boolean> {
@@ -60,7 +57,15 @@ mod funcs {
 	}
 
 	pub fn at_num(_: &Object<Null>) -> Object<Number> {
-		Object::new_number(super::NULL_NUM)
+		Object::new_number(0.0)
+	}
+
+	pub fn at_list(_: &Object<Null>) -> Object<List> {
+		Object::new_list(List::empty())
+	}
+
+	pub fn at_map(_: &Object<Null>) -> Object<Map> {
+		Object::new_map(Map::empty())
 	}
 
 	pub fn eql(_: &Object<Null>, _: &Object<Null>) -> Object<Boolean> {
@@ -76,6 +81,9 @@ impl_type! { for Null;
 	literals::AT_TEXT => |n, _| Ok(funcs::at_text(n)),
 	literals::AT_BOOL => |n, _| Ok(funcs::at_bool(n)),
 	literals::AT_NUM => |n, _| Ok(funcs::at_num(n)),
+	literals::AT_LIST => |n, _| Ok(funcs::at_list(n)),
+	literals::AT_MAP => |n, _| Ok(funcs::at_map(n)),
+
 	literals::EQL => |n, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(n, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
 	literals::CALL => funcs::call
 }
@@ -83,7 +91,7 @@ impl_type! { for Null;
 #[cfg(test)]
 mod fn_tests {
 	use super::funcs;
-	use crate::object::Object;
+	use crate::object::{Object, types};
 
 	#[test]
 	fn at_bool() {
@@ -92,13 +100,24 @@ mod fn_tests {
 
 	#[test]
 	fn at_text() {
-		assert_eq!(funcs::at_text(&Object::new_null()), super::NULL_STR);
+		assert_eq!(funcs::at_text(&Object::new_null()), "null");
 	}
 
 	#[test]
 	fn at_num() {
 		assert_eq!(funcs::at_num(&Object::new_null()), 0.0);
 	}
+
+	#[test]
+	fn at_map() {
+		assert_eq!(funcs::at_map(&Object::new_null()), types::Map::empty());
+	}
+
+	#[test]
+	fn at_list() {
+		assert_eq!(funcs::at_list(&Object::new_null()), types::List::empty());
+	}
+
 
 	#[test]
 	fn eql() {
@@ -120,7 +139,7 @@ mod integration {
 	use super::*;
 	use crate::err::Result;
 	use crate::object::Object;
-	use crate::object::types::{Text, Boolean, Number};
+	use crate::object::types::{Text, Boolean, Number, Map, List};
 	use literals::*;
 
 	define_blank!(struct Blank;);
@@ -154,6 +173,27 @@ mod integration {
 
 		Ok(())
 	}
+
+	#[test]
+	fn at_map() -> Result<()> {
+		let ref n = Object::new_null().as_any();
+		
+		assert_eq!(n.call_attr(AT_MAP, &[])?.downcast_or_err::<Map>()?, Map::empty());
+		assert_eq!(n.call_attr(AT_MAP, &[&Blank::new_any()])?.downcast_or_err::<Map>()?, Map::empty());
+
+		Ok(())
+	}
+
+	#[test]
+	fn at_list() -> Result<()> {
+		let ref n = Object::new_null().as_any();
+		
+		assert_eq!(n.call_attr(AT_LIST, &[])?.downcast_or_err::<List>()?, List::empty());
+		assert_eq!(n.call_attr(AT_LIST, &[&Blank::new_any()])?.downcast_or_err::<List>()?, List::empty());
+
+		Ok(())
+	}
+
 
 	#[test]
 	fn eql() -> Result<()> {

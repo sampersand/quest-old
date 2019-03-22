@@ -13,19 +13,26 @@ use crate::object::literal::consts::{
 	L_LEN
 };
 
+type ObjList = Vec<AnyObject>;
+
 #[derive(Debug, PartialEq, Clone, Default, Hash)]
-pub struct List(Vec<AnyObject>);
+pub struct List(ObjList);
 
 impl List {
 	#[inline]
-	pub fn new(list: Vec<AnyObject>) -> List {
+	pub fn new(list: ObjList) -> List {
 		List(list)
+	}
+
+	#[inline]
+	pub fn empty() -> List {
+		List::default()
 	}
 }
 
 impl Object<List> {
-	pub fn new_list(list: Vec<AnyObject>) -> Object<List> {
-		Object::new(List::new(list))
+	pub fn new_list<T: Into<List>>(list: T) -> Object<List> {
+		Object::new(list.into())
 	}
 }
 
@@ -35,6 +42,11 @@ impl AnyObject {
 	}
 }
 
+impl PartialEq<List> for Object<List> {
+	fn eq(&self, rhs: &List) -> bool {
+		self.data().read().expect("read error in Object<List>::eq").as_ref() == rhs.as_ref()
+	}
+}
 
 impl AsRef<[AnyObject]> for List {
 	fn as_ref(&self) -> &[AnyObject] {
@@ -49,14 +61,14 @@ impl Deref for List {
 	}
 }
 
-impl From<Vec<AnyObject>> for List {
-	fn from(list: Vec<AnyObject>) -> List {
+impl From<ObjList> for List {
+	fn from(list: ObjList) -> List {
 		List::new(list)
 	}
 }
 
-impl From<List> for Vec<AnyObject> {
-	fn from(list: List) -> Vec<AnyObject> {
+impl From<List> for ObjList {
+	fn from(list: List) -> ObjList {
 		list.0
 	}
 }
