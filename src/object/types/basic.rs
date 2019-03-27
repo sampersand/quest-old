@@ -33,24 +33,21 @@ mod funcs {
 	pub fn strict_neq(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
 		obj.call_attr(literals::STRICT_EQL, &[rhs])?
 		   .call_attr(literals::NOT, &[])?
-		   .downcast_or_err::<Boolean>()
+		   .to_boolean()
 	}
 
 	pub fn eql(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
-		obj.call_attr(literals::STRICT_EQL, &[rhs])?
-		   .downcast_or_err::<Boolean>()
+		obj.call_attr(literals::STRICT_EQL, &[rhs])?.to_boolean()
 	}
 
 	pub fn neq(obj: &AnyObject, rhs: &AnyObject) -> Result<Object<Boolean>> {
 		obj.call_attr(literals::EQL, &[rhs])?
 		   .call_attr(literals::NOT, &[])?
-		   .downcast_or_err::<Boolean>()
+		   .to_boolean()
 	}
 
-	pub fn not(obj: &AnyObject,) -> Result<Object<Boolean>> {
-		obj.to_boolean()?.as_any()
-		   .call_attr(literals::NOT, &[])?
-		   .downcast_or_err::<Boolean>()
+	pub fn not(obj: &AnyObject) -> Result<Object<Boolean>> {
+		obj.to_boolean()?.as_any().call_attr(literals::NOT, &[])?.to_boolean()
 	}
 
 	pub fn and(obj: &AnyObject, rhs: &AnyObject) -> Result<AnyObject> {
@@ -108,7 +105,7 @@ define_blank!(struct BooleanError, BOOLEAN_ERROR;
 );
 
 #[cfg(test)]
-define_blank!(struct InvertStrictEql, INVERT_STRICT_EQL; 
+define_blank!(struct InvertStrictEql, INVERT_STRICT_EQL;
 	literals::STRICT_EQL => |o, a| Ok(Object::new_boolean(!funcs::strict_eql(&o.as_any(), getarg!(a[0]).unwrap()).is_true()))
 );
 
@@ -186,7 +183,7 @@ mod fn_tests {
 		assert_eq!(funcs::neq(obj, &BlankObject::new_any())?, true);
 
 		// check to make sure overriding `==` works properly
-		define_blank!(struct InvertEql; 
+		define_blank!(struct InvertEql;
 			literals::EQL => |o, a| Ok(Object::new_boolean(!funcs::eql(&o.as_any(), getarg!(a[0])?)?.is_true()))
 		);
 
@@ -413,7 +410,7 @@ mod integration {
 	#[test]
 	fn arrow_right() -> Result<()> {
 		let ref obj1 = BlankObject::new_any();
-		let ref obj2 = BlankObject::new_any();	
+		let ref obj2 = BlankObject::new_any();
 
 		match obj2.call_attr(ARROW_LEFT, &[obj1]) {
 			Err(crate::err::Error::AttrMissing { attr, obj }) => {

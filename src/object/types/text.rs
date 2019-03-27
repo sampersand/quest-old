@@ -91,27 +91,27 @@ impl_type! { for Text;
 
 	EQL => |obj, args| {
 		let lhs = obj.data().read().expect(data_err![read in Text, EQL]);
-		let rhs = getarg!(args[0]: Text)?;
+		let rhs = __getarg!(args[0]: Text)?;
 		let rhs = rhs.data().read().expect(data_err![read in Text, EQL]);
 		Ok(Object::new_boolean(*lhs == *rhs))
 	},
 
 	ADD => |obj, args| {
-		let text_obj = getarg!(args[0] @ to_text)?;
+		let text_obj = __getarg!(args[0] @@ to_text)?;
 		let mut new_text = obj.data().read().expect(data_err![read in Text, ADD]).as_ref().to_string();
 		new_text.push_str(&text_obj.data().read().expect(data_err![read in Text, ADD]).as_ref());
 		Ok(Object::new_text(new_text))
 	},
 
 	ADD_ASSIGN => |obj, args| {
-		let text_obj = getarg!(args[0] @ to_text)?;
+		let text_obj = __getarg!(args[0] @@ to_text)?;
 		// this might fail if we try adding the same number
 		obj.data().write().expect(data_err![write in Text, ADD_ASSIGN]).push_str(&text_obj.data().read().expect(data_err![read in Text, ADD_ASSIGN]));
 		Ok(obj.clone())
 	},
 
 	MUL => |obj, args| {
-		let amnt_obj = getarg!(args[0] @ to_number)?;
+		let amnt_obj = __getarg!(args[0] @@ to_number)?;
 		let amnt = amnt_obj.data().read().expect(data_err![read in Text, MUL]).to_integer();
 		if amnt.is_negative() {
 			return Err(Error::BadArgument{ pos: 0, arg: amnt_obj, msg: "received a negative value" });;
@@ -123,7 +123,7 @@ impl_type! { for Text;
 	L_LEN => |obj, _| Ok(Object::new_number(obj.data().read().expect(data_err![read in Text, L_LEN]).chars().count() as f64)),
 	INDEX => |obj, args| { // note you index starting at 1
 		let this = obj.data().read().expect(data_err![read in Text, INDEX]);
-		let start = getarg!(args[0] @ to_number)?.data().read().expect(data_err![read in Text, INDEX]).to_integer();
+		let start = __getarg!(args[0] @@ to_number)?.data().read().expect(data_err![read in Text, INDEX]).to_integer();
 		let end = args.get(1).map(|x| x.to_number()).transpose()?.map(|x| x.data().read().expect(data_err![read in Text, INDEX]).to_integer());
 
 		match util::get_index(start, end, this.len()) {
@@ -133,7 +133,7 @@ impl_type! { for Text;
 		}
 	},
 	INDEX_ASSIGN => |obj, args| {
-		let start = getarg!(args[0] @ to_number)?.data().read().expect(data_err![read in Text, INDEX_ASSIGN]).to_integer();
+		let start = __getarg!(args[0] @@ to_number)?.data().read().expect(data_err![read in Text, INDEX_ASSIGN]).to_integer();
 		let end = if args.len() >= 3 {
 			Some(args[1].to_number()?.data().read().expect(data_err![read in Text, INDEX_ASSIGN]).to_integer())
 		} else {
@@ -143,7 +143,7 @@ impl_type! { for Text;
 		let insertion = if args.len() == 2 {
 			args[1].to_text()?
 		} else {
-			getarg!(args[2] @ to_text)?
+			__getarg!(args[2] @@ to_text)?
 		};
 
 		let mut this = obj.data().write().expect(data_err![write in Text, INDEX_ASSIGN]);

@@ -52,7 +52,7 @@ pub use self::funcs::colon_colon as _colon_colon;
 
 // so we can have the GETTER object
 fn colon_colon(obj: &AnyObject, args: &[&AnyObject]) -> crate::err::Result<AnyObject> {
-	funcs::colon_colon(obj, getarg!(args[0])?)
+	funcs::colon_colon(obj, __getarg!(args[0])?)
 }
 
 lazy_static! {
@@ -63,10 +63,10 @@ lazy_static! {
 		literals::L_MAP => |o, _| Ok(funcs::__map__(o)),
 		literals::L_ENV => |o, _| Ok(funcs::__env__(o)),
 		literals::COLON_COLON => colon_colon,
-		literals::ATTR_GET => |o, a| funcs::access(o, getarg!(a[0])?),
-		literals::ATTR_SET => |o, a| Ok(funcs::access_assign(o, getarg!(a[0])?.clone(), getarg!(a[1])?.clone())),
-		literals::ATTR_DEL => |o, a| funcs::access_delete(o, getarg!(a[0])?),
-		literals::ATTR_HAS => |o, a| Ok(funcs::access_has(o, getarg!(a[0])?))
+		literals::ATTR_GET => |o, a| funcs::access(o, __getarg!(a[0])?),
+		literals::ATTR_SET => |o, a| Ok(funcs::access_assign(o, __getarg!(a[0])?.clone(), __getarg!(a[1])?.clone())),
+		literals::ATTR_DEL => |o, a| funcs::access_delete(o, __getarg!(a[0])?),
+		literals::ATTR_HAS => |o, a| Ok(funcs::access_has(o, __getarg!(a[0])?))
 	};
 }
 

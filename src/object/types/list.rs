@@ -105,7 +105,7 @@ mod funcs {
 	pub fn eql(list: &Object<List>, rhs: &Object<List>) -> Result<Object<Boolean>> {
 		let list = list.data().read().expect("read err in List::funcs::eql");
 		let rhs = rhs.data().read().expect("read err in List::funcs::eql");
-		if list.len() != rhs.len() { 
+		if list.len() != rhs.len() {
 			return Ok(Object::new_boolean(false));
 		}
 		for i in 0..list.len() {
@@ -152,26 +152,26 @@ mod funcs {
 
 }
 
-impl_type! { for List; 
+impl_type! { for List;
 	literals::AT_LIST => |o, _| Ok(funcs::at_list(o)),
 	literals::AT_MAP => |o, _| Ok(funcs::at_map(o)?),
 	literals::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
 	literals::AT_TEXT => |o, _| Ok(funcs::at_text(o)?),
 
-	literals::EQL => |o, a| Ok(funcs::eql(o, &getarg!(a[0]: List)?)?),
-	literals::ADD => |o, a| Ok(funcs::add(o, &getarg!(a[0] @ to_list)?)),
-	literals::ADD_ASSIGN => |o, a| Ok(funcs::add_assign(o, &getarg!(a[0] @ to_list)?)),
-	literals::MUL => |o, a| Ok(funcs::mul(o, &getarg!(a[0] @ to_number)?)),
-	literals::MUL_ASSIGN => |o, a| Ok(funcs::mul_assign(o, &getarg!(a[0] @ to_number)?)),
+	literals::EQL => |o, a| Ok(funcs::eql(o, &__getarg!(a[0]: List)?)?),
+	literals::ADD => |o, a| Ok(funcs::add(o, &__getarg!(a[0] @@ to_list)?)),
+	literals::ADD_ASSIGN => |o, a| Ok(funcs::add_assign(o, &__getarg!(a[0] @@ to_list)?)),
+	literals::MUL => |o, a| Ok(funcs::mul(o, &__getarg!(a[0] @@ to_number)?)),
+	literals::MUL_ASSIGN => |o, a| Ok(funcs::mul_assign(o, &__getarg!(a[0] @@ to_number)?)),
 	literals::L_LEN => |o, _| Ok(funcs::len(o)),
 
-	// literals::INDEX => |o, a| funcs::index(o, &getarg!(a[0])),
-	// literals::INDEX_ASSIGN => |o, a| funcs::index_assign(o, &getarg!(a[0])?),
-	// literals::INDEX_DELETE => |o, a| funcs::index_delete(o, &getarg!(a[0])?),
+	// literals::INDEX => |o, a| funcs::index(o, &__getarg!(a[0])),
+	// literals::INDEX_ASSIGN => |o, a| funcs::index_assign(o, &__getarg!(a[0])?),
+	// literals::INDEX_DELETE => |o, a| funcs::index_delete(o, &__getarg!(a[0])?),
 
-	// literals::B_OR => |o, a| Ok(funcs::b_or(o, &getarg!(a[0] @ to_list)?)), // union
-	// literals::B_AND => |o, a| Ok(funcs::b_and(o, &getarg!(a[0] @ to_list)?)), // intersect
-	// literals::B_XOR => |o, a| Ok(funcs::b_xor(o, &getarg!(a[0] @ to_list)?)), // symmetric_difference
+	// literals::B_OR => |o, a| Ok(funcs::b_or(o, &__getarg!(a[0] @@ to_list)?)), // union
+	// literals::B_AND => |o, a| Ok(funcs::b_and(o, &__getarg!(a[0] @@ to_list)?)), // intersect
+	// literals::B_XOR => |o, a| Ok(funcs::b_xor(o, &__getarg!(a[0] @@ to_list)?)), // symmetric_difference
 }
 
 

@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{literals, Object, AnyObject};
 use crate::err::{Result, Error};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -13,16 +13,18 @@ impl Boolean {
 		Boolean(boolean)
 	}
 
+	#[deprecated]
 	pub fn is_true(&self) -> bool {
 		self.0 == true
 	}
 }
 
 impl Object<Boolean> {
-	pub fn new_boolean(boolean: bool) -> Object<Boolean> {
-		Object::new(Boolean::new(boolean))
+	pub fn new_boolean<T: Into<Boolean>>(boolean: T) -> Object<Boolean> {
+		Object::new(boolean.into())
 	}
 
+	#[deprecated]
 	pub fn is_true(&self) -> bool {
 		*self == true
 	}
@@ -30,8 +32,8 @@ impl Object<Boolean> {
 
 impl TryFrom<&'_ AnyObject> for Object<Boolean> {
 	type Error = Error;
-	fn try_from(obj: &AnyObject) -> Result<Object<Boolean>> {
-		obj.call_attr(literals::AT_BOOL, &[])?.downcast_or_err::<Boolean>()
+	fn try_from(obj: &'_ AnyObject) -> Result<Object<Boolean>> {
+		obj.to_boolean()
 	}
 }
 
@@ -86,7 +88,7 @@ mod funcs {
 	pub fn at_bool(obj: &Object<Boolean>) -> Object<Boolean> {
 		obj.duplicate()
 	}
-	
+
 	pub fn at_num(obj: &Object<Boolean>) -> Object<Number> {
 		if obj.is_true() {
 			Object::new_number(1.0)
@@ -96,7 +98,11 @@ mod funcs {
 	}
 
 	pub fn at_text(obj: &Object<Boolean>) -> Object<Text> {
-		Object::new_text_str(if obj.is_true() { "true" } else { "false" })
+		if *obj == true {
+			Object::new_text_str("true")
+		} else {
+			Object::new_text_str("false")
+		}
 	}
 
 	pub fn not(obj: &Object<Boolean>) -> Object<Boolean> {
@@ -126,10 +132,10 @@ impl_type! { for Boolean;
 	literals::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
 
 	literals::NOT => |b, _| Ok(funcs::not(b)),
-	literals::EQL => |b, a| Ok(funcs::eql(b, &getarg!(a[0]: Boolean)?)),
-	literals::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] @ to_boolean)?)),
-	literals::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] @ to_boolean)?)),
-	literals::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] @ to_boolean)?)),
+	literals::EQL => |b, a| Ok(getarg!(a[0] required: Boolean)?.map(|b2| funcs::eql(b, b2)).unwrap_or_else(|| Object::new_boolean(true))),
+	literals::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] as Boolean)?)),
+	literals::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] as Boolean)?)),
+	literals::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] as Boolean)?)),
 }
 
 #[cfg(test)]
@@ -328,12 +334,6 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn make_sure_not_nan() {
-		assert!(!1.0.is_nan());
-		assert!(!0.0.is_nan());
-	}
-
-	#[test]
 	fn new() {
 		assert_eq!(Boolean::new(true), Boolean::new(true));
 		assert_ne!(Boolean::new(true), Boolean::new(false));
@@ -354,7 +354,7 @@ mod tests {
 		// TODO: make `MyStruct` here so it doesn't rely upon number
 		assert_eq!(Object::new_number(0.0).as_any().to_boolean()?, false);
 		assert_eq!(Object::new_number(1.0).as_any().to_boolean()?, true);
-		
+
 		Ok(())
 	}
 

@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use crate::object::{literals, Object, AnyObject};
 use crate::err::{Result, Error};
+use std::convert::TryFrom;
 use std::ops::Deref;
 
 type Inner = f64;
@@ -61,6 +62,13 @@ impl Number {
 impl Object<Number> {
 	pub fn new_number<T: Into<Inner>>(num: T) -> Object<Number> {
 		Object::new(Number::new(num.into()))
+	}
+}
+
+impl TryFrom<&'_ AnyObject> for Object<Number> {
+	type Error = Error;
+	fn try_from(obj: &AnyObject) -> Result<Object<Number>> {
+		obj.to_number()
 	}
 }
 
@@ -142,14 +150,14 @@ mod funcs {
 
 	macro_rules! f64_func {
 		(math $oper:tt $name:ident) => { |num, args| {
-			let rhs_obj = getarg!(args[0] @ to_number)?;
+			let rhs_obj = __getarg!(args[0] @@ to_number)?;
 			let lhs = num.data().read().expect(const_concat!("num read error in Number::", $name));
 			let rhs = rhs_obj.data().read().expect(const_concat!("rhs read error in Number::", $name));
 			Ok(Object::new_number(**lhs $oper **rhs))
 		}};
 
 		(logic $oper:tt $name:ident) => { |num, args| {
-			let rhs_obj = getarg!(args[0] @ to_number)?;
+			let rhs_obj = __getarg!(args[0] @@ to_number)?;
 			let lhs = num.data().read().expect(const_concat!("num read error in Number::", $name));
 			let rhs = rhs_obj.data().read().expect(const_concat!("rhs read error in Number::", $name));
 			Ok(Object::new_boolean(**lhs $oper **rhs))
@@ -268,7 +276,6 @@ mod funcs {
 	pub fn neg(num: &Object<Number>) -> Object<Number> {
 		Object::new_number(-num.data().read().expect(data_err![read in Number, literals::POS]).as_ref())
 	}
-
 }
 
 impl_type! { for Number;
@@ -278,24 +285,25 @@ impl_type! { for Number;
 
 	literals::CALL => funcs::call,
 
-	literals::ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] @ to_number)?)),
-	literals::SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] @ to_number)?)),
-	literals::MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] @ to_number)?)),
-	literals::DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] @ to_number)?)),
-	literals::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] @ to_number)?)),
-	literals::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] @ to_number)?)),
+	literals::ADD => |n, a| Ok(funcs::add(n, &getarg!(a[0] as Number)?)),
+	literals::SUB => |n, a| Ok(funcs::sub(n, &getarg!(a[0] as Number)?)),
+	literals::MUL => |n, a| Ok(funcs::mul(n, &getarg!(a[0] as Number)?)),
+	literals::DIV => |n, a| Ok(funcs::div(n, &getarg!(a[0] as Number)?)),
+	literals::MOD => |n, a| Ok(funcs::r#mod(n, &getarg!(a[0] as Number)?)),
+	literals::POW => |n, a| Ok(funcs::pow(n, &getarg!(a[0] as Number)?)),
 
-	literals::EQL => |n, a| Ok(funcs::eql(n, &getarg!(a[0]: Number)?)),
-	literals::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] @ to_number)?)),
-	literals::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] @ to_number)?)),
-	literals::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] @ to_number)?)),
-	literals::LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] @ to_number)?)),
-	literals::GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] @ to_number)?)),
-	literals::CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] @ to_number)?)),
+	literals::EQL => |n, a| Ok(getarg!(a[0] required: Number)?.map(|n2| funcs::eql(n, n2)).unwrap_or_else(|| Object::new_boolean(false))),
+	literals::NEQ => |n, a| Ok(funcs::neq(n, &getarg!(a[0] as Number)?)),
+	literals::LTH => |n, a| Ok(funcs::lth(n, &getarg!(a[0] as Number)?)),
+	literals::GTH => |n, a| Ok(funcs::gth(n, &getarg!(a[0] as Number)?)),
+	literals::LEQ => |n, a| Ok(funcs::leq(n, &getarg!(a[0] as Number)?)),
+	literals::GEQ => |n, a| Ok(funcs::geq(n, &getarg!(a[0] as Number)?)),
+	literals::CMP => |n, a| Ok(funcs::cmp(n, &getarg!(a[0] as Number)?)),
 
 	literals::POS => |n, _| Ok(funcs::pos(n)),
 	literals::NEG => |n, _| Ok(funcs::neg(n)),
 }
+
 #[cfg(test)]
 mod fn_tests {
 	use super::{funcs, consts::*};
@@ -364,7 +372,7 @@ mod fn_tests {
 		assert_eq!(funcs::add(&n![NEG_INF], &n![NEG_INF]), NEG_INF);
 		assert_eq!(funcs::add(&n![INF], &n![INF]), INF);
 	}
-	
+
 	#[test]
 	fn sub() {
 		assert_eq!(funcs::sub(&n![13.4], &n![-4.0]), 17.4);
@@ -759,7 +767,6 @@ mod fn_tests {
 	}
 }
 
-
 #[cfg(test)]
 mod integration {
 	use super::{funcs, consts::*, Number};
@@ -767,7 +774,7 @@ mod integration {
 	use crate::object::types::{Boolean, Text};
 	use crate::object::literals::{
 		AT_BOOL, AT_TEXT, AT_NUM,
-		ADD, SUB, MUL, DIV, MOD, POW, 
+		ADD, SUB, MUL, DIV, MOD, POW,
 		EQL, NEQ, LTH, LEQ, GTH, GEQ, CMP,
 		POS, NEG
 	};
@@ -870,7 +877,7 @@ mod integration {
 
 		Ok(())
 	}
-	
+
 	#[test]
 	fn sub() -> Result<()> {
 		assert_call_eq!(SUB sub Number {
@@ -1083,7 +1090,7 @@ mod integration {
 			(-9e9) (-2.612) (-1.0) (-0.05)
 			0.05 0.0 1.0 2.0 INF NEG_INF
 		});
-		
+
 		assert_call_nan!(UNARY; NEG neg { NAN });
 
 		Ok(())
@@ -1108,7 +1115,7 @@ mod tests {
 
 		assert_new_asref_eq!{
 			0.0, -1.0, 1.0, 123491.0,
-			INF, NEG_INF, E, PI, 
+			INF, NEG_INF, E, PI,
 			inner_mod::EPSILON, inner_mod::MIN, inner_mod::MIN_POSITIVE, inner_mod::MAX,
 			inner_consts::FRAC_1_PI, inner_consts::FRAC_2_PI, inner_consts::FRAC_1_SQRT_2, inner_consts::FRAC_2_SQRT_PI,
 			inner_consts::FRAC_PI_2, inner_consts::FRAC_PI_3, inner_consts::FRAC_PI_4, inner_consts::FRAC_PI_6,
@@ -1147,7 +1154,7 @@ mod tests {
 		assert_eq!(*Object::new_number(1.0).as_any().to_number()?.unwrap_data(), 1.0);
 		assert!(Object::new_number(INF).as_any().to_number()?.unwrap_data().is_infinite());
 		assert!(Object::new_number(NAN).as_any().to_number()?.unwrap_data().is_nan());
-		
+
 		Ok(())
 	}
 }

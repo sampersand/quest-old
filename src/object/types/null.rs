@@ -1,7 +1,8 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::convert::TryFrom;
 use crate::object::{literals, Object, AnyObject};
-use crate::err::Result;
+use crate::err::{Result, Error};
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -13,13 +14,21 @@ impl Object<Null> {
 	}
 }
 
+impl TryFrom<AnyObject> for Object<Null> {
+	type Error = Error;
+	fn try_from(obj: AnyObject) -> Result<Object<Null>> {
+		obj.to_null()
+	}
+}
+
 impl AnyObject {
+	#[deprecated]
 	pub fn to_null(&self) -> Result<Object<Null>> {
-		self.downcast_or_err::<Null>() // we don't have an attr to downcast to
+		self.downcast_or_err::<Null>() // there's no `at_null` so just downcasting will do
 	}
 
 	pub fn is_null(&self) -> bool {
-		self.downcast::<Null>().is_some()
+		self.is::<Null>()
 	}
 
 }
@@ -84,7 +93,7 @@ impl_type! { for Null;
 	literals::AT_LIST => |n, _| Ok(funcs::at_list(n)),
 	literals::AT_MAP => |n, _| Ok(funcs::at_map(n)),
 
-	literals::EQL => |n, a| Ok(getarg!(a[0])?.to_null().map(|ref arg| funcs::eql(n, arg)).unwrap_or_else(|_| Object::new_boolean(false))),
+	literals::EQL => |n, a| Ok(getarg!(a[0] required: Null)?.map(|n2| funcs::eql(n, n2)).unwrap_or_else(|| Object::new_boolean(false))),
 	literals::CALL => funcs::call
 }
 
@@ -157,7 +166,7 @@ mod integration {
 	#[test]
 	fn at_text() -> Result<()> {
 		let ref n = Object::new_null();
-		
+
 		assert_eq!(n.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?, "null");
 		assert_eq!(n.as_any().call_attr(AT_TEXT, &[&Blank::new_any()])?.downcast_or_err::<Text>()?, "null");
 
@@ -167,7 +176,7 @@ mod integration {
 	#[test]
 	fn at_num() -> Result<()> {
 		let ref n = Object::new_null().as_any();
-		
+
 		assert_eq!(n.call_attr(AT_NUM, &[])?.downcast_or_err::<Number>()?, 0.0);
 		assert_eq!(n.call_attr(AT_NUM, &[&Blank::new_any()])?.downcast_or_err::<Number>()?, 0.0);
 
@@ -177,7 +186,7 @@ mod integration {
 	#[test]
 	fn at_map() -> Result<()> {
 		let ref n = Object::new_null().as_any();
-		
+
 		assert_eq!(n.call_attr(AT_MAP, &[])?.downcast_or_err::<Map>()?, Map::empty());
 		assert_eq!(n.call_attr(AT_MAP, &[&Blank::new_any()])?.downcast_or_err::<Map>()?, Map::empty());
 
@@ -187,7 +196,7 @@ mod integration {
 	#[test]
 	fn at_list() -> Result<()> {
 		let ref n = Object::new_null().as_any();
-		
+
 		assert_eq!(n.call_attr(AT_LIST, &[])?.downcast_or_err::<List>()?, List::empty());
 		assert_eq!(n.call_attr(AT_LIST, &[&Blank::new_any()])?.downcast_or_err::<List>()?, List::empty());
 
@@ -198,13 +207,13 @@ mod integration {
 	#[test]
 	fn eql() -> Result<()> {
 		let ref n = Object::new_null().as_any();
-		
+
 		assert_eq!(n.call_attr(EQL, &[&n])?.downcast_or_err::<Boolean>()?, true);
 		assert_eq!(n.call_attr(EQL, &[&Blank::new_any()])?.downcast_or_err::<Boolean>()?, false);
 		assert_param_missing!(n.call_attr(EQL, &[]));
 
 		Ok(())
-	
+
 	}
 
 	#[test]
@@ -238,7 +247,7 @@ mod tests {
 	#[test]
 	fn to_null() -> Result<()> {
 		Object::new_null().as_any().to_null()?; // ignore the result
-		
+
 		Ok(())
 	}
 

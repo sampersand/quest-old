@@ -8,8 +8,8 @@ macro_rules! assert_param_missing {
 	($expr:expr) => (assert_param_missing!($expr, 0));
 	($expr:expr, $pos:expr) => (
 		match $expr {
-			Err(crate::err::Error::MissingArgument { pos: 0, .. }) => {},
-			other => panic!("invalid response returend from `assert_param_missing({:?},{:?})`: {:?}", $expr, $pos, other)
+			Err(crate::err::Error::MissingArgument { pos: $pos, .. }) => {},
+			other => panic!("invalid response returend from `assert_param_missing({:?}, {})`: {:?}", $expr, $pos, other)
 		}
 	);
 }
@@ -18,7 +18,7 @@ macro_rules! assert_param_missing {
 macro_rules! assert_obj_duplicated {
 	($obj1:expr, $obj2:expr) => ({
 		assert_eq!(*$obj1.unwrap_data(), *$obj2.unwrap_data());
-		unsafe { 
+		unsafe {
 			assert_ne!($obj1.data_ptr(), $obj2.data_ptr());
 		}
 		assert!(!$obj1.map().ptr_eq($obj2.map()));
@@ -26,11 +26,31 @@ macro_rules! assert_obj_duplicated {
 }
 
 macro_rules! getarg {
-	($args:ident[$pos:expr]: $type:ty) => {
-		getarg!($args[$pos]).and_then(|obj| obj.downcast_or_err::<$type>())
+	($args:ident[$pos:expr] required: $type:ty) => {
+		getarg!($args[$pos]).map($crate::object::Object::downcast_ref::<$type>)
 	};
-	($args:ident[$pos:expr] @ $conv_func:ident) => {
-		getarg!($args[$pos]).and_then(|obj| obj.$conv_func())
+
+	($args:ident[$pos:expr] as $type:ty) => {
+		getarg!($args[$pos]).and_then(<$crate::object::Object<$type> as std::convert::TryFrom<_>>::try_from)
+	};
+
+	($args:ident[$pos:expr]) => {
+		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::err::Error::MissingArgument {
+			pos: $pos,
+			args: $args.iter().map(|x| (*x).clone()).collect()
+		})
+	}
+}
+
+macro_rules! __getarg {
+	($args:ident[$pos:expr]: $type:ty) => {
+		__getarg!($args[$pos]).and_then(|obj| obj.downcast_or_err::<$type>())
+	};
+	($args:ident[$pos:expr] @ $ty:ty) => {
+		__getarg!($args[$pos]).and_then(<$crate::object::Object<$ty> as std::convert::TryFrom<_>>::try_from)
+	};
+	($args:ident[$pos:expr] @@ $conv_func:ident) => {
+		__getarg!($args[$pos]).and_then(|obj| obj.$conv_func())
 	};
 
 	($args:ident[$pos:expr]) => {
@@ -128,7 +148,7 @@ macro_rules! object_map {
 macro_rules! impl_type {
 	(for $type:ty, map $mapname:ident: $map:expr; $($impl:tt)*) => {
 		lazy_static::lazy_static! {
-			pub static ref $mapname: $crate::shared::Shared<dyn $crate::map::Map> = 
+			pub static ref $mapname: $crate::shared::Shared<dyn $crate::map::Map> =
 				object_map!(TYPED $type, $map; $($impl)*);
 		}
 
