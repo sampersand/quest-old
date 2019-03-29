@@ -345,8 +345,8 @@ mod fn_tests {
 	#[test]
 	#[ignore]
 	fn make_sure_attr_access_works() -> Result<()> {
-		let ref one = Object::new_number(1.0).as_any();
-		let ref two = Object::new_number(2.0).as_any();
+		let ref one = Object::new_whole_number(1).as_any();
+		let ref two = Object::new_whole_number(2).as_any();
 
 		one.call_attr(literals::ATTR_SET, &[two])?;
 		assert!(one.has(two));

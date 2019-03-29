@@ -84,7 +84,7 @@ impl PartialEq<str> for Object<Variable> {
 }
 
 impl_type! { for Variable;
-	literals::AT_VAR => |obj, _| Ok(Object::new_variable(**obj.data().read().expect(data_err![read in Variable, literals::AT_VAR])))
+	literals::AT_VAR => |obj, _| Ok(Object::new_variable(**obj.data().read().expect("read err in Variable::at_var")))
 }
 
 

@@ -90,11 +90,7 @@ mod funcs {
 	}
 
 	pub fn at_num(obj: &Object<Boolean>) -> Object<Number> {
-		if obj.is_true() {
-			Object::new_number(1.0)
-		} else {
-			Object::new_number(0.0)
-		}
+		Object::new_whole_number(u8::from(obj.is_true()))
 	}
 
 	pub fn at_text(obj: &Object<Boolean>) -> Object<Text> {
@@ -132,7 +128,7 @@ impl_type! { for Boolean;
 	literals::AT_TEXT => |b, _| Ok(funcs::at_text(b)),
 
 	literals::NOT => |b, _| Ok(funcs::not(b)),
-	literals::EQL => |b, a| Ok(getarg!(a[0] required: Boolean)?.map(|b2| funcs::eql(b, b2)).unwrap_or_else(|| Object::new_boolean(true))),
+	literals::EQL => |b, a| Ok(getarg!(a[0] required: Boolean)?.map(|b2| funcs::eql(b, b2)).unwrap_or_else(|| Object::new_boolean(false))),
 	literals::B_XOR => |b, a| Ok(funcs::b_xor(b, &getarg!(a[0] as Boolean)?)),
 	literals::B_AND => |b, a| Ok(funcs::b_and(b, &getarg!(a[0] as Boolean)?)),
 	literals::B_OR => |b, a| Ok(funcs::b_or(b, &getarg!(a[0] as Boolean)?)),

@@ -56,15 +56,12 @@ impl RustFn {
 		RustFn { name, func: Arc::new(func) }
 	}
 
-
-	pub fn name(&self) -> Option<&'static str> {
-		self.name
-	}
-
 	pub fn call(&self, args: &[&AnyObject]) -> Result<AnyObject> {
 		let obj = args.get(0).expect("no `self` passed? <todo make this a thrown error>");
 		(self.func)(obj, &args[1..])
 	}
+
+
 }
 
 impl Object<RustFn> {
@@ -118,9 +115,47 @@ impl Debug for RustFn {
 	}
 }
 
+mod funcs {
+	use super::{RustFn};
+	use crate::err::Result;
+	use crate::object::{Object, AnyObject};
+	use crate::object::types::Text;
+
+	pub fn call(rustfn: &Object<RustFn>, args: &[&AnyObject]) -> Result<AnyObject> {
+		rustfn.data().read().expect("read err in RustFn::call").call(args)
+	}
+
+	pub fn at_text(rustfn: &Object<RustFn>) -> Object<Text> {
+		let rustfn = rustfn.data().read().expect("read err in RustFn::at_text");
+		if let Some(name) = rustfn.name {
+			Object::new_text(format!("<rustfn '{}'>", name))
+		} else {
+			Object::new_text(format!("<rustfn {:p}>", rustfn.func))
+		}
+	}
+}
+
 impl_type! { for RustFn;
-	// AT_TEXT => |obj, _| Ok(Object::new_text(format!("{:?}", *obj.data().read().expect("read error in RustFn::@text")))),
-	literals::CALL => |obj, args| obj.data().read().expect(data_err![read in RustFn, literals::CALL]).call(args)
+	literals::AT_TEXT => |r, _| Ok(funcs::at_text(r)),
+	literals::CALL => funcs::call
+}
+
+#[cfg(test)]
+mod fn_tests {
+	use super::*;
+
+	#[test]
+	fn at_text() {
+		let rustfn = Object::new_named_rustfn::<_, !>("myname", |_, _| unreachable!());
+		assert!(funcs::at_text(&rustfn).data().read().unwrap().contains("myname"));
+		// we dont have any assertions about things without names...
+	}
+
+	#[test]
+	#[ignore]
+	fn call() {
+		unimplemented!()
+	}
 }
 
 #[cfg(test)]
@@ -130,8 +165,8 @@ mod tests {
 
 	#[test]
 	fn new() {
-		assert_eq!(RustFn::new::<_, !>(|_, _| unreachable!()).name(), None);
-		assert_eq!(RustFn::new_named::<_, !>("hi there", |_, _| unreachable!()).name(), Some("hi there"));
+		assert_eq!(RustFn::new::<_, !>(|_, _| unreachable!()).name, None);
+		assert_eq!(RustFn::new_named::<_, !>("hi there", |_, _| unreachable!()).name, Some("hi there"));
 
 		// let f: fn(&Object<!>, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
 		// assert_eq!(RustFn::new::<_, !>(f), RustFn::new::<_,!>(f));
@@ -139,8 +174,8 @@ mod tests {
 
 	#[test]
 	fn untyped() {
-		assert_eq!(RustFn::new_untyped(|_, _| unreachable!()).name(), None);
-		assert_eq!(RustFn::new_named_untyped("hi there", |_, _| unreachable!()).name(), Some("hi there"));
+		assert_eq!(RustFn::new_untyped(|_, _| unreachable!()).name, None);
+		assert_eq!(RustFn::new_named_untyped("hi there", |_, _| unreachable!()).name, Some("hi there"));
 
 		// let f: fn(&AnyObject, &[&AnyObject]) -> Result<AnyObject> = |_, _| unreachable!();
 		// assert_eq!(RustFn::new_untyped(f), RustFn::new_untyped(f));

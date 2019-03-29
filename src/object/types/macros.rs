@@ -1,8 +1,3 @@
-macro_rules! data_err {
-	(read in $ty:ty, $name:expr) => {const_concat!("read err in ", stringify!($ty), "::", $name) };
-	(write in $ty:ty, $name:expr) => {const_concat!("write err in ", stringify!($ty), "::", $name) }
-}
-
 #[cfg(test)]
 macro_rules! assert_param_missing {
 	($expr:expr) => (assert_param_missing!($expr, 0));

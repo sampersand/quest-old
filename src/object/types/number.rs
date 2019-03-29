@@ -60,6 +60,10 @@ impl Number {
 }
 
 impl Object<Number> {
+	pub fn new_whole_number<T: Into<Inner>>(num: T) -> Object<Number> {
+		Object::new_number(num)
+	}
+
 	pub fn new_number<T: Into<Inner>>(num: T) -> Object<Number> {
 		Object::new(Number::new(num.into()))
 	}
@@ -77,7 +81,6 @@ impl AnyObject {
 		self.call_attr(literals::AT_NUM, &[])?.downcast_or_err::<Number>()
 	}
 }
-
 
 impl From<Inner> for Number {
 	fn from(num: Inner) -> Number {
@@ -186,80 +189,80 @@ mod funcs {
 	}
 
 	pub fn add(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::ADD]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::ADD]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::add");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::add");
 		Object::new_number(lhs + rhs)
 	}
 
 	pub fn sub(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::SUB]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::SUB]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::sub");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::sub");
 		Object::new_number(lhs - rhs)
 	}
 
 	pub fn mul(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::MUL]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::MUL]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::mul");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::mul");
 		Object::new_number(lhs * rhs)
 	}
 
 	pub fn div(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::DIV]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::DIV]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::div");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::div");
 		Object::new_number(lhs / rhs)
 	}
 
 	pub fn r#mod(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::MOD]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::MOD]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::mod");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::mod");
 		Object::new_number(lhs % rhs)
 	}
 
 	pub fn pow(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Number> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::POW]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::POW]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::pow");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::pow");
 		Object::new_number(lhs.powf(rhs))
 	}
 
 
 	pub fn eql(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::EQL]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::EQL]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::eql");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::eql");
 		Object::new_boolean(lhs == rhs)
 	}
 
 	pub fn neq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::NEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::NEQ]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::neq");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::neq");
 		Object::new_boolean(lhs != rhs)
 	}
 
 	pub fn lth(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::LTH]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::LTH]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::lth");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::lth");
 		Object::new_boolean(lhs < rhs)
 	}
 	pub fn gth(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::GTH]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::GTH]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::gth");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::gth");
 		Object::new_boolean(lhs > rhs)
 	}
 	pub fn leq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::LEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::LEQ]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::leq");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::leq");
 		Object::new_boolean(lhs <= rhs)
 	}
 	pub fn geq(lhs: &Object<Number>, rhs: &Object<Number>) -> Object<Boolean> {
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::GEQ]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::GEQ]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::geq");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::geq");
 		Object::new_boolean(lhs >= rhs)
 	}
 
 	pub fn cmp(lhs: &Object<Number>, rhs: &Object<Number>) -> AnyObject {
 		use std::cmp::{Ord, Ordering};
 
-		let lhs = **lhs.data().read().expect(data_err![read in Number, literals::CMP]);
-		let rhs = **rhs.data().read().expect(data_err![read in Number, literals::CMP]);
+		let lhs = **lhs.data().read().expect("read err in Number::funcs::cmp");
+		let rhs = **rhs.data().read().expect("read err in Number::funcs::cmp");
 		match lhs.partial_cmp(&rhs) {
 			None => Object::new_null(),
 			Some(Ordering::Less) => Object::new_number(-1.0),
@@ -270,11 +273,11 @@ mod funcs {
 
 
 	pub fn pos(num: &Object<Number>) -> Object<Number> {
-		Object::new_number(num.data().read().expect(data_err![read in Number, literals::POS]).abs())
+		Object::new_number(num.data().read().expect("read err in Number::funcs::pos").abs())
 	}
 
 	pub fn neg(num: &Object<Number>) -> Object<Number> {
-		Object::new_number(-num.data().read().expect(data_err![read in Number, literals::POS]).as_ref())
+		Object::new_number(-num.data().read().expect("read err in Number::funcs::pos").as_ref())
 	}
 }
 
@@ -848,6 +851,12 @@ mod integration {
 
 	#[test]
 	fn at_text() -> Result<()> {
+		// let ref n = Object::new_number(1.0);
+		// /*assert_eq!(*/n.as_any().call_attr(AT_TEXT, &[])?.downcast_or_err::<Text>()?/*)*/;//, funcs::at_text(n));
+
+		// n!(-990.0).call_attr(AT_TEXT, &[]);
+		// n!(-1.23).call_attr(AT_TEXT, &[]);
+		// return Ok(());
 		assert_call_eq!(UNARY; AT_TEXT at_text Text {
 			0.0 1.0 (-1.0) 12.34 (-1.23) NAN INF NEG_INF (-990.0)
 		});
