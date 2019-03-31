@@ -15,6 +15,10 @@ impl Variable {
 	pub fn new(id: Literal) -> Variable {
 		Variable(id)
 	}
+
+	fn inner_str(&self) -> &str {
+		self.0.as_ref()
+	}
 }
 
 impl Object<Variable> {
@@ -83,8 +87,34 @@ impl PartialEq<str> for Object<Variable> {
 	}
 }
 
+mod funcs {
+	use super::Variable;
+	use crate::err::Result;
+	use crate::object::{literals, Object, AnyObject};
+	use crate::object::types::Text;
+
+	pub fn at_text(var: &Object<Variable>) -> Object<Text> {
+		Object::new_text(var.data().read().expect("read err in Variable::at_text").inner_str().to_string())
+	}
+
+	pub fn at_var(var: &Object<Variable>) -> Object<Variable> {
+		var.duplicate()
+	}
+
+	pub fn call(var: &Object<Variable>) -> AnyObject {
+		unimplemented!()
+	}
+
+	pub fn assign(var: &Object<Variable>, val: AnyObject) -> AnyObject {
+		unimplemented!()
+	}
+}
+
 impl_type! { for Variable;
-	literals::AT_VAR => |obj, _| Ok(Object::new_variable(**obj.data().read().expect("read err in Variable::at_var")))
+	literals::AT_TEXT => |v, _| Ok(funcs::at_text(v)),
+	literals::AT_VAR => |v, _| Ok(funcs::at_var(v)),
+	literals::CALL => |v, _| Ok(funcs::call(v)),
+	literals::ASSIGN => |v, a| Ok(funcs::assign(v, getarg!(a[0])?.clone())),
 }
 
 

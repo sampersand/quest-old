@@ -60,8 +60,8 @@ impl Number {
 }
 
 impl Object<Number> {
-	pub fn new_whole_number<T: Into<Inner>>(num: T) -> Object<Number> {
-		Object::new_number(num)
+	pub fn new_whole_number<T: Into<i64>>(num: T) -> Object<Number> {
+		Object::new_number(num.into() as f64)
 	}
 
 	pub fn new_number<T: Into<Inner>>(num: T) -> Object<Number> {

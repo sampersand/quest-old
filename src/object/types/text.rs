@@ -89,6 +89,7 @@ mod funcs {
 	use std::convert::TryFrom;
 	use crate::object::{literals, Object, AnyObject};
 	use crate::object::types::{Boolean, Number, Variable};
+	use crate::util::{self, IndexError};
 
 	pub fn at_text(text: &Object<Text>) -> Object<Text> {
 		text.duplicate()
@@ -144,9 +145,47 @@ mod funcs {
 		}
 	}
 
-	pub fn len(text: &Object<Text>) -> Result<Object<Number>> {
-	// Object::new_whole_number(text.data().read().expect("read err in Text::l_len").chars().count() 
-		unimplemented!()
+	pub fn len(text: &Object<Text>) -> Object<Number> {
+		Object::new_whole_number(text.data().read().expect("read err in Text::len").chars().count() as i64)
+	}
+
+	pub fn index(text: &Object<Text>, args: &[&AnyObject]) -> Result<AnyObject> {
+		let this = text.data().read().expect("read err in Text::index");
+		let start = __getarg!(args[0] @@ to_number)?.data().read().expect("read err in Text::index").to_integer();
+		let end = args.get(1).map(|x| x.to_number()).transpose()?.map(|x| x.data().read().expect("read err in Text::index").to_integer());
+
+		match util::get_index(start, end, this.len()) {
+			Ok(range) => Ok(Object::new_text_str(this.get(range).expect(const_concat!["indexing failed in Text::", literals::INDEX]))),
+			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
+			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
+		}
+	}
+
+	pub fn index_assign(text: &Object<Text>, args: &[&AnyObject]) -> Result<AnyObject> {
+		let start = getarg!(args[0] as Number)?.data().read().expect("read err in Text::index_assign").to_integer();
+		let end = if args.len() >= 3 {
+			Some(args[1].to_number()?.data().read().expect("read err in Text::index_assign").to_integer())
+		} else {
+			None
+		};
+
+		let insertion = if args.len() == 2 {
+			args[1].to_text()?
+		} else {
+			getarg!(args[2] as Text)?
+		};
+
+		let mut this = text.data().write().expect("write err in Text::index_assign");
+
+		match util::get_index(start, end, this.len()) {
+			Ok(range) => {
+				this.replace_range(range, &insertion.data().read().expect("read err in Text::index_assign"));
+				drop(this);
+				Ok(text.as_any())
+			},
+			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
+			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
+		}
 	}
 }
 
@@ -165,48 +204,14 @@ impl_type! { for Text;
 	literals::ADD_ASSIGN => |t, a| Ok(funcs::add_assign(t, &getarg!(a[0] as Text)?)),
 	literals::MUL => |t, a| Ok(funcs::mul(t, &getarg!(a[0] as super::Number)?)?),
 
-	literals::L_LEN => |text, _| Ok(Object::new_number(text.data().read().expect("read err in Text::l_len").chars().count() as f64)),
-	literals::INDEX => |text, args| { // note you index starting at 1
-		let this = text.data().read().expect("read err in Text::index");
-		let start = __getarg!(args[0] @@ to_number)?.data().read().expect("read err in Text::index").to_integer();
-		let end = args.get(1).map(|x| x.to_number()).transpose()?.map(|x| x.data().read().expect("read err in Text::index").to_integer());
-
-		match util::get_index(start, end, this.len()) {
-			Ok(range) => Ok(Object::new_text_str(this.get(range).expect(const_concat!["indexing failed in Text::", literals::INDEX]))),
-			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
-			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
-		}
-	},
-	literals::INDEX_ASSIGN => |text, args| {
-		let start = __getarg!(args[0] @@ to_number)?.data().read().expect("read err in Text::index_assign").to_integer();
-		let end = if args.len() >= 3 {
-			Some(args[1].to_number()?.data().read().expect("read err in Text::index_assign").to_integer())
-		} else {
-			None
-		};
-
-		let insertion = if args.len() == 2 {
-			args[1].to_text()?
-		} else {
-			__getarg!(args[2] @@ to_text)?
-		};
-
-		let mut this = text.data().write().expect("write err in Text::index_assign");
-		match util::get_index(start, end, this.len()) {
-			Ok(range) => {
-				this.replace_range(range, &insertion.data().read().expect("read err in Text::index_assign"));
-				drop(this);
-				Ok(text.as_any())
-			},
-			Err(IndexError::ZeroPassed) => Err(Error::BadArgument { pos: 0, arg: Object::new_number(0.0).clone(), msg: "0 is not allowed for indexing" }), // making the number is bad
-			Err(IndexError::StartOutOfBounds) | Err(IndexError::StartBiggerThanEnd) => Ok(Object::new_null())
-		}
-	},
+	literals::L_LEN => |t, _| Ok(funcs::len(t)),
+	literals::INDEX => funcs::index,
+	literals::INDEX_ASSIGN => funcs::index_assign
 }
 
 
 #[cfg(test)]
-mod fn_tests {
+mod integration_old {
 	use super::*;
 	use crate::object::types::{Boolean, Number, Variable};
 	use crate::err::Error;
