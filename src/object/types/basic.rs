@@ -6,7 +6,7 @@ use crate::object::{Type, Object, AnyObject};
 
 use crate::shared::Shared;
 use crate::map::{Map, ParentMap};
-use crate::err::Result;
+use crate::error::Result;
 use crate::object::{literals, types::pristine::PRISTINE_MAP};
 
 mod funcs {
@@ -101,7 +101,7 @@ define_blank!(struct BlankButFalse, BLANK_BUT_FALSE_MAP;
 
 #[cfg(test)]
 define_blank!(struct BooleanError, BOOLEAN_ERROR;
-	literals::AT_BOOL => |_, _| Err(crate::err::Error::__Testing)
+	literals::AT_BOOL => |_, _| Err(crate::error::Error::__Testing)
 );
 
 #[cfg(test)]
@@ -112,7 +112,7 @@ define_blank!(struct InvertStrictEql, INVERT_STRICT_EQL;
 #[cfg(test)]
 mod fn_tests {
 	use super::*;
-	use crate::err::{Error, Result};
+	use crate::error::{Error, Result};
 	use crate::object::types::{Boolean, Variable};
 
 
@@ -413,7 +413,7 @@ mod integration {
 		let ref obj2 = BlankObject::new_any();
 
 		match obj2.call_attr(ARROW_LEFT, &[obj1]) {
-			Err(crate::err::Error::AttrMissing { attr, obj }) => {
+			Err(crate::error::Error::AttrMissing { attr, obj }) => {
 				assert!(obj.id_eq(&obj2));
 				assert_eq!(attr.downcast_or_err::<crate::object::types::Variable>()?, ARROW_LEFT);
 			},

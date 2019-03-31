@@ -3,7 +3,7 @@ macro_rules! assert_param_missing {
 	($expr:expr) => (assert_param_missing!($expr, 0));
 	($expr:expr, $pos:expr) => (
 		match $expr {
-			Err(crate::err::Error::MissingArgument { pos: $pos, .. }) => {},
+			Err(crate::error::Error::MissingArgument { pos: $pos, .. }) => {},
 			other => panic!("invalid response returend from `assert_param_missing({:?}, {})`: {:?}", $expr, $pos, other)
 		}
 	);
@@ -30,7 +30,7 @@ macro_rules! getarg {
 	};
 
 	($args:ident[$pos:expr]) => {
-		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::err::Error::MissingArgument {
+		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::error::Error::MissingArgument {
 			pos: $pos,
 			args: $args.iter().map(|x| (*x).clone()).collect()
 		})
@@ -49,7 +49,7 @@ macro_rules! __getarg {
 	};
 
 	($args:ident[$pos:expr]) => {
-		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::err::Error::MissingArgument {
+		$args.get($pos).map(|x| *x).ok_or_else(|| $crate::error::Error::MissingArgument {
 			pos: $pos,
 			args: $args.iter().map(|x| (*x).clone()).collect()
 		})
@@ -160,7 +160,7 @@ macro_rules! impl_type {
 
 	(for $type:ty, map $mapname:ident; $($name:expr => $func:expr),*) => {
 		impl_type!(for $type,
-			map $mapname: $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::basic::BASIC_MAP.clone());
+			map $mapname: $crate::map::ParentMap::<std::collections::HashMap<_, _>>::new_default($crate::object::types::BASIC_MAP.clone());
 			$($name => $func),*
 		);
 	};

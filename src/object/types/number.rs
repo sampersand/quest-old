@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use crate::object::{literals, Object, AnyObject};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use std::convert::TryFrom;
 use std::ops::Deref;
 
@@ -147,7 +147,7 @@ impl Display for Number {
 
 mod funcs {
 	use super::Number;
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::{literals, Object, AnyObject};
 	use crate::object::types::{Boolean, Text};
 
@@ -781,7 +781,7 @@ mod integration {
 		EQL, NEQ, LTH, LEQ, GTH, GEQ, CMP,
 		POS, NEG
 	};
-	use crate::err::Result;
+	use crate::error::Result;
 
 	macro_rules! _n_ {
 		($num:expr) => (Object::new_number($num as f64))

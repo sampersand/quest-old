@@ -1,6 +1,3 @@
-#[macro_use]
-mod macros;
-
 mod basic;
 mod number;
 mod variable;

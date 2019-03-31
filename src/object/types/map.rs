@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{Object, AnyObject};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use std::hash::{Hasher, Hash};
 use std::ops::Deref;
 use std::collections::HashMap;
@@ -66,7 +66,7 @@ impl Hash for Map {
 mod funcs {
 	use super::*;
 	use super::Map;
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::{literals, Object, AnyObject};
 	use crate::object::types::{Boolean, Text, List};
 

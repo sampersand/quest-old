@@ -1,4 +1,4 @@
-mod types;
+pub mod types;
 mod map;
 mod literal;
 
@@ -11,7 +11,7 @@ use std::any::Any;
 use crate::shared::Shared;
 use crate::map::Map;
 use std::convert::TryFrom;
-use crate::err::{Error, Result};
+use crate::error::{Error, Result};
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 use lazy_static::lazy_static;

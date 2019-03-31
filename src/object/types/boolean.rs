@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{literals, Object, AnyObject};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
@@ -226,7 +226,7 @@ mod fn_tests {
 #[cfg(test)]
 mod integration {
 	use super::{Boolean, funcs, literals};
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Number};
 	use literals::*;

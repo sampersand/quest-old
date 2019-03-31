@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{literals, Object, AnyObject};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use std::ops::Deref;
 
 type ObjList = Vec<AnyObject>;
@@ -67,7 +67,7 @@ mod funcs {
 	use super::{List, ObjList};
 	use crate::object::types::{Number, Text, Map, Boolean};
 	use crate::object::{Object, literals};
-	use crate::err::Result;
+	use crate::error::Result;
 
 	pub fn at_list(list: &Object<List>) -> Object<List> {
 		list.duplicate()

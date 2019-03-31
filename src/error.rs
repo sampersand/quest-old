@@ -1,5 +1,6 @@
 // use std::sync::PoisonError;
 use crate::object::AnyObject;
+use crate::parse;
 use std::error::Error as ErrorTrait;
 
 #[derive(Debug)]
@@ -9,6 +10,7 @@ pub enum Error {
 	MissingArgument { pos: usize, args: Vec<AnyObject> },
 	BadArgument { pos: usize, arg: AnyObject, msg: &'static str },
 	Boxed(Box<dyn ErrorTrait>),
+	ParseError(parse::Error),
 	#[cfg(test)]
 	__Testing // this error is used to throw custom errors when testing
 }

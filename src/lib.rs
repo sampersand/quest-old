@@ -5,11 +5,18 @@
 #[macro_use]
 mod util;
 
+#[macro_use]
+mod macros;
+
 mod object;
 mod map;
 mod shared;
 mod env;
-mod err;
+mod error;
+mod parse;
+
+
+pub use self::parse::{parse_str, parse_file};
 
 pub fn _test() {
 	// macro_rules! n {

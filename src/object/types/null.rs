@@ -2,7 +2,7 @@ use std::fmt::{self, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::convert::TryFrom;
 use crate::object::{literals, Object, AnyObject};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -53,7 +53,7 @@ impl Display for Null {
 
 mod funcs {
 	use super::Null;
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::{Object, AnyObject};
 	use crate::object::types::{Text, List, Map, Boolean, Number};
 
@@ -146,7 +146,7 @@ mod fn_tests {
 #[cfg(test)]
 mod integration {
 	use super::*;
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::Object;
 	use crate::object::types::{Text, Boolean, Number, Map, List};
 	use literals::*;

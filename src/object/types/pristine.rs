@@ -1,13 +1,13 @@
 use std::any::Any;
 use lazy_static::lazy_static;
 use crate::object::{literals, Type, Object, AnyObject, types::RustFn};
-use crate::{shared::Shared, map::Map, err::Error};
+use crate::{shared::Shared, map::Map, error::Error};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 
 mod funcs {
 	use crate::map::Map as MapTrait;
-	use crate::err::{Error, Result};
+	use crate::error::{Error, Result};
 	use crate::object::types::{Number, Boolean, Map};
 	use crate::object::{literals, AnyObject, Object};
 
@@ -51,7 +51,7 @@ mod funcs {
 pub use self::funcs::colon_colon as _colon_colon;
 
 // so we can have the GETTER object
-fn colon_colon(obj: &AnyObject, args: &[&AnyObject]) -> crate::err::Result<AnyObject> {
+fn colon_colon(obj: &AnyObject, args: &[&AnyObject]) -> crate::error::Result<AnyObject> {
 	funcs::colon_colon(obj, __getarg!(args[0])?)
 }
 

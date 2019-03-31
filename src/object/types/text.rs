@@ -3,7 +3,7 @@ use crate::object::{Object, AnyObject, Type};
 use std::collections::{HashSet, HashMap};
 use crate::{map::Map, shared::Shared};
 use std::ops::{Deref, DerefMut};
-use crate::err::{Result, Error};
+use crate::error::{Result, Error};
 use lazy_static::lazy_static;
 use crate::util::{self, IndexError};
 use std::convert::TryFrom;
@@ -85,7 +85,7 @@ impl AsRef<str> for Text {
 
 mod funcs {
 	use super::Text;
-	use crate::err::{Result, Error};
+	use crate::error::{Result, Error};
 	use std::convert::TryFrom;
 	use crate::object::{literals, Object, AnyObject};
 	use crate::object::types::{Boolean, Number, Variable};
@@ -214,7 +214,7 @@ impl_type! { for Text;
 mod integration_old {
 	use super::*;
 	use crate::object::types::{Boolean, Number, Variable};
-	use crate::err::Error;
+	use crate::error::Error;
 	use literals::*;
 
 	macro_rules! t {

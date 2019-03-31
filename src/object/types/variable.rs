@@ -3,7 +3,7 @@ use crate::object::{Object, AnyObject, Type};
 use std::collections::{HashSet, HashMap};
 use crate::{map::Map, shared::Shared};
 use std::ops::Deref;
-use crate::err::Result;
+use crate::error::Result;
 
 use crate::object::{Literal, literals};
 
@@ -89,7 +89,7 @@ impl PartialEq<str> for Object<Variable> {
 
 mod funcs {
 	use super::Variable;
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::{literals, Object, AnyObject};
 	use crate::object::types::Text;
 

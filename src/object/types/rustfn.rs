@@ -1,5 +1,5 @@
 use crate::object::{literals, Object, AnyObject};
-use crate::err::{Error, Result};
+use crate::error::{Error, Result};
 use std::any::Any;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -117,7 +117,7 @@ impl Debug for RustFn {
 
 mod funcs {
 	use super::{RustFn};
-	use crate::err::Result;
+	use crate::error::Result;
 	use crate::object::{Object, AnyObject};
 	use crate::object::types::Text;
 
