@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use crate::object::{literals, Object, AnyObject};
 use crate::error::{Result, Error};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 type ObjList = Vec<AnyObject>;
 
@@ -45,9 +45,15 @@ impl AsRef<[AnyObject]> for List {
 }
 
 impl Deref for List {
-	type Target = [AnyObject];
-	fn deref(&self) -> &[AnyObject] {
-		self.0.deref()
+	type Target = Vec<AnyObject>;
+	fn deref(&self) -> &Vec<AnyObject> {
+		&self.0
+	}
+}
+
+impl DerefMut for List {
+	fn deref_mut(&mut self) -> &mut Vec<AnyObject> {
+		&mut self.0
 	}
 }
 
@@ -66,7 +72,7 @@ impl From<List> for ObjList {
 mod funcs {
 	use super::{List, ObjList};
 	use crate::object::types::{Number, Text, Map, Boolean};
-	use crate::object::{Object, literals};
+	use crate::object::{AnyObject, Object, literals};
 	use crate::error::Result;
 
 	pub fn at_list(list: &Object<List>) -> Object<List> {
@@ -150,20 +156,35 @@ mod funcs {
 		Object::new_number(list.data().read().expect("read err in List::funcs::len").len() as f64)
 	}
 
+	pub fn push(list: &Object<List>, obj: AnyObject) -> Object<List> {
+		list.data().write().expect("write err in List::funcs::push")
+			.push(obj);
+		list.clone()
+	}
+
+	pub fn pop(list: &Object<List>) -> AnyObject {
+		list.data().write().expect("write err in List::funcs::pop")
+			.pop()
+			.unwrap_or_else(|| Object::new_null() as _)
+	}
 }
 
 impl_type! { for List;
-	literals::AT_LIST => |o, _| Ok(funcs::at_list(o)),
-	literals::AT_MAP => |o, _| Ok(funcs::at_map(o)?),
-	literals::AT_BOOL => |o, _| Ok(funcs::at_bool(o)),
-	literals::AT_TEXT => |o, _| Ok(funcs::at_text(o)?),
+	literals::AT_LIST => |l, _| Ok(funcs::at_list(l)),
+	literals::AT_MAP => |l, _| Ok(funcs::at_map(l)?),
+	literals::AT_BOOL => |l, _| Ok(funcs::at_bool(l)),
+	literals::AT_TEXT => |l, _| Ok(funcs::at_text(l)?),
 
-	literals::EQL => |o, a| Ok(funcs::eql(o, &__getarg!(a[0]: List)?)?),
-	literals::ADD => |o, a| Ok(funcs::add(o, &__getarg!(a[0] @@ to_list)?)),
-	literals::ADD_ASSIGN => |o, a| Ok(funcs::add_assign(o, &__getarg!(a[0] @@ to_list)?)),
-	literals::MUL => |o, a| Ok(funcs::mul(o, &__getarg!(a[0] @@ to_number)?)),
-	literals::MUL_ASSIGN => |o, a| Ok(funcs::mul_assign(o, &__getarg!(a[0] @@ to_number)?)),
-	literals::L_LEN => |o, _| Ok(funcs::len(o)),
+	literals::EQL => |l, a| Ok(funcs::eql(l, &__getarg!(a[0]: List)?)?),
+	literals::ADD => |l, a| Ok(funcs::add(l, &__getarg!(a[0] @@ to_list)?)),
+	literals::ADD_ASSIGN => |l, a| Ok(funcs::add_assign(l, &__getarg!(a[0] @@ to_list)?)),
+	literals::MUL => |l, a| Ok(funcs::mul(l, &__getarg!(a[0] @@ to_number)?)),
+	literals::MUL_ASSIGN => |l, a| Ok(funcs::mul_assign(l, &__getarg!(a[0] @@ to_number)?)),
+	literals::L_LEN => |l, _| Ok(funcs::len(l)),
+
+	literals::L_PUSH => |l, a| Ok(funcs::push(l, getarg!(a[0])?.clone())),
+	literals::L_POP => |l, _| Ok(funcs::pop(l))
+
 
 	// literals::INDEX => |o, a| funcs::index(o, &__getarg!(a[0])),
 	// literals::INDEX_ASSIGN => |o, a| funcs::index_assign(o, &__getarg!(a[0])?),

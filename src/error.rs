@@ -10,7 +10,7 @@ pub enum Error {
 	MissingArgument { pos: usize, args: Vec<AnyObject> },
 	BadArgument { pos: usize, arg: AnyObject, msg: &'static str },
 	Boxed(Box<dyn ErrorTrait>),
-	ParseError(parse::Error),
+	ParseError(parse::ParseError),
 	#[cfg(test)]
 	__Testing // this error is used to throw custom errors when testing
 }

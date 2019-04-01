@@ -152,11 +152,19 @@ pub mod consts {
 
 
 	/* Literals */
-	pub const L_CLONE: Literal = Literal::new("clone");
-	pub const L_LEN: Literal = Literal::new("len");
-	pub const L_EVAL: Literal = Literal::new("eval");
 	pub const L_ID: Literal = Literal::new("__id__");
 	pub const L_MAP: Literal = Literal::new("__map__");
 	pub const L_ENV: Literal = Literal::new("__env__");
-	pub const L_PARENT: Literal = Literal::new("parent");
+
+	pub const L_CLONE: Literal = Literal::new("clone");
+	pub const L_LEN: Literal = Literal::new("len");
+	pub const L_EVAL: Literal = Literal::new("eval");
+	pub const L_PARENT: Literal = Literal::new("parent")
+;
+	pub const L_PARSER: Literal = Literal::new("parser");
+	pub const L_STACK: Literal = Literal::new("stack");
+	pub const L_POP: Literal = Literal::new("pop");
+	pub const L_PUSH: Literal = Literal::new("push");
+
+
 }

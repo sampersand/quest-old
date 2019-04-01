@@ -28,7 +28,7 @@ struct InternalOps {
 #[derive(Debug)]
 struct ObjectInfo {
 	id: usize,
-	env: Shared<dyn Map>,
+	env: Option<AnyObject>,
 	parent: Option<AnyObject>,
 }
 
@@ -51,7 +51,7 @@ impl<T: Type + Sized> Object<T> {
 		Object::_new(data, Some(parent), crate::env::current())
 	}
 
-	fn _new(data: T, parent: Option<AnyObject>, env: Shared<dyn Map>) -> Object<T> {
+	fn _new(data: T, parent: Option<AnyObject>, env: Option<AnyObject>) -> Object<T> {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 
 		lazy_static! {
@@ -74,7 +74,7 @@ impl<T: Type + Sized> Object<T> {
 						Any::downcast_ref::<T>(obj).expect("bad obj passed to `duplicate`").clone()
 					},
 					parent.or_else(|| obj.parent().clone()),
-					obj.env().clone(),
+					obj.0.info.env.clone(),
 				) as AnyObject
 			},
 			weakref: unsafe { std::mem::uninitialized() },
@@ -117,7 +117,7 @@ impl<T: Send + Sync + ?Sized> Object<T> {
 	}
 
 	#[cfg_attr(feature = "ignore-unused", allow(unused))]
-	pub fn env(&self) -> &Shared<dyn Map> {
+	pub fn env(&self) -> &Option<AnyObject> {
 		&self.0.info.env
 	}
 
@@ -297,7 +297,7 @@ impl Debug for AnyObject {
 
 		if f.alternate() {
 			f.debug_struct("Object")
-			 .field("map", &self.0.map)
+			 // .field("map", &self.0.map)
 			 .field("info", &self.0.info)
 			 .field("data", &DataFmtr(self))
 			 .finish()
