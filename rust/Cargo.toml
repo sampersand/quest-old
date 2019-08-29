@@ -1,19 +1,21 @@
 [package]
 name = "quest"
-version = "0.0.2"
+version = "0.0.9"
 authors = ["sam <westerhack@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["single-threaded"]
-single-threaded = []
-fine-debug = []
+default = ["ignore-unused", "display-special-numbers"]
+ignore-unused = []
+display-special-numbers = []
 
 [dependencies]
 lazy_static = "1.1.0"
 mopa = "0.2"
-libc = "0.2"
-#regex = { version = "1.0", features = ["pattern"] }
-log = "0.4"
-env_logger = "0.5"
-rand = "=0.6.0"
+type-name = "0.1.0"
+
+#libc = "0.2"
+# regex = { version = "1.0", features = ["pattern"] }
+# log = "0.4"
+# env_logger = "0.5"
+# rand = "=0.6.0"
