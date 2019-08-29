@@ -6,6 +6,7 @@ use self::types::Type;
 use self::map::ObjectMap;
 pub use self::literal::{Literal, consts as literals};
 
+use std::marker::PhantomData;
 use std::sync::{Arc, RwLock, Weak};
 use std::any::Any;
 use crate::shared::Shared;
@@ -37,7 +38,7 @@ struct Inner<T: ?Sized + Send + Sync> {
 	info: ObjectInfo,
 	ops: InternalOps,
 	weakref: Weak<Inner<dyn Any + Send + Sync>>, // is this required?
-	data: RwLock<T>,
+	data: RwLock<T>
 }
 
 impl<T: Type + Sized> Object<T> {
