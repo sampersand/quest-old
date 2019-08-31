@@ -1,3 +1,4 @@
+require_relative 'pristine'
 require_relative 'object'
 require_relative 'block'
 require_relative 'stepparents/all'

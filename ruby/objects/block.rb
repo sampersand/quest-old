@@ -36,6 +36,10 @@ class Quest::Block < Quest::Object
 		define_attr :'()' do |*a|
 			call *a
 		end
+
+		define_attr :bind do |owner|
+			bind_owner owner
+		end
 	end
 end
 

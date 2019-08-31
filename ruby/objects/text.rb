@@ -37,16 +37,20 @@ class Quest::Text < Quest::Object
 	end
 
 
-	define_attrs do
+	define_attrs stepparents: [
+		::Quest::StepParents::Comparable,
+		::Quest::StepParents::TruthyContainers
+	] do
 		define_attr :@text do
 			clone
 		end
-		define_attr :@text_inspect do
-			::Quest::Text.new @text.inspect
+
+		define_attr :<=> do |rhs|
+			::Quest::Number.new (@text <=> rhs.call_attr(:@text).__text) || ::Float::NAN
 		end
 
-		define_attr :@bool do
-			::Quest::Boolean.new !@text.empty?
+		define_attr :@text_inspect do
+			::Quest::Text.new @text.inspect
 		end
 
 		define_attr :@list do

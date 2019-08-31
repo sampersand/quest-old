@@ -43,7 +43,7 @@ class Quest::Number < Quest::Object
 		end
 
 		# Arithmetic Operators
-		%i(+ - * / % ** <=>).each do |method|
+		%i(+ - * / % **).each do |method|
 			define_attr method do |rhs|
 				::Quest::Number.new @num.send method, rhs.call_attr(:@num).__num
 			end
@@ -54,6 +54,11 @@ class Quest::Number < Quest::Object
 				self
 			end
 		end
+
+		define_attr :<=> do |rhs|
+			::Quest::Number.new (@num <=> rhs.call_attr(:@num).__num || ::Float::NAN)
+		end
+
 
 		# Bitwise Operators
 		%i(__BIT_AND __BIT_OR __BIT_XOR __BIT_SHL __BIT_SHR).each do |method|
@@ -76,11 +81,27 @@ class Quest::Number < Quest::Object
 			::Quest::Number.new ~__to_integer
 		end
 
-		define_attr :'__UNARY_+' do
+		define_attr :'++@' do
+			@num = @num + 1; self
+		end
+
+		define_attr :'@++' do
+			old, @num = @num, @num + 1; ::Quest::Number.new old
+		end
+
+		define_attr :'--@' do
+			@num = @num - 1; self
+		end
+
+		define_attr :'@--' do
+			old, @num = @num, @num - 1; ::Quest::Number.new old
+		end
+
+		define_attr :'+@' do
 			::Quest::Number.new +@num
 		end
 
-		define_attr :'__UNARY_-' do
+		define_attr :'-@' do
 			::Quest::Number.new -@num
 		end
 	end

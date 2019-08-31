@@ -32,9 +32,13 @@ class Quest::Boolean < Quest::Object
 
 	def __bool; @bool end
 
-	define_attrs do 
+	define_attrs stepparents: [::Quest::StepParents::Comparable] do 
 		define_attr :@text do
 			::Quest::Text.new @bool.to_s
+		end
+
+		define_attr :<=> do |rhs|
+			::Quest::Number.new (@bool <=> rhs.call_attr(:@bool).__bool) || ::Float::NAN
 		end
 
 		define_attr :@bool do

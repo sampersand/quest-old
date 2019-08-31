@@ -36,19 +36,20 @@ class Quest::List < Quest::Object
 
 
 	define_attrs stepparents: [
-		# ::Quest::StepParents::Indexable
+		::Quest::StepParents::Comparable,
+		::Quest::StepParents::TruthyContainers
 	] do
 
 		define_attr :@text do
 			::Quest::Text.new "[" + @list.map{|l| l.call_attr(:@text_inspect).__text }.join(', ') + "]"
 		end
 
-		define_attr :@list do
-			clone
+		define_attr :<=> do |rhs|
+			::Quest::Number.new (@list <=> rhs.call_attr(:@list).__list) || ::Float::NAN
 		end
 
-		define_attr :@bool do
-			::Quest::Boolean.new !@list.empty?
+		define_attr :@list do
+			clone
 		end
 
 		define_attr :length do

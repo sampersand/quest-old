@@ -15,7 +15,7 @@ module_function
 	end
 
 	def quest_object? *objs
-		objs.all?{|x| x.is_a?(Quest::Object) || x.is_a?(Class) && x.ancestors.include?(Quest::Object) }
+		objs.all?{|x| x.is_a?(Quest::Pristine) || x.is_a?(Class) && x.ancestors.include?(Quest::Pristine) }
 	end
 
 	alias :quest_objects? :quest_object?

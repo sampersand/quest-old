@@ -1,10 +1,6 @@
 require_relative '../object'
 
 class Quest::StepParents::Comparable < Quest::Object
-	def inspect
-		"Comparable"
-	end
-
 	define_attrs do
 		# We're expecting that we'll have `<=>`
 

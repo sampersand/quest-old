@@ -30,7 +30,7 @@ module Quest
 			end
 
 			def valid_result? val
-				::Quest::quest_object? val or val.nil?
+				::Quest::quest_object? val
 			end
 		end
 
@@ -47,7 +47,7 @@ module Quest
 				HasAttributes::check_result self, ::Kernel::__method__, attr, result
 			end
 
-			result
+			result || Quest::Null.new
 		end
 
 		def set_attr attr, val
@@ -70,7 +70,7 @@ module Quest
 				HasAttributes::check_result self, ::Kernel::__method__, attr, result
 			end
 
-			result
+			result || Quest::Null::new
 		end
 
 		def has_attr? attr
@@ -81,6 +81,15 @@ module Quest
 			attrs.has_attr? attr
 		end
 
+		def respond_to_attr? attr
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
+			end
+
+			attrs.respond_to_attr? attr
+		end
+
+
 		def call_attr attr, *args
 			Quest::if_debug do
 				HasAttributes::check_attr self, ::Kernel::__method__, attr
@@ -89,9 +98,10 @@ module Quest
 					HasAttributes::check_val self, ::Kernel::__method__, attr, arg, 'arg'
 				end
 			end
-			
-			attribute = get_attr(attr) or return
-			result = if attribute.is_a? ::Quest::Block
+		
+			return Quest::Null.new unless respond_to_attr? attr
+
+			result = if (attribute = get_attr attr).is_a? ::Quest::Block
 				attribute.call *args
 			else
 				# this might lose `self`, so we need to be careful there
@@ -109,7 +119,6 @@ module Quest
 				else
 					HasAttributes::check_result self, ::Kernel::__method__, attr, result
 				end
-
 			end
 
 			result
@@ -118,10 +127,6 @@ module Quest
 	end
 
 	class Attributes
-		def self.valid_attr? arg
-			arg.is_a? Symbol or ::Quest::quest_object? arg
-		end
-
 		def initialize uid, parent=nil, stepparents=nil, &block
 			@attributes = Hash.new
 			@attributes[:__readonly__] = @readonly = [:__uid__]
@@ -161,12 +166,19 @@ module Quest
 			@attributes.include? attr
 		end
 
+		def respond_to_attr? attr
+			has_attr?(attr) || 
+				@attributes[:__parent__]&.respond_to_attr?(attr) ||
+				@attributes[:__stepparents__]&.any?{|sp| sp.respond_to_attr?(attr) } ||
+				false
+		end
+
 		def get_attr attr
 			if has_attr? attr
 				attribute = @attributes[attr]
-				case attr.:eql?
-				when :__uid__ then ::Quest::Number.new attribute
-				when :__stepparents__ then ::Quest::List.new attribute
+				case attr.hash
+				when :__uid__.hash then ::Quest::Number.new attribute
+				when :__stepparents__.hash then ::Quest::List.new attribute
 				else attribute
 				end
 			else

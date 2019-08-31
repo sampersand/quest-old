@@ -1,10 +1,6 @@
 require_relative '../object'
 
 class Quest::StepParents::Indexable < Quest::Object
-	def inspect
-		"Indexable"
-	end
-
 	define_attrs do
 		# We're expecting that we'll have `length` 
 
