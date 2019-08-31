@@ -30,7 +30,7 @@ module Quest
 			end
 
 			def valid_result? val
-				::Quest::quest_object? val
+				::Quest::quest_object? val or val.nil?
 			end
 		end
 
@@ -90,7 +90,8 @@ module Quest
 				end
 			end
 			
-			result = if (attribute = get_attr attr).is_a? ::Quest::Block
+			attribute = get_attr(attr) or return
+			result = if attribute.is_a? ::Quest::Block
 				attribute.call *args
 			else
 				# this might lose `self`, so we need to be careful there
@@ -121,11 +122,12 @@ module Quest
 			arg.is_a? Symbol or ::Quest::quest_object? arg
 		end
 
-		def initialize uid, parent: nil, &block
+		def initialize uid, parent=nil, stepparents=nil, &block
 			@attributes = Hash.new
 			@attributes[:__readonly__] = @readonly = [:__uid__]
 			@attributes[:__uid__] = uid
-			@attributes[:__parent__] = parent if parent
+			set_attr :__parent__, parent if parent
+			set_attr :__stepparents__, stepparents if stepparents
 
 			if block_given?
 				def self.define_attr attr, val=nil, &block
@@ -160,10 +162,16 @@ module Quest
 		end
 
 		def get_attr attr
-			if attr.eql? :__uid__ and has_attr? attr
-				::Quest::Number.new @attributes[attr]
+			if has_attr? attr
+				attribute = @attributes[attr]
+				case attr.:eql?
+				when :__uid__ then ::Quest::Number.new attribute
+				when :__stepparents__ then ::Quest::List.new attribute
+				else attribute
+				end
 			else
-				@attributes[attr] || @attributes[:__parent__]&.get_attr(attr)
+				@attributes[:__stepparents__]&.each&.lazy&.map{|stepparent| stepparent.get_attr attr }&.find{|x| x} ||
+					@attributes[:__parent__]&.get_attr(attr)
 			end
 		end
 
@@ -177,3 +185,6 @@ module Quest
 		end
 	end
 end
+
+
+

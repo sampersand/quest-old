@@ -27,7 +27,9 @@ class Quest::Number < Quest::Object
 	def __num; @num end
 	def __to_integer; @num.to_i end
 
-	define_attrs do 
+	define_attrs stepparents: [
+		::Quest::StepParents::Comparable
+	] do 
 		define_attr :@text do
 			::Quest::Text.new @num.to_s
 		end
@@ -41,7 +43,7 @@ class Quest::Number < Quest::Object
 		end
 
 		# Arithmetic Operators
-		%i(+ - * / % **).each do |method|
+		%i(+ - * / % ** <=>).each do |method|
 			define_attr method do |rhs|
 				::Quest::Number.new @num.send method, rhs.call_attr(:@num).__num
 			end
@@ -50,13 +52,6 @@ class Quest::Number < Quest::Object
 			define_attr :"#{method}=" do |rhs|
 				@num = @num.send method, rhs.call_attr(:@num).__num
 				self
-			end
-		end
-
-		# Comparison Operators
-		%i(== != < > <= >= <=>).each do |method|
-			define_attr method do |rhs|
-				::Quest::Boolean.new @num.send method, rhs.call_attr(:@num).__num
 			end
 		end
 

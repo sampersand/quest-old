@@ -2,9 +2,18 @@ $DEBUG = true
 
 require_relative 'quest'
 
-l = Quest::List.new [1.to_q, "A".to_q, 3.to_q]
+l = Quest::List.new [1.to_q, "A".to_q, 3.to_q, 'b'.to_q, 91.3.to_q]
 
-puts l.call_attr :*, 2.to_q#[1.to_q,2.to_q].to_q
+# puts l.call_attr(:index, 2.to_q, 3.to_q)
+p 12.to_q.call_attr :<, 12.to_q
+p 12.to_q.call_attr :<=, 12.to_q
+p 12.to_q.call_attr :>, 12.to_q
+p 12.to_q.call_attr :>=, 12.to_q
+p 12.to_q.call_attr :!=, 12.to_q
+p 12.to_q.call_attr :==, 12.to_q
+# puts l.call_attr :index, 2.to_q
+
+# puts l.call_attr :*, 2.to_q#[1.to_q,2.to_q].to_q
 # p l.call_attr :*, [1.to_q, 2.to_q, 3.to_q].to_q
 # puts l.call_attr(:@text).call_attr(:+, "A".to_q).call_attr(:@text_inspect).__text
 

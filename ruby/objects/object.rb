@@ -24,8 +24,8 @@ class Quest::Object < BasicObject
 
 	private
 
-		def define_attrs parent: ancestors[1], &block
-			const_get(:ATTRIBUTES).replace ::Quest::Attributes.new(__id__, parent: parent, &block)
+		def define_attrs parent: ancestors[1], stepparents: nil, &block
+			const_get(:ATTRIBUTES).replace ::Quest::Attributes.new(__id__, parent, stepparents, &block)
 		end
 	end
 
@@ -44,8 +44,8 @@ class Quest::Object < BasicObject
 	def to_s; inspect end
 	alias :eql? :==
 
-	def initialize
-		@_attributes = ::Quest::Attributes.new(__id__, parent: self.class)
+	def initialize parent=self.class
+		@_attributes = ::Quest::Attributes.new(__id__, parent)
 	end
 
 # Attributes
@@ -63,6 +63,17 @@ class Quest::Object
 		define_attr :@hash do
 			::Quest::Number.new hash
 		end
+
+		# define_attr :birth do |*args|
+		# 	if defined? new 
+		# 		new *args
+		# 	elsif args
+		# 		obj = Object.new self
+		# 		args.each do |arg|
+		# 			obj.call_attr :merge, arg
+		# 		end
+		# 	end
+		# end
 
 		define_attr :is_a do |rhs|
 			if self.call_attr(:===, rhs).call_attr(:@bool).true?

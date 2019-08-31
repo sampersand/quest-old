@@ -35,7 +35,10 @@ class Quest::List < Quest::Object
 	end
 
 
-	define_attrs do
+	define_attrs stepparents: [
+		# ::Quest::StepParents::Indexable
+	] do
+
 		define_attr :@text do
 			::Quest::Text.new "[" + @list.map{|l| l.call_attr(:@text_inspect).__text }.join(', ') + "]"
 		end
@@ -46,6 +49,10 @@ class Quest::List < Quest::Object
 
 		define_attr :@bool do
 			::Quest::Boolean.new !@list.empty?
+		end
+
+		define_attr :length do
+			::Quest::Number.new @list.length
 		end
 
 		define_attr :== do |rhs|
