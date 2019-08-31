@@ -1,104 +1,114 @@
 module Quest
 	module HasAttributes
-	# 	def attr_getter_setter *attrs
-	# 		attr_getter *attrs
-	# 		attr_setter *attrs
-	# 	end
+		class << self
+			def check_attr self_, method_name, attr
+				unless valid_attr? attr
+					Quest::warn caller.first, "#{self_.inspect}.#{method_name} received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
+				end
+			end
 
-	# 	def attr_getter *attrs
-	# 		attrs.each do |attr|
-	# 			define_method attr do
-	# 				get_attr :"__#{attr}__"
-	# 			end
-	# 		end
-	# 	end
-		
-	# 	def attr_setter *attrs
-	# 		attrs.each do |attr|
-	# 			define_method :"#{attr}=" do |val|
-	# 				set_attr :"__#{attr}__", val
-	# 			end
-	# 		end
-	# 	end
+			def check_val self_, method_name, attr, val, name='val'
+				unless valid_val? val
+					Quest::warn caller.first, "#{self_.inspect}.#{method_name}(#{attr.inspect}) recieved a non-Quest Object #{name} '#{val.inspect}'"
+				end
+			end
+
+			def check_result self_, method_name, attr, result
+				unless valid_result? result
+					Quest::warn caller.first, "#{self_.inspect}.#{method_name}(#{attr.inspect}) returned a non-Quest Object '#{result.inspect}'"
+				end
+			end
+
+		private
+
+			def valid_attr? attr
+				attr.is_a? Symbol or ::Quest::quest_object? val
+			end
+
+			def valid_val? val
+				::Quest::quest_object? val
+			end
+
+			def valid_result? val
+				::Quest::quest_object? val
+			end
+		end
 
 		def get_attr attr
-			unless attr.is_a?(Symbol) || attr.is_a?(Object)
-				warn "#{self.class.name}.get_attr(#{attr.inspect}) received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
+			end 
+
+			if (result = attrs.get_attr attr).respond_to? :bind_owner
+				result = result.bind_owner self
 			end
 
-			result = if (result = attrs.get_attr attr).respond_to? :bind_owner
-				result.bind_owner self
-			else
-				result
-			end
-
-			unless result.is_a? Object
-				warn "#{self.class.name}.get_attr(#{attr.inspect}) returned a non-Quest Object '#{result.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_result self, ::Kernel::__method__, attr, result
 			end
 
 			result
 		end
 
 		def set_attr attr, val
-			if !val.is_a? Object
-				warn "#{self.class.name}.set_attr(#{attr.inspect}) recieved a non-Quest Object val '#{val.inspect}'"
-			elsif !attr.is_a?(Symbol) && !attr.is_a?(Object)
-				warn "#{self.class.name}.set_attr(#{attr.inspect}) received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
+				HasAttributes::check_val self, ::Kernel::__method__, attr, val
 			end
 
 			attrs.set_attr attr, val
 		end
 
 		def del_attr attr
-			unless attr.is_a?(Symbol) || attr.is_a?(Object)
-				warn "#{self.class.name}.del_attr(#{attr.inspect}) received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
 			end
 
 			result = attrs.del_attr attr
 
-			unless result.is_a? Object
-				warn "#{self.class.name}.del_attr(#{attr.inspect}) returned a non-Quest Object '#{result.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_result self, ::Kernel::__method__, attr, result
 			end
 
 			result
 		end
 
 		def has_attr? attr
-			unless attr.is_a?(Symbol) || attr.is_a?(Object)
-				warn "#{self.class.name}.del_attr(#{attr.inspect}) received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
 			end
 
 			attrs.has_attr? attr
 		end
 
 		def call_attr attr, *args
-			unless attr.is_a?(Symbol) || attr.is_a?(Object)
-				warn "#{self.class.name}.call_attr(#{attr.inspect}) received a non-Quest Object and non-Symbol attr '#{attr.inspect}'"
-			end
+			Quest::if_debug do
+				HasAttributes::check_attr self, ::Kernel::__method__, attr
 
-			args.each do |arg|
-				unless arg.is_a? Object
-					warn "#{self.class.name}.call_attr(#{attr.inspect}) received a non-Quest Object arg '#{arg.inspect}'"
+				args.each do |arg|
+					HasAttributes::check_val self, ::Kernel::__method__, attr, arg, 'arg'
 				end
 			end
-
 			
-			result = 
-				if (attribute = get_attr attr).is_a? Block
-					attribute.call *args
-				else
-					# this might lose `self`, so we need to be careful there
-					attribute.call_attr :'()', *args
-				end
-
-			case attr
-			when :@bool then fail "@bool didn't return Boolean (got #{result.inspect} from #{inspect})" unless result.is_a? Boolean
-			when :@num then fail "@num didn't return Number (got #{result.inspect} from #{inspect})" unless result.is_a? Number
-			when :@text then fail "@text didn't return Text (got #{result.inspect} from #{inspect})" unless result.is_a? Text
+			result = if (attribute = get_attr attr).is_a? ::Quest::Block
+				attribute.call *args
+			else
+				# this might lose `self`, so we need to be careful there
+				attribute.call_attr :'()', *args
 			end
 
-			unless result.is_a? Object
-				warn "#{self.class.name}.call_attr(#{attr.inspect}) returned a non-Quest Object '#{result.inspect}'"
+			Quest::if_debug do
+				case attr
+				when :@bool then
+					::Quest::warn "@bool didn't return Boolean (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Boolean
+				when :@num then
+					::Quest::warn "@num didn't return Number (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Number
+				when :@text then
+					::Quest::warn "@text didn't return Text (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Text
+				else
+					HasAttributes::check_result self, ::Kernel::__method__, attr, result
+				end
+
 			end
 
 			result
@@ -107,10 +117,13 @@ module Quest
 	end
 
 	class Attributes
+		def self.valid_attr? arg
+			arg.is_a? Symbol or ::Quest::quest_object? arg
+		end
+
 		def initialize uid, parent: nil, &block
-			@attributes = {
-				:__readonly__ => @readonly = [:__uid__]
-			}
+			@attributes = Hash.new
+			@attributes[:__readonly__] = @readonly = [:__uid__]
 			@attributes[:__uid__] = uid
 			@attributes[:__parent__] = parent if parent
 
@@ -129,6 +142,11 @@ module Quest
 			end
 		end
 
+		def replace other
+			@attributes = other.instance_variable_get :@attributes
+			@readonly = other.instance_variable_get :@readonly
+		end
+
 		def inspect
 			"#{self.class.name}(#{@attributes.keys.map(&:inspect).join ', '})"
 		end
@@ -142,11 +160,15 @@ module Quest
 		end
 
 		def get_attr attr
-			@attributes[attr] || @attributes[:__parent__]&.get_attr(attr)
+			if attr.eql? :__uid__ and has_attr? attr
+				::Quest::Number.new @attributes[attr]
+			else
+				@attributes[attr] || @attributes[:__parent__]&.get_attr(attr)
+			end
 		end
 
 		def set_attr attr, val
-			fail "Attr #{attr} is readonly" if readonly? attr
+			raise "Attr #{attr} is readonly" if readonly? attr
 			@attributes[attr] = val
 		end
 

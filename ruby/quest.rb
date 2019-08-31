@@ -1,7 +1,21 @@
 module Quest
+
 module_function
+	def warn src=::Kernel::caller.first, msg
+		if $DEBUG == 2
+			::Kernel::fail msg 
+		else
+			::Kernel::warn "#{src}: #{msg}"
+		end
+	end
+
+	def if_debug
+		return unless $DEBUG
+		yield
+	end
+
 	def quest_object? *objs
-		objs.all?{|x| x.is_a? Quest::Object}
+		objs.all?{|x| x.is_a?(Quest::Object) || x.is_a?(Class) && x.ancestors.include?(Quest::Object) }
 	end
 
 	alias :quest_objects? :quest_object?

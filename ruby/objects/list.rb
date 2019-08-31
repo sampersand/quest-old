@@ -1,72 +1,71 @@
 require_relative 'object'
 
-class String
-	def to_q; Quest::Text.new self end
+class Array
+	def to_q; Quest::List.new self end
 end
 
-class Quest::Text < Quest::Object
-	def initialize text
+class Quest::List < Quest::Object
+	def initialize list
 		::Quest::if_debug do
-			unless text.is_a? ::String
-				::Quest::warn "Text::initialize received a non-String arg '#{text.inspect}'"
+			unless list.is_a? ::Array
+				::Quest::warn "List::initialize received a non-Array arg '#{list.inspect}'"
+			end
+
+			list.each do |ele|
+				unless ::Quest::quest_object? ele
+					::Quest::warn "List::initialize recieved a non-Object element '#{ele.inspect}"
+				end
 			end
 		end
 
-		@text = text.freeze
+		@list = list
 		super()
 	end
 
 	def clone
-		::Quest::Text.new @text
+		::Quest::List.new @list.clone
 	end
 
-	def hash
-		@hash ||= @text.to_sym.hash
-	end
-
-	def eql? rhs
-		(self == rhs) || rhs.is_a?(::Symbol) && @text = rhs.to_s
-	end
-
-	def __text
-		@text
+	def __list
+		@list
 	end
 
 	def inspect
-		"Text(#{@text.inspect})"
+		"List(#{@list.inspect})"
 	end
 
 
 	define_attrs do
 		define_attr :@text do
-			clone
-		end
-		define_attr :@text_inspect do
-			::Quest::Text.new @text.inspect
-		end
-
-		define_attr :@bool do
-			::Quest::Boolean.new !@text.empty?
+			::Quest::Text.new "[" + @list.map{|l| l.call_attr(:@text_inspect).__text }.join(', ') + "]"
 		end
 
 		define_attr :@list do
-			::Quest::List.new @text.each_char.map(::Quest::Text.:new)
+			clone
 		end
 
-		define_attr :@num do 
-			::Quest::Number.new @text.to_f
+		define_attr :@bool do
+			::Quest::Boolean.new !@list.empty?
 		end
 
 		define_attr :== do |rhs|
-			::Quest::Boolean.new rhs.is_a?(::Quest::Text) && @text == rhs.__text
+			::Quest::Boolean.new rhs.is_a?(::Quest::List) && @list == rhs.__list
 		end
 
 		define_attr :+ do |rhs|
-			::Quest::Text.new @text + rhs.call_attr(:@text).__text
+			::Quest::List.new @list + rhs.call_attr(:@list).__list
+		end
+
+		define_attr :cross do |rhs|
+			::Quest::List.new @list.product(rhs.call_attr(:@list).__list).map(&::Quest::List.:new)
 		end
 
 		define_attr :* do |rhs|
-			::Quest::Text.new @text * rhs.call_attr(:@num).__num
+			if rhs.call_attr(:is_a, ::Quest::List).call_attr(:@bool).true?
+				call_attr :cross, rhs
+			else
+				::Quest::List.new @list * rhs.call_attr(:@num).__num
+			end
 		end
 
 		define_attr :[] do |start, stop=start, step=nil|
@@ -77,19 +76,19 @@ class Quest::Text < Quest::Object
 			case start
 			when 0    then ::Kernel::raise "Zero not allowed for 'start'"
 			when 1..  then start -= 1
-			when ..-1 then start += @text.length
+			when ..-1 then start += @list.length
 			else ::Kernel::fail "All cmps for start failed"
 			end
 
 			case stop
 			when 0    then ::Kernel::raise "Zero not allowed for 'stop'"
 			when 1..  then stop -= 1
-			when ..-1 then stop += @text.length
+			when ..-1 then stop += @list.length
 			else ::Kernel::fail "All cmps for stop failed"
 			end
 
 			::Kernel::fail "todo: step" if step
-			::Quest::Text.new(@text[start..stop] || '')
+			::Quest::List.new(@list[start..stop] || '')
 		end
 
 		define_attr :[]= do |start, stop=start, step=nil, value|
@@ -100,25 +99,25 @@ class Quest::Text < Quest::Object
 			case start
 			when 0    then ::Kernel::raise "Zero not allowed for 'start'"
 			when 1..  then start -= 1
-			when ..-1 then start += @text.length
+			when ..-1 then start += @list.length
 			else ::Kernel::fail "All cmps for start failed"
 			end
 
 			case stop
 			when 0    then ::Kernel::raise "Zero not allowed for 'stop'"
 			when 1..  then stop -= 1
-			when ..-1 then stop += @text.length
+			when ..-1 then stop += @list.length
 			else ::Kernel::fail "All cmps for stop failed"
 			end
 
 			::Kernel::fail "todo: step" if step
-			(text = @text.dup)[start..stop] = value.call_attr(:@text).__text
-			::Quest::Text.new text
+			(list = @list.dup)[start..stop] = value.call_attr(:@list).__list
+			::Quest::List.new list
 		end
 
 		define_attr :each do |block|
-			@text.each_char do |char|
-				block.call ::Quest::Text.new char
+			@list.each_char do |char|
+				block.call ::Quest::List.new char
 			end
 			self
 		end

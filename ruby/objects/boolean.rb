@@ -10,8 +10,10 @@ end
 
 class Quest::Boolean < Quest::Object
 	def initialize bool
-		unless bool.is_a?(::TrueClass) || bool.is_a?(::FalseClass)
-			warn "#{self.class.name}.initialize received a non-Boolean arg '#{bool.inspect}'"
+		::Quest::if_debug do
+			unless bool.is_a? ::TrueClass or bool.is_a? ::FalseClass
+				::Quest::warn "Boolean::initialize received a non-Boolean arg '#{bool.inspect}'"
+			end
 		end
 
 		@bool = bool
@@ -21,6 +23,8 @@ class Quest::Boolean < Quest::Object
 	def clone
 		::Quest::Boolean.new @bool
 	end
+
+	def true?; @bool end
 
 	def inspect
 		"Boolean(#@bool)"

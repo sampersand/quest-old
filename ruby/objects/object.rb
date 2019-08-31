@@ -1,5 +1,7 @@
 class Quest::Object < BasicObject
 # Extensions
+	ATTRIBUTES = ::Quest::Attributes.new __id__
+
 	class << self
 		def attrs
 			const_get :ATTRIBUTES
@@ -16,17 +18,21 @@ class Quest::Object < BasicObject
 			end
 		end
 
+		def inherited cls
+			cls.const_set :ATTRIBUTES, ::Quest::Attributes.new(__id__)
+		end
+
 	private
 
 		def define_attrs parent: ancestors[1], &block
-			parent = parent.const_get :ATTRIBUTES if defined? parent.ATTRIBUTES
-			const_set :ATTRIBUTES, ::Quest::Attributes.new(__id__, parent: parent, &block)
+			const_get(:ATTRIBUTES).replace ::Quest::Attributes.new(__id__, parent: parent, &block)
 		end
 	end
 
 	kernel_methods %i(
 		class respond_to? clone initialize_clone initialize_copy
 		inspect instance_variable_get instance_variable_set is_a?
+		hash
 	)
 
 	class << self
@@ -35,14 +41,11 @@ class Quest::Object < BasicObject
 
 # Instance stuff
 	attr_reader :_attributes
-	alias :to_s :inspect
+	def to_s; inspect end
+	alias :eql? :==
 
 	def initialize
-		@_attributes = Attributes.new __id__, parent: self.class.const_get(:ATTRIBUTES)
-	end
-
-	def warn src=::Kernel::caller.first, msg
-		::Kernel::warn "#{src}: #{msg}"
+		@_attributes = ::Quest::Attributes.new(__id__, parent: self.class)
 	end
 
 # Attributes
@@ -56,13 +59,32 @@ end
 require_relative 'block'
 
 class Quest::Object
-	define_attrs parent: nil do			
+	define_attrs parent: nil do
+		define_attr :@hash do
+			::Quest::Number.new hash
+		end
+
+		define_attr :is_a do |rhs|
+			if self.call_attr(:===, rhs).call_attr(:@bool).true?
+				::Quest::Boolean.new true
+			elsif has_attr? :__parent__
+				get_attr(:__parent__).call_attr(:is_a, rhs)
+			else
+				::Quest::Boolean.new false
+			end
+		end
+
 		define_attr :@text do
-			Text.new to_s
+			::Quest::Text.new inspect
+		end
+
+ 		# this is such a hack, but idk what to do otherwise for quotes on strings
+		define_attr :@text_inspect do |*args|
+			call_attr :@text, *args
 		end
 
 		define_attr :@bool do
-			Boolean.new true
+			::Quest::Boolean.new true
 		end
 
 		define_attr :clone do
@@ -74,7 +96,7 @@ class Quest::Object
 		end
 
 		define_attr :=== do |rhs|
-			Boolean.new get_attr(:__uid__) == rhs.get_attr(:__uid__)
+			::Quest::Boolean.new get_attr(:__uid__).__num == rhs.get_attr(:__uid__).__num
 		end
 
 		define_attr :'!==' do |rhs|
@@ -88,7 +110,6 @@ class Quest::Object
 		define_attr :'!=' do |rhs|
 			call_attr(:==, rhs).call_attr(:'!')
 		end
-
 	end
 end
 
