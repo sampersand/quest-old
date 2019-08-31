@@ -1,0 +1,7 @@
+require_relative 'object'
+require_relative 'block'
+require_relative 'boolean'
+require_relative 'null'
+require_relative 'number'
+require_relative 'text'
+require_relative 'var'
