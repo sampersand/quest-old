@@ -1,6 +1,6 @@
 require_relative 'util'
 
-Quest::Object.get_attr(:birth).call(_{
+Quest::Object.get_attr(:init).call(_{
 	max = 100._;
 	secret = rand(1._, max);
 	guesses = 0._;

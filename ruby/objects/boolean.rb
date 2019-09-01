@@ -32,13 +32,16 @@ class Quest::Boolean < Quest::Object
 
 	def __bool; @bool end
 
-	define_attrs stepparents: [::Quest::StepParents::Comparable] do 
+	define_attrs parents: [
+			::Quest::StepParents::Comparable,
+			::Quest::Object,
+	] do 
 		define_attr :@text do
 			::Quest::Text.new @bool.to_s
 		end
 
 		define_attr :<=> do |rhs|
-			::Quest::Number.new (@bool <=> rhs.call_attr(:@bool).__bool) || ::Float::NAN
+			::Quest::Number.new (@bool <=> rhs.call_into(:@bool)) || ::Float::NAN
 		end
 
 		define_attr :@bool do
@@ -54,15 +57,15 @@ class Quest::Boolean < Quest::Object
 		end
 
 		define_attr :__BIT_AND do |rhs|
-			::Quest::Boolean.new @bool & rhs.call_attr(:@bool).__bool
+			::Quest::Boolean.new @bool & rhs.call_into(:@bool)
 		end
 
 		define_attr :__BIT_OR do |rhs|
-			::Quest::Boolean.new @bool | rhs.call_attr(:@bool).__bool
+			::Quest::Boolean.new @bool | rhs.call_into(:@bool)
 		end
 
 		define_attr :__BIT_XOR do |rhs|
-			::Quest::Boolean.new @bool ^ rhs.call_attr(:@bool).__bool
+			::Quest::Boolean.new @bool ^ rhs.call_into(:@bool)
 		end
 
 		define_attr :== do |rhs|

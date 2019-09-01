@@ -7,7 +7,7 @@ class Quest::Pristine
 	alias :c :call
 end
 
-Quest::Object.get_attr(:birth).call(_{
+Quest::Object.get_attr(:init).call(_{
 	max = 100._
 	secret = g(:rand).c(1._, max)
 	guesses = 0._

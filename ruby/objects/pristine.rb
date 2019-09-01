@@ -1,6 +1,6 @@
 class Quest::Pristine < BasicObject
 # Extensions
-	ATTRIBUTES = ::Quest::Attributes.new __id__
+	ATTRIBUTES = ::Quest::Attributes.new __id__, []
 
 	class << self
 		def attrs
@@ -19,13 +19,13 @@ class Quest::Pristine < BasicObject
 		end
 
 		def inherited cls
-			cls.const_set :ATTRIBUTES, ::Quest::Attributes.new(__id__)
+			cls.const_set :ATTRIBUTES, ::Quest::Attributes.new(__id__, [])
 		end
 
 	private
 
-		def define_attrs parent: ancestors[1], stepparents: nil, &block
-			const_get(:ATTRIBUTES).replace ::Quest::Attributes.new(__id__, parent, stepparents, &block)
+		def define_attrs parents:, &block
+			const_get(:ATTRIBUTES).replace ::Quest::Attributes.new(__id__, parents, &block)
 		end
 	end
 
@@ -44,8 +44,8 @@ class Quest::Pristine < BasicObject
 	def to_s; inspect end
 	alias :eql? :==
 
-	def initialize parent=self.class
-		@_attributes = ::Quest::Attributes.new(__id__, parent)
+	def initialize parents: [self.class]
+		@_attributes = ::Quest::Attributes.new(__id__, parents)
 	end
 
 # Attributes
@@ -55,7 +55,7 @@ class Quest::Pristine < BasicObject
 
 	include ::Quest::HasAttributes
 
-	define_attrs parent: nil
+	define_attrs parents: []
 end
 
 

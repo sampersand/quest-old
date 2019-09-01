@@ -1,6 +1,6 @@
 require_relative 'util'
 
-Frac = Quest::Object.call_attr(:birth, _{
+Frac = Quest::Object.call_attr(:init, _{
 	self.set_attr :@num, _{
 		self.get_attr(:numer).call_attr(:/, self.get_attr(:denom))
 	};
@@ -14,8 +14,8 @@ Frac = Quest::Object.call_attr(:birth, _{
 		a
 	};
 
-	self.set_attr :birth, _{ |numer, denom|
-		self.get_attr(:__parent__).get_attr(:birth).call_attr(:bind, self)
+	self.set_attr :init, _{ |numer, denom|
+		self.get_attr(:__parent__).get_attr(:init).call_attr(:bind, self)
 			.call_attr(:'()', _{
 				gcd = self.call_attr(:_gcd, numer, denom);
 				self.set_attr :numer, numer.call_attr(:/, gcd);
@@ -28,13 +28,13 @@ Frac = Quest::Object.call_attr(:birth, _{
 		_Frac = self.get_attr(:__parent__);
 
 		self.call_attr(:if, rhs.call_attr(:is_a, _Frac), _{
-			_Frac.call_attr(:birth,
+			_Frac.call_attr(:init,
 				self.get_attr(:numer).call_attr(:*, rhs.get_attr(:denom))
 					.call_attr(:+, rhs.get_attr(:numer).call_attr(:*, self.get_attr(:denom))),
 				self.get_attr(:denom).call_attr(:*, rhs.get_attr(:denom))
 			)
 		}, _{
-			_Frac.call_attr(:birth, self.get_attr(:numer).call_attr(:*, rhs), self.get_attr(:denom))
+			_Frac.call_attr(:init, self.get_attr(:numer).call_attr(:*, rhs), self.get_attr(:denom))
 		}).call_attr(:'()')
 	};
 
@@ -49,6 +49,6 @@ Frac = Quest::Object.call_attr(:birth, _{
 	self
 });
 
-frac = Frac.call_attr(:birth, 3.to_q, 4.to_q);
+frac = Frac.call_attr(:init, 3.to_q, 4.to_q);
 puts frac.call_attr(:+, 3.to_q).call_attr(:@text)
-puts frac.call_attr(:+, Frac.call_attr(:birth, 1.to_q, 4.to_q)).call_attr(:@text)
+puts frac.call_attr(:+, Frac.call_attr(:init, 1.to_q, 4.to_q)).call_attr(:@text)

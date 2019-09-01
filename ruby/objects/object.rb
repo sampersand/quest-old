@@ -5,25 +5,43 @@ require_relative 'block'
 require_relative 'stepparents/all'
 
 class Quest::Object
-	define_attrs parent: nil, stepparents: [::Quest::StepParents::Builtins] do
+	define_attrs parents: [
+			::Quest::StepParents::Builtins,
+			::Quest::Pristine
+		] do
+
 		define_attr :@hash do
 			::Quest::Number.new hash
+		end
+
+		define_attr :base_parent do
+			get_attr(:__parents__).call_attr :[], ::Quest::Number.new(1)
+		end
+
+		define_attr :is_null do
+			call_attr(:is_a, ::Quest::Null)
+		end
+
+		define_attr :super do |attr|
+			get_attr(:__parents__).__list
+				.lazy
+				.map{|parent| parent.get_attr attr }
+				.find{|meth| meth.call_attr(:is_null).call_attr(:'!').call_into(:@bool) }
 		end
 
 		define_attr :execute do |block|
 			block.call_attr(:bind, self).call_attr(:'()')
 		end
 
-		define_attr :birth do |block=nil|
-			newobj = ::Quest::Pristine.new self
+		define_attr :init do |block=nil|
+			newobj = ::Quest::Pristine.new parents: [self]
 			block ? newobj.call_attr(:execute, block) : newobj
 		end
 
 		define_attr :is_a do |rhs|
 			::Quest::Boolean.new(
-				self.call_attr(:===, rhs).call_attr(:@bool).true? ||
-				(has_attr?(:__parent__) && get_attr(:__parent__).call_attr(:is_a, rhs).call_attr(:@bool).true?) ||
-				(has_attr?(:__stepparents__) && get_attr(:__stepparents__).__list.any?{|x| x.call_attr(:is_a, rhs).call_attr(:@bool).true? })
+				self.call_attr(:===, rhs).call_into(:@bool) ||
+				(has_attr? :__parents__ and get_attr(:__parents__).__list.any?{|x| x.call_attr(:is_a, rhs).call_into :@bool })
 			)
 		end
 

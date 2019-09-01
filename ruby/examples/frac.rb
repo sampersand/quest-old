@@ -1,48 +1,75 @@
-require_relative 'util'
-$DEBUG = 2
-Frac = Quest::Object.get_attr(:birth).(_{
-	self.__at_num = _{
-		self.numer / self.denom
-	};
+module Quest::HasAttributes
+	alias :g :get_attr
+	alias :s :set_attr
+	alias :c :call_attr
+	def _ &block; ::Quest::Block.new &block end
+	def call *a; c :'()', *a end
+end
 
-	self._gcd = _{ |a, b|
-		_while(_{ b != 0._ }, _{
+Frac = Quest::Object.g(:init).(::Quest::Block.new {
+	self.set_attr :_gcd, _{ |a, b|
+		self.g(:while).(_{ b }, _{
 			t = b;
-			b = a % b;
+			b = a.c(:%, b)
 			a = t
-		});
+		})
 		a
 	};
 
-	self.birth = _{ |numer, denom|
-		self.__parent__.birth.bind(self).(_{
-			gcd = self._gcd(numer, denom);
-			self.numer = numer / gcd;
-			self.denom = denom / gcd;
+	self.set_attr :init, _{ |n, d|
+		# todo: check for zero denom
+		gcd = self.g(:_gcd).(n, d);
+		n.g(:'/=').(gcd);
+		d.g(:'/=').(gcd);
+
+		self.g(:super).('init'.to_q).g(:bind).(self).(_{
+			self.set_attr :numer, n
+			self.set_attr :denom, d
 			self
 		})
 	};
 
-	self.__plus = _{ |rhs|
-		parent = self.__parent__
-		_if(rhs.is_a(parent), _{
-			parent.birth.(
-				self.numer * rhs.denom + rhs.numer * self.denom,
-				self.denom * rhs.denom
+	self.set_attr :@text, _{
+		result = self.g(:numer).g(:@text).();
+		self.g(:if).(self.g(:denom).g(:'!=').(1.to_q), _{
+			result.g(:'+=').('/'.to_q.g(:+).(self.g(:denom).g(:@text).()))
+		}).();
+		result
+	};
+
+	self.set_attr :@num, _{
+		self.g(:numer).g(:/).(self.g(:denom))
+	}
+
+	self.set_attr :+, _{ |rhs|
+		super_init = self.g(:super).('init'.to_q);
+		self.g(:if).( rhs.g(:is_a).(self.g(:base_parent).()), _{
+			super_init.(
+				self.g(:numer).g(:*).(rhs.g(:denom)).g(:+).(rhs.g(:numer).g(:*).(self.g(:denom))),
+				self.g(:denom).g(:*).(rhs.g(:denom))
 			)
 		}, _{
-			parent.birth.(self.numer * rhs, self.denom);
+			super_init.(
+				self.g(:numer).g(:*).(rhs.g(:@num).()),
+				self.g(:denom)
+			)
 		}).()
 	};
 
-	self.__at_text = _{
-		self.numer.c(:@text) + _if(self.denom == 1._, ''._, '/'._ + self.denom.c(:@text))
-	};
+	self.set_attr :clone, _{
+		self.g(:base_parent).().g(:init).(self.g(:numer), self.g(:denom))
+	}
 	
 	self
 });
 
-frac = Frac.birth.(3.0._, 4._);
-puts (frac + 3._).c(:@text);
-puts frac.c(:@num).c(:@text)
-puts (frac + Frac.birth.(1._, 4._)).c(:@text)
+
+frac = Frac.g(:init).(8.0.to_q, 5.to_q);
+
+puts frac.g(:+).(2.5.to_q).c(:@text)
+
+
+
+
+
+

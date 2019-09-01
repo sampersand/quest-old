@@ -35,7 +35,7 @@ class Quest::Pristine
 	def_call %i(while prompt rand != + < > disp if)
 end
 
-Quest::Object.get_attr(:birth).call(_{
+Quest::Object.get_attr(:init).call(_{
 	self.max = 100._;
 	self.secret = self.rand(1._, self.max);
 	self.guesses = 0._;

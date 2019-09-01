@@ -25,17 +25,25 @@ class Quest::Number < Quest::Object
 	end
 
 	def __num; @num end
-	def __to_integer; @num.to_i end
 
-	define_attrs stepparents: [
-		::Quest::StepParents::Comparable
+	define_attrs parents: [
+		::Quest::StepParents::Comparable,
+		::Quest::Object
 	] do 
 		define_attr :@text do
-			::Quest::Text.new @num.to_s
+			if call_attr(:is_whole).call_into(:@bool)
+				::Quest::Text.new @num.to_i.to_s
+			else
+				::Quest::Text.new @num.to_s
+			end
 		end
 
 		define_attr :@num do
-			clone
+			clone				
+		end
+
+		define_attr :is_whole do
+			::Quest::Boolean.new @num.to_i == @num
 		end
 
 		define_attr :@bool do
@@ -45,18 +53,18 @@ class Quest::Number < Quest::Object
 		# Arithmetic Operators
 		%i(+ - * / % **).each do |method|
 			define_attr method do |rhs|
-				::Quest::Number.new @num.send method, rhs.call_attr(:@num).__num
+				::Quest::Number.new @num.send method, rhs.call_into(:@num)
 			end
 
 			# In-place
 			define_attr :"#{method}=" do |rhs|
-				@num = @num.send method, rhs.call_attr(:@num).__num
+				@num = @num.send method, rhs.call_into(:@num)
 				self
 			end
 		end
 
 		define_attr :<=> do |rhs|
-			::Quest::Number.new (@num <=> rhs.call_attr(:@num).__num || ::Float::NAN)
+			::Quest::Number.new (@num <=> rhs.call_into(:@num)) || ::Float::NAN
 		end
 
 
@@ -65,12 +73,12 @@ class Quest::Number < Quest::Object
 			ruby_methods = %i(__BIT_AND & __BIT_OR | __BIT_XOR ^ __BIT_SHL << __BIT_SHR >>).each_slice(2).to_h
 
 			define_attr method do |rhs|
-				::Quest::Number.new __to_integer.send ruby_methods[method], rhs.call_attr(:@num).__to_integer
+				::Quest::Number.new @num.to_i.send ruby_methods[method], rhs.call_into(:@num).to_i
 			end
 
 			# in place
 			define_attr :"#{method}=" do |rhs|
-				@num = __to_integer.send ruby_methods[method], rhs.call_attr(:@num).__to_integer
+				@num = @num.to_i.send ruby_methods[method], rhs.call_into(:@num).to_i
 				self
 			end
 		end
@@ -78,7 +86,7 @@ class Quest::Number < Quest::Object
 
 		# Unary Operators
 		define_attr :__BIT_NOT do
-			::Quest::Number.new ~__to_integer
+			::Quest::Number.new ~@num.to_i
 		end
 
 		define_attr :'++@' do

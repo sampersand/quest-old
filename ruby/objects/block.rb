@@ -32,7 +32,7 @@ class Quest::Block < Quest::Object
 		end
 	end
 
-	define_attrs do
+	define_attrs parents: [ ::Quest::Object ] do
 		define_attr :'()' do |*a|
 			call *a
 		end
