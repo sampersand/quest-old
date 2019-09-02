@@ -1,7 +1,7 @@
 require_relative '../object'
 
 class Quest::StepParents::Builtins < Quest::Object
-	define_attrs parents: [ ::Quest::Pristine ] do
+	define_attrs ancestors: [ ::Quest::Pristine ] do
 		define_attr :if do |cond, if_true, if_false=nil|
 			if cond.call_into :@bool
 				if_true

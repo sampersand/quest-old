@@ -1,7 +1,7 @@
 require_relative '../object'
 
 class Quest::StepParents::TruthyContainers < Quest::Object
-	define_attrs parents: [ ::Quest::Object ] do
+	define_attrs ancestors: [ ::Quest::Object ] do
 		# We're expecting that we'll have `length` method
 
 		define_attr :@bool do

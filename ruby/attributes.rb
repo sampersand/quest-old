@@ -153,20 +153,20 @@ module Quest
 	end
 
 	class Attributes
-		def initialize uid, parents, &block
+		def initialize uid, ancestors, &block
 			@attributes = Hash.new
 			@attributes[:__readonly__] = @readonly = [:__uid__]
 			@attributes[:__uid__] = uid
 			::Quest::if_debug do
-				if parents.is_a? Array
-					parents.each do |parent|
-						::Quest::warn "parent (#{parent.inspect}) is not a Quest Object" unless ::Quest::quest_object? parent
+				if ancestors.is_a? Array
+					ancestors.each do |ancestor|
+						::Quest::warn "ancestor (#{ancestor.inspect}) is not a Quest Object" unless ::Quest::quest_object? ancestor
 					end
 				else
-					::Quest::warn "__parents__ is not an array: #{parents}"
+					::Quest::warn "__ancestors__ is not an array: #{ancestors}"
 				end
 			end
-			@attributes[:__parents__] = parents
+			@attributes[:__ancestors__] = ancestors
 
 
 			if block_given?
@@ -202,8 +202,8 @@ module Quest
 		end
 
 		def respond_to_attr? attr
-			# p @attributes[:__parents__]
-			has_attr? attr or @attributes[:__parents__].any?{|sp| sp.respond_to_attr? attr }
+			# p @attributes[:__ancestors__]
+			has_attr? attr or @attributes[:__ancestors__].any?{|sp| sp.respond_to_attr? attr }
 		end
 
 		def get_attr attr
@@ -211,14 +211,14 @@ module Quest
 				attribute = @attributes[attr]
 				case attr.hash
 				when :__uid__.hash then ::Quest::Number.new attribute
-				when :__parents__.hash then ::Quest::List.new attribute
+				when :__ancestors__.hash then ::Quest::List.new attribute
 				else attribute
 				end
 			else
-				@attributes[:__parents__]
+				@attributes[:__ancestors__]
 					.each
 					.lazy
-					.map{|stepparent| stepparent.get_attr attr }
+					.map{|ancestor| ancestor.get_attr attr }
 					.find{|x| x}
 			end
 		end

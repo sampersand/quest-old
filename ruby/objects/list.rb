@@ -35,7 +35,7 @@ class Quest::List < Quest::Object
 	end
 
 
-	define_attrs parents: [
+	define_attrs ancestors: [
 		::Quest::StepParents::Enumerable,
 		::Quest::StepParents::Comparable,
 		::Quest::StepParents::TruthyContainers,

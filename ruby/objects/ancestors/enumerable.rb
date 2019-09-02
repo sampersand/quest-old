@@ -1,8 +1,12 @@
 require_relative '../object'
 
+# The `Enumerable` "mixin"; it provides methods
+# that anything that can be enumerated over (ie has the `each` method
+# defined) can use.
 class Quest::StepParents::Enumerable < Quest::Object
-	define_attrs parents: [ ::Quest::Object ] do
-		# We're expecting that we'll have `each` method
+	# The only ancestor is Object.
+	# We're only expecting the `each` method
+	define_attrs ancestors: [ ::Quest::Object ] do
 
 		define_attr :map do |meth|
 			map = []
@@ -17,7 +21,11 @@ class Quest::StepParents::Enumerable < Quest::Object
 			call_attr(:each, ::Quest::Block.new{|obj|
 				map.push obj if meth.call_attr(:'()', obj).call_into :@bool
 			})
-			map
+			call_attr :init_map_result, ::Quest::List.new(map)
+		end
+
+		define_attr :init_map_result do |list|
+			list
 		end
 
 		define_attr :find do |meth|
@@ -62,7 +70,6 @@ class Quest::StepParents::Enumerable < Quest::Object
 		define_attr :none do |meth|
 			call_attr(:any, meth).call_attr :'!'
 		end
-
 
 		# define_attr :map_filter do |meth|
 		# 	::Quest::List::new @list.map{|ele|

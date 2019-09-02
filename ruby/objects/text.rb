@@ -37,7 +37,7 @@ class Quest::Text < Quest::Object
 	end
 
 
-	define_attrs parents: [
+	define_attrs ancestors: [
 		::Quest::StepParents::Comparable,
 		::Quest::StepParents::TruthyContainers,
 		::Quest::Object

@@ -26,7 +26,7 @@ class Quest::Number < Quest::Object
 
 	def __num; @num end
 
-	define_attrs parents: [
+	define_attrs ancestors: [
 		::Quest::StepParents::Comparable,
 		::Quest::Object
 	] do 

@@ -32,7 +32,7 @@ class Quest::Boolean < Quest::Object
 
 	def __bool; @bool end
 
-	define_attrs parents: [
+	define_attrs ancestors: [
 			::Quest::StepParents::Comparable,
 			::Quest::Object,
 	] do 

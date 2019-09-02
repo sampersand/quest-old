@@ -13,7 +13,7 @@ class Quest::Null < Quest::Object
 		"Null()"
 	end
 
-	define_attrs parents: [ ::Quest::Object ] do
+	define_attrs ancestors: [ ::Quest::Object ] do
 		define_attr :@text do
 			::Quest::Text.new 'null'
 		end

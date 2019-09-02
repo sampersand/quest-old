@@ -19,6 +19,7 @@ Frac = Quest::Object.g(:init).(::Quest::Block.new {
 	self.set_attr :init, _{ |n, d|
 		# todo: check for zero denom
 		gcd = self.g(:_gcd).(n, d);
+
 		n.g(:'/=').(gcd);
 		d.g(:'/=').(gcd);
 
@@ -43,7 +44,7 @@ Frac = Quest::Object.g(:init).(::Quest::Block.new {
 
 	self.set_attr :+, _{ |rhs|
 		super_init = self.g(:super).('init'.to_q);
-		self.g(:if).( rhs.g(:is_a).(self.g(:base_parent).()), _{
+		self.g(:if).( rhs.g(:is_a).(self.g(:base_ancestor).()), _{
 			super_init.(
 				self.g(:numer).g(:*).(rhs.g(:denom)).g(:+).(rhs.g(:numer).g(:*).(self.g(:denom))),
 				self.g(:denom).g(:*).(rhs.g(:denom))
@@ -57,7 +58,7 @@ Frac = Quest::Object.g(:init).(::Quest::Block.new {
 	};
 
 	self.set_attr :clone, _{
-		self.g(:base_parent).().g(:init).(self.g(:numer), self.g(:denom))
+		self.g(:base_ancestor).().g(:init).(self.g(:numer), self.g(:denom))
 	}
 	
 	self
@@ -67,6 +68,9 @@ Frac = Quest::Object.g(:init).(::Quest::Block.new {
 frac = Frac.g(:init).(8.0.to_q, 5.to_q);
 
 puts frac.g(:+).(2.5.to_q).c(:@text)
+
+
+
 
 
 
