@@ -88,10 +88,6 @@ class Quest::List < Quest::Object
 			self
 		end
 
-		define_attr :map do |meth|
-			::Quest::List.new @list.map{ |ele| meth.call_attr :'()', ele }
-		end
-
 		define_attr :[] do |start, stop=nil, step=nil|
 			start = start.call_into :@num
 			stop = stop.call_into :@num if stop
@@ -150,7 +146,7 @@ class Quest::List < Quest::Object
 
 		define_attr :each do |block|
 			@list.each do |element|
-				block.call element
+				block.call_attr :'()', element
 			end
 			self
 		end

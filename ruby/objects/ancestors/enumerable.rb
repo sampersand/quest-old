@@ -12,14 +12,16 @@ class Quest::StepParents::Enumerable < Quest::Object
 			map = []
 			call_attr(:each, ::Quest::Block.new{|obj|
 				map.push meth.call_attr :'()', obj
+				::Quest::Null.new
 			})
-			::Quest::List.new map
+			call_attr :init_map_result, ::Quest::List.new(map)
 		end
 
 		define_attr :filter do |meth|
 			map = []
 			call_attr(:each, ::Quest::Block.new{|obj|
 				map.push obj if meth.call_attr(:'()', obj).call_into :@bool
+				::Quest::Null.new
 			})
 			call_attr :init_map_result, ::Quest::List.new(map)
 		end

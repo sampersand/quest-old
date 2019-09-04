@@ -24,6 +24,18 @@ class Quest::Number < Quest::Object
 		"Number(#@num)"
 	end
 
+	def hash
+		@num.hash
+	end
+
+	def == rhs
+		rhs.is_a?(::Quest::Number) && @num == rhs.__num
+	end
+
+	def eql? rhs
+		(self == rhs) || rhs.is_a?(::Numeric) && @num == rhs
+	end
+
 	def __num; @num end
 
 	define_attrs ancestors: [

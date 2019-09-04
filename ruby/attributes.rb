@@ -107,6 +107,7 @@ module Quest
 			when :@bool then result.__bool
 			when :@text then result.__text
 			when :@num then result.__num
+			when :@map then result.__map
 			when :@list then result.__list
 			else
 				::Quest::warn "#{self}.#{::Kernel::__method__}(#{attr}) doesn't recognie the attribute given."
@@ -142,6 +143,11 @@ module Quest
 					::Quest::warn "@num didn't return Number (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Number
 				when :@text then
 					::Quest::warn "@text didn't return Text (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Text
+				when :@list then
+					::Quest::warn "@list didn't return List (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::List
+				when :@map then
+					::Quest::warn "@map didn't return Map (got #{result.inspect} from #{inspect})" unless result.is_a? ::Quest::Map
+
 				else
 					HasAttributes::check_result self, ::Kernel::__method__, attr, result
 				end

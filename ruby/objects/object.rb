@@ -5,6 +5,10 @@ require_relative 'block'
 require_relative 'ancestors/all'
 
 class Quest::Object
+	# def == rhs
+	# 	call_attr(:==, rhs).call_into :@bool
+	# end
+
 	define_attrs ancestors: [
 			::Quest::StepParents::Builtins,
 			::Quest::Pristine

@@ -25,7 +25,7 @@ class Quest::Text < Quest::Object
 	end
 
 	def eql? rhs
-		(self == rhs) || rhs.is_a?(::Symbol) && @text = rhs.to_s
+		(self == rhs) || rhs.is_a?(::Symbol) && @text == rhs.to_s
 	end
 
 	def __text
@@ -38,6 +38,7 @@ class Quest::Text < Quest::Object
 
 
 	define_attrs ancestors: [
+		::Quest::StepParents::Enumerable,
 		::Quest::StepParents::Comparable,
 		::Quest::StepParents::TruthyContainers,
 		::Quest::Object

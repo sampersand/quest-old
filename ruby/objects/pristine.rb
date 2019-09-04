@@ -42,7 +42,6 @@ class Quest::Pristine < BasicObject
 # Instance stuff
 	attr_reader :_attributes
 	def to_s; inspect end
-	alias :eql? :==
 
 	def initialize ancestors: [self.class]
 		@_attributes = ::Quest::Attributes.new(__id__, ancestors)
